@@ -110,13 +110,15 @@
       var cat = r[0] || [], tests = r[1] || [], extra = r[2] || [], board = r[3] || [];
       var sel = {}; // key "S|U|T" -> {s,u,t}
       function trackOf(s) { return s.category === 'Exam' ? 'competitive' : 'foundation'; }
-      function chk(id, label, extraCls, dis) { return '<label class="tchk' + (extraCls || '') + '"><input type="checkbox" data-k="' + esc(id) + '"' + (dis ? ' disabled' : '') + '><span>' + label + '</span></label>'; }
-      function subjNode(s) {
-        return '<details class="tn"><summary><span class="caret"></span>' + chk(s.id, '<b>' + esc(s.name) + '</b>', ' lvl1', !s.durations.length) + '</summary><div class="tk">' +
+      var NAMES = {};
+      function chk(id, label, extraCls, dis, nm) { NAMES[id] = nm || id; return '<label class="tchk' + (extraCls || '') + '"><input type="checkbox" data-k="' + esc(id) + '"' + (dis ? ' disabled' : '') + '><span>' + label + '</span></label>'; }
+      function subjNode(s, tk) {
+        var UL = tk === 'foundation' ? 'Unit ' : 'Section ';
+        return '<details class="tn"><summary><span class="caret"></span>' + chk(s.id, '<b>' + esc(s.name) + '</b>', ' lvl1', false, s.name) + '</summary><div class="tk">' +
           s.units.map(function (u) {
-            var key = s.id + '|' + u.unit, many = u.topics.filter(function (t) { return t.durations.length; }).length >= 2;
-            return '<details class="tn"><summary><span class="caret"' + (u.topics.length ? '' : ' style="visibility:hidden"') + '></span>' + chk(key, 'Unit ' + u.unit + ': ' + esc(u.name), '', !u.durations.length) + '</summary>' +
-              (many ? '<div class="tk">' + u.topics.map(function (t) { return '<div class="leaf">' + chk(key + '|' + t.id, esc(t.name) + (t.new ? ' <span class="badge">New</span>' : ''), '', !t.durations.length) + '</div>'; }).join('') + '</div>' : '') + '</details>';
+            var key = s.id + '|' + u.unit, many = u.topics.length >= 2;
+            return '<details class="tn"><summary><span class="caret"' + (u.topics.length ? '' : ' style="visibility:hidden"') + '></span>' + chk(key, UL + u.unit + ': ' + esc(u.name), '', false, s.name + ' · ' + UL + u.unit + ': ' + u.name) + '</summary>' +
+              (many ? '<div class="tk">' + u.topics.map(function (t) { return '<div class="leaf">' + chk(key + '|' + t.id, esc(t.name) + (t.new ? ' <span class="badge">New</span>' : ''), '', false, t.name) + '</div>'; }).join('') + '</div>' : '') + '</details>';
           }).join('') + '</div></details>';
       }
       function ghost(rows) { return rows.length ? '<div class="ghosts">' + rows.map(function (x) { return '<span>' + esc(x.title) + '</span>'; }).join('') + '<span>…and many more</span></div>' : ''; }
@@ -125,7 +127,7 @@
         var subs = cat.filter(function (s) { return trackOf(s) === tr.k; });
         var more = extra.filter(function (x) { return x.track === tr.k && !(x.subject_id && live[x.subject_id]); });
         var rt = tr.k === 'competitive' ? tests.filter(function (t) { return !/-custom$/.test(t.slug); }) : [];
-        var body = (subs.length ? '<div class="tree">' + subs.map(subjNode).join('') + '</div>' : '') +
+        var body = (subs.length ? '<div class="tree">' + subs.map(function (x) { return subjNode(x, tr.k); }).join('') + '</div>' : '') +
           (rt.length ? '<p class="f" style="margin-top:14px">Ready-made tests</p><div class="rtl">' + rt.map(function (t) { return '<a href="/t/' + esc(t.slug) + '" data-link>' + esc(t.title) + ' <span>&rarr;</span></a>'; }).join('') + '</div>' : '') +
           ghost(more);
         return '<details class="trk ' + tr.k + '"' + (i === 0 ? ' id="tr0"' : '') + '><summary><span class="tic">' + tr.ic + '</span><span class="tt"><b>' + tr.t + '</b><small>' + tr.d + '</small></span><span class="tplus" aria-hidden="true"></span></summary><div class="tbody">' + body + '</div></details>';
@@ -133,9 +135,12 @@
       h('<section class="hero" style="padding-bottom:6px"><p class="eyebrow">Free practice by VKV Sir</p><h1>Practice the way <em>examiners</em> think.</h1>' +
         '<p class="muted" style="max-width:620px">Open a track, tick the subjects, units or topics you want, choose the time and start. Every paper is freshly balanced, with instant results.</p></section>' +
         '<div class="tracks">' + tracksHtml + '</div>' +
-        '<div class="startbar" id="sbar" hidden><div><b id="sn"></b><span class="small muted" id="sd"></span></div><div class="seg mini" id="sdur">' + [5, 10, 15, 30].map(function (d, k) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (k === 1) + '">' + d + ' min</button>'; }).join('') + '</div><button class="btn" id="sgo">' + (session ? 'Start practice' : 'Sign in to start') + '</button><div class="err" id="se" role="alert"></div></div>' +
+        '<div class="startbar" id="sbar" hidden><div class="sbtop"><b id="sn"></b><button type="button" class="linkbtn" id="sclr">Clear all</button></div><div class="snames" id="sd"></div>' +
+        '<div class="sbrow"><div class="seg mini" id="smode"><button type="button" data-m="fixed" aria-pressed="true">📝 Fixed paper</button><button type="button" data-m="rapid" aria-pressed="false">⚡ Rapid fire</button></div>' +
+        '<div class="seg mini" id="sdur">' + [5, 10, 15, 30].map(function (d, k) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (k === 1) + '">' + d + ' min</button>'; }).join('') + '</div>' +
+        '<button class="btn" id="sgo">' + (session ? 'Start practice' : 'Sign in to start') + '</button></div><p class="small muted" id="smi">Fixed paper: a set number of questions with fair time for each.</p><div class="err" id="se" role="alert"></div></div>' +
         shareBar(location.origin + '/', 'Free practice quizzes with instant results by VKV Sir:', 'Invite friends:') + boardCard(board, 'Top performers'));
-      var dur = 10;
+      var dur = 10, mode = 'fixed', hint1 = false, hint2 = false;
       function selection() {
         var out = [], keys = Object.keys(sel);
         keys.forEach(function (k) {
@@ -149,8 +154,9 @@
       function refresh() {
         var s = selection(), bar = q('#sbar');
         bar.hidden = !s.length;
-        q('#sn').textContent = s.length ? s.length + (s.length === 1 ? ' selection' : ' selections') + ' ready' : '';
-        q('#sd').textContent = s.length ? ' · ' + s.map(function (x) { return x.t ? 'topic' : x.u ? 'unit ' + x.u : 'full ' + x.s; }).slice(0, 4).join(', ') + (s.length > 4 ? '…' : '') : '';
+        q('#sn').textContent = s.length ? 'Your selection (' + s.length + ')' : '';
+        q('#sd').innerHTML = s.map(function (x) { var k = [x.s, x.u, x.t].filter(function (v) { return v != null; }).join('|'); return '<span class="snm">' + esc(NAMES[k] || k) + '</span>'; }).join('');
+        if (s.length && !hint2) { hint2 = true; guide(q('#smode'), 'Choose Fixed paper or Rapid fire, pick your time, then Start'); }
       }
       if ($view._treeBound) { $view.removeEventListener('change', $view._treeChange); $view.removeEventListener('click', $view._treeClick, true); }
       $view._treeBound = true;
@@ -168,16 +174,57 @@
         var inp = lab.querySelector('input'); if (inp.disabled) return;
         inp.checked = !inp.checked; inp.dispatchEvent(new Event('change', { bubbles: true }));
       }, true);
+      q('#sclr').onclick = function () { sel = {}; $view.querySelectorAll('.tchk input').forEach(function (x) { x.checked = false; }); refresh(); };
+      $view.querySelectorAll('.trk .tn').forEach(function (d) { d.addEventListener('toggle', function () { if (d.open && !hint1) { hint1 = true; guide(d.querySelector('.tk .tchk') || d.querySelector('summary'), 'Tick the units or topics you want in your quiz'); } }); });
+      q('#smode').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; mode = b.getAttribute('data-m'); this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+        q('#smi').innerHTML = mode === 'rapid' ? '⚡ <b>Rapid fire:</b> questions come one after another until time runs out, so you rehearse more in less time. Pick <b>one whole unit or subject</b>; it unlocks after you have practised all its topics. Two rounds per unit per day; each round uses fresh questions.' : 'Fixed paper: a set number of questions with fair time for each.';
+        q('#sdur').querySelectorAll('button').forEach(function (x) { x.hidden = mode === 'rapid' && x.getAttribute('data-d') === '15'; }); if (mode === 'rapid' && dur === 15) dur = 10; };
       q('#sdur').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; dur = +b.getAttribute('data-d'); this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); };
       q('#sgo').onclick = function () {
         if (!requireAuth(location.pathname)) return;
         var g = this, s = selection(); g.disabled = true; g.textContent = 'Preparing your paper…'; q('#se').textContent = '';
-        rpc('start_multi', { p_sel: s, p_duration: dur }).then(function (v) { go('/exam/' + v.attempt); })
+        var call;
+        if (mode === 'rapid') {
+          if (s.length !== 1 || s[0].t) { q('#se').textContent = 'For Rapid fire, tick exactly one whole unit or one whole subject.'; g.disabled = false; g.textContent = 'Start practice'; return; }
+          call = rpc('start_rapid', { p_subject: s[0].s, p_unit: s[0].u == null ? null : s[0].u, p_duration: dur });
+        } else call = rpc('start_multi', { p_sel: s, p_duration: dur });
+        call.then(function (v) { go('/exam/' + v.attempt); })
           .catch(function (e) { var m = errMsg(e); if (m === 'PROFILE_INCOMPLETE') return go('/profile?next=' + location.pathname); q('#se').textContent = lockText(m); g.disabled = false; g.textContent = 'Start practice'; });
       };
       guide(q('#tr0 summary'), 'Tap a track to open it, then tick what you want to practise');
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p><button class="btn" onclick="location.reload()">Try again</button></div>'); });
   }
+  /* ---------- suggestions ---------- */
+  var SKINDS = [['topic', 'Topic / subject'], ['exam', 'Exam'], ['interview', 'Company / interview'], ['idea', 'Other idea']];
+  function suggestBox() {
+    var id = 'sg' + Math.random().toString(36).slice(2, 7);
+    setTimeout(function () {
+      var el = document.getElementById(id); if (!el) return;
+      function paint(st) {
+        var can = st && st.can, why = st && st.why;
+        var note = can ? (st.first ? 'Your first suggestion is always welcome.' : 'You can send one now.')
+          : why === 'signin' ? 'Sign in to send suggestions.'
+          : 'Next suggestion opens after you complete one 15-minute test' + (st.next ? ', or on ' + new Date(st.next).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '') + '.';
+        el.innerHTML = '<h3 style="margin:0 0 4px">💡 Tell us what to add next</h3><p class="small muted" style="margin:0 0 10px">Suggest a topic, subject, exam, or a company/job you are preparing for (role, fresher or experienced). Up to 30 words. We use these to plan new question banks.</p>' +
+          '<div class="' + (can ? '' : 'blurred') + '"><div class="chips" id="' + id + 'k">' + SKINDS.map(function (k, i) { return '<button type="button" class="chip sel" data-k="' + k[0] + '" aria-pressed="' + (i === 0) + '"' + (can ? '' : ' disabled') + '>' + k[1] + '</button>'; }).join('') + '</div>' +
+          '<textarea class="in" id="' + id + 't" rows="2" maxlength="240" placeholder="e.g. GATE thermodynamics numericals, or Tata Motors graduate engineer (fresher)"' + (can ? '' : ' disabled') + '></textarea>' +
+          '<div class="spread" style="margin-top:8px"><span class="small muted" id="' + id + 'c">0 / 30 words</span><button class="btn" id="' + id + 'b"' + (can ? '' : ' disabled') + '>Send suggestion</button></div></div>' +
+          '<p class="small" style="margin:8px 0 0;color:var(--muted)">' + note + '</p><div class="err" id="' + id + 'e"></div>';
+        if (!can) return;
+        var kind = 'topic', ta = document.getElementById(id + 't'), cnt = document.getElementById(id + 'c');
+        document.getElementById(id + 'k').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; kind = b.getAttribute('data-k'); this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); };
+        ta.oninput = function () { var w = ta.value.trim() ? ta.value.trim().split(/\s+/).length : 0; cnt.textContent = w + ' / 30 words'; cnt.style.color = w > 30 ? 'var(--bad)' : ''; };
+        document.getElementById(id + 'b').onclick = function () {
+          var b = this; b.disabled = true;
+          rpc('submit_suggestion', { p_kind: kind, p_body: ta.value }).then(function (st2) { el.innerHTML = '<p style="margin:0">✅ Thank you! Your suggestion has reached VKV Sir.</p>'; }).catch(function (e) { document.getElementById(id + 'e').textContent = errMsg(e); b.disabled = false; });
+        };
+      }
+      if (!session) return paint({ can: false, why: 'signin' });
+      rpc('suggestion_status').then(paint).catch(function () { el.remove(); });
+    }, 300);
+    return '<section class="card suggest" id="' + id + '"></section>';
+  }
+
   /* one-time floating hint per page */
   function guide(target, text) {
     if (!target) return;
@@ -714,6 +761,7 @@
         (r.units && r.units.length > 1 ? '<h3 style="margin-top:18px">By unit</h3>' + unitBars(r.units, 'ok') : '') +
         '<div class="row" style="margin-top:18px">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/" data-link>Practise again</a><a class="btn ghost" href="/me" data-link>My dashboard</a>') + '</div></div>' +
         (rev ? '<h2 style="margin-top:28px">Learn from your mistakes</h2><p class="small muted">Questions you missed, with the right answer.</p>' + rev : '<div class="card center"><h2>Perfect score!</h2><p class="muted">Every answer was correct.</p></div>') + '</div>');
+      var rv = q('.stack'); if (rv) rv.insertAdjacentHTML('beforeend', suggestBox());
       renderMath($view);
       $view.querySelectorAll('.rfb').forEach(function (box) {
         var no = +box.getAttribute('data-no'), rating = null, flags = [], chips = box.querySelector('.chips');
@@ -765,7 +813,7 @@
         (d.units && d.units.length ? '<section class="card"><h3>Accuracy by unit</h3>' + unitBars(d.units) + '</section>' : '') +
         (weak ? '<section class="card"><h3>Focus areas</h3><p class="small muted">Your weakest topics first. Practise these next.</p><div class="bars">' + weak + '</div></section>' : '') +
         '<section class="card"><div class="spread"><h2 style="margin:0">History</h2></div><div class="list" style="margin-top:8px">' + hist + '</div></section>' +
-        boardCard(board, 'Top performers') + shareBar(location.origin + '/', 'I practise with VKV Sir Test Lab. Free quizzes with instant results:', 'Invite friends:') + '</div>');
+        suggestBox() + boardCard(board, 'Top performers') + shareBar(location.origin + '/', 'I practise with VKV Sir Test Lab. Free quizzes with instant results:', 'Invite friends:') + '</div>');
       mountCatalog(q('#cat'));
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
@@ -826,13 +874,27 @@
     if (!session) return go('/login?next=/admin', true);
     if (!profile || !profile.is_admin) { h('<div class="narrow card center"><h2>Admins only</h2><p class="muted">This area is for teachers and admins.</p></div>'); return; }
     var tab = new URLSearchParams(location.search).get('tab') || 'overview';
-    var tabs = [['overview', 'Live'], ['questions', 'Questions'], ['students', 'Students'], ['tests', 'Tests'], ['results', 'Results'], ['groups', 'Groups'], ['links', 'Share links']];
+    var tabs = [['overview', 'Live'], ['questions', 'Questions'], ['students', 'Students'], ['tests', 'Tests'], ['results', 'Results'], ['groups', 'Groups'], ['suggest', 'Suggestions'], ['links', 'Share links']];
     h('<div class="stack"><div class="spread"><div><p class="eyebrow">Admin</p><h1>Control room</h1></div></div>' +
       '<div class="tabs">' + tabs.map(function (t) { return '<a href="/admin?tab=' + t[0] + '" data-link class="' + (t[0] === tab ? 'on' : '') + '">' + t[1] + '</a>'; }).join('') + '</div><div id="adm"></div></div>');
     var box = q('#adm');
-    ({ overview: admOverview, questions: admQuestions, students: admStudents, tests: admTests, results: admResults, links: admLinks, groups: admGroups }[tab] || admOverview)(box);
+    ({ overview: admOverview, questions: admQuestions, students: admStudents, tests: admTests, results: admResults, links: admLinks, groups: admGroups, suggest: admSuggest }[tab] || admOverview)(box);
   }
 
+  function admSuggest(box) {
+    var KN = { topic: 'Topic / subject', exam: 'Exam', interview: 'Company / interview', idea: 'Idea' };
+    function load() {
+      rpc('admin_suggestions').then(function (list) {
+        box.innerHTML = '<p class="small muted">Sorted by the most active students first. Mark items as Planned or Done to keep track.</p>' + (list.length ? list.map(function (x) {
+          return '<div class="card" style="padding:14px;margin-bottom:10px;opacity:' + (x.status === 'done' ? .55 : 1) + '"><div class="spread small"><span><b>' + esc(x.name) + '</b> &middot; ' + esc(x.email || '') + ' &middot; <span class="pill">' + x.tests + ' tests</span></span><span>' + new Date(x.at).toLocaleDateString('en-IN') + '</span></div>' +
+            '<p style="margin:8px 0"><span class="pill accent">' + esc(KN[x.kind] || x.kind) + '</span> ' + esc(x.body) + '</p>' +
+            '<div class="row small">' + ['new', 'planned', 'done'].map(function (st) { return '<button class="chip sel" data-id="' + x.id + '" data-st="' + st + '" aria-pressed="' + (x.status === st) + '">' + st + '</button>'; }).join('') + '</div></div>';
+        }).join('') : '<p class="muted">No suggestions yet.</p>');
+        box.onclick = function (e) { var b = e.target.closest('[data-st]'); if (!b) return; rpc('admin_suggestion_done', { p_id: +b.getAttribute('data-id'), p_status: b.getAttribute('data-st') }).then(load); };
+      }).catch(function (e) { box.innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; });
+    }
+    load();
+  }
   function admOverview(box) {
     setTimeout(function () { rpc('admin_reported_count').then(function (n) { var e = q('#rep-n'); if (e) e.textContent = n || 0; }).catch(function () {}); }, 900);
     function load() {
