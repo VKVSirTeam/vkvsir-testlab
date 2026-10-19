@@ -263,3 +263,12 @@ body.modal-open{overflow:hidden}
 .sitebar .sm{display:none}
 @media(max-width:600px){.sitebar{flex-wrap:nowrap;font-size:13px;padding:6px 10px;gap:8px}.sitebar .lg{display:none}.sitebar .sm{display:inline}.sitebar a{padding:3px 12px}
  .startbar{gap:8px;padding:10px 12px}.startbar>div:first-child{flex-basis:100%}.startbar .seg.mini{flex:1;display:flex}.startbar .seg.mini button{flex:1;padding:6px 4px;min-height:34px;font-size:13px}.startbar #sgo{flex:1 1 100%;min-height:42px}}
+.sbtop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-basis:100%}
+.linkbtn{background:none;border:0;color:#b4531a;font-weight:700;cursor:pointer;text-decoration:underline;padding:4px}
+.snames{display:flex;flex-wrap:wrap;gap:6px;flex-basis:100%;max-height:74px;overflow:auto}
+.snm{font-size:13px;background:rgba(14,107,92,.09);color:#0e6b5c;border-radius:999px;padding:3px 10px}
+.sbrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;flex-basis:100%}
+.startbar #smi,.startbar .err{flex-basis:100%;margin:0}
+.blurred{filter:blur(2px);opacity:.6;pointer-events:none;user-select:none}
+.suggest textarea{width:100%;margin-top:10px;resize:vertical}
+@media(max-width:600px){.sbrow .seg.mini{flex:1 1 100%}}
