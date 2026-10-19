@@ -83,6 +83,7 @@
     if (p === '/profile') return viewProfile();
     if (p === '/me') return viewDashboard();
     if (p === '/admin') return viewAdmin();
+    if (p === '/disclaimer') return viewDisclaimer();
     if ((m = p.match(/^\/p\/([a-z0-9]+)(?:\/(\d+))?(?:\/([a-z0-9-]+))?$/i))) return viewFocus(m[1], m[2], m[3]);
     if ((m = p.match(/^\/t\/([a-z0-9-]+)$/))) return viewTest(m[1]);
     if ((m = p.match(/^\/exam\/([0-9a-f-]{36})$/))) return viewExam(m[1]);
@@ -194,6 +195,28 @@
       guide(q('#tr0 summary'), 'Tap a track to open it, then tick what you want to practise');
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p><button class="btn" onclick="location.reload()">Try again</button></div>'); });
   }
+
+  /* ---------- disclaimer & terms ---------- */
+  function viewDisclaimer() {
+    setNav('');
+    var S = [
+      ['1. Purpose of this platform', 'VKV Sir Test Lab (test.vkvsir.com) is a free, educational practice platform. All questions, options, answer keys, explanations, scores, ranks and analyses are provided solely to help learners practise and self-assess. They do not constitute an official examination, assessment, certification, or a statement of any examining body.'],
+      ['2. No warranty of accuracy', 'Content is prepared and reviewed with reasonable care; however, errors, omissions, ambiguities or differences of interpretation may exist. Answer keys and explanations are provided on an "as is" and "as available" basis, without any warranty, express or implied, as to accuracy, completeness, currency or fitness for any purpose.'],
+      ['3. Not a final or authoritative answer', 'An answer marked "correct" on this platform is not final, conclusive or binding. It may differ from, or be contradicted by, textbooks, reference books, standards, codes, official answer keys, notifications, or the decision of any examining authority, university, board or recruiting body. In every case the official source shall prevail. No user may cite, rely upon, or claim any answer from this platform as authoritative or as evidence in any dispute, representation, re-evaluation, objection or legal proceeding.'],
+      ['4. Verify with standard material', 'Users are advised to independently verify every concept, formula, value, unit, data and answer with standard textbooks, reference books, relevant codes/standards, syllabus documents and official notifications before relying on them for any examination, academic, professional or practical purpose.'],
+      ['5. Exam patterns and names', 'Names of examinations, universities, boards, organisations or companies are used only to describe the nature or level of practice. Questions are not official, previous-year or leaked papers unless expressly stated, and no affiliation, endorsement or sponsorship is implied.'],
+      ['6. Scores and rankings', 'Scores, leaderboards, timings and analyses are indicative only, may change as content is corrected, and do not predict or guarantee performance, selection or results in any examination or interview.'],
+      ['7. Reporting errors', 'If you believe a question or answer is incorrect, please use the report and rating options provided. Reports help us review and improve content; acceptance, correction or removal is at the sole discretion of the platform, and no claim, credit or compensation arises from a report.'],
+      ['8. Limitation of liability', 'To the maximum extent permitted by law, VKV Sir Test Lab, Dr. Vinod Kumar Verma and associated contributors shall not be liable for any direct, indirect, incidental or consequential loss, damage, claim or grievance arising from the use of, or reliance on, any content, answer, score or service of this platform.'],
+      ['9. Fair use and conduct', 'Content is for personal, non-commercial learning. Copying, scraping, republishing or redistributing questions, or misusing the platform, is not permitted. Accounts may be restricted for misuse, unfair means or attempts to manipulate scores or feedback.'],
+      ['10. Changes and acceptance', 'These terms may be updated at any time without prior notice; the version on this page applies. By accessing or using this platform, you acknowledge that you have read, understood and accepted this disclaimer and these terms. Any dispute shall be subject to the jurisdiction of courts at Ajmer, Rajasthan, India.']
+    ];
+    h('<div class="narrow stack legal"><div><p class="eyebrow">Legal</p><h1>Disclaimer &amp; terms of use</h1><p class="muted small">Last updated: 19 October 2026</p></div>' +
+      '<div class="card" style="border-left:4px solid var(--warn,#b4531a)"><p style="margin:0"><b>In short:</b> this is a free practice platform. Answers and explanations may contain errors and are <b>not final</b>. Always verify with standard textbooks and official sources; the official answer of any examining body always prevails.</p></div>' +
+      S.map(function (x) { return '<section><h3>' + x[0] + '</h3><p>' + x[1] + '</p></section>'; }).join('') +
+      '<p class="small muted">Questions about these terms: <a href="https://mail.google.com/mail/?view=cm&fs=1&to=vinodvermavkvsir@gmail.com&su=Test%20Lab%20disclaimer%20query" target="_blank" rel="noopener">vinodvermavkvsir@gmail.com</a></p></div>');
+  }
+
   /* ---------- suggestions ---------- */
   var SKINDS = [['topic', 'Topic / subject'], ['exam', 'Exam'], ['interview', 'Company / interview'], ['idea', 'Other idea']];
   function suggestBox() {
@@ -761,7 +784,7 @@
         (r.units && r.units.length > 1 ? '<h3 style="margin-top:18px">By unit</h3>' + unitBars(r.units, 'ok') : '') +
         '<div class="row" style="margin-top:18px">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/" data-link>Practise again</a><a class="btn ghost" href="/me" data-link>My dashboard</a>') + '</div></div>' +
         (rev ? '<h2 style="margin-top:28px">Learn from your mistakes</h2><p class="small muted">Questions you missed, with the right answer.</p>' + rev : '<div class="card center"><h2>Perfect score!</h2><p class="muted">Every answer was correct.</p></div>') + '</div>');
-      var rv = q('.stack'); if (rv) rv.insertAdjacentHTML('beforeend', suggestBox());
+      var rv = q('.stack'); if (rv) rv.insertAdjacentHTML('beforeend', '<p class="small muted" style="text-align:center;margin:4px 0 0">Answers are for practice and may contain errors; verify with standard books and official sources. <a href="/disclaimer" data-link>Disclaimer</a></p>' + suggestBox());
       renderMath($view);
       $view.querySelectorAll('.rfb').forEach(function (box) {
         var no = +box.getAttribute('data-no'), rating = null, flags = [], chips = box.querySelector('.chips');
