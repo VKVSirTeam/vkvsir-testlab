@@ -96,25 +96,100 @@
   function nextParam() { var n = new URLSearchParams(location.search).get('next'); return n && n.charAt(0) === '/' ? n : '/me'; }
 
   /* ---------- home ---------- */
+  /* ---------- home: three expandable tracks with a tick-box tree ---------- */
+  var TRACKS = [
+    { k: 'foundation', ic: '📘', t: 'Fundamentals', d: 'Unit and topic MCQs for semester exams, practicals and viva: Diploma, UG, PG and PhD.' },
+    { k: 'competitive', ic: '🏆', t: 'Competitive exams', d: 'GATE, ESE, PSU, ISRO, RTO/MVI, SSC, aptitude, reasoning and more, by level and domain.' },
+    { k: 'career', ic: '🚀', t: 'Interview & career', d: 'Job, interview and role-switch preparation for freshers to senior professionals.' }
+  ];
   function viewHome() {
     setNav('home'); loading();
-    Promise.all([rpc('list_tests'), rpc('leaderboard', { p_subject: null })]).then(function (r) {
-      var tests = r[0] || [], board = r[1] || [];
-      var cards = tests.map(function (t) {
-        return '<article class="card test-card"><div class="row"><span class="pill accent">' + esc(t.subject) + '</span>' +
-          '<span class="pill">' + (t.mode === 'exam' ? 'Exam' : 'Practice') + '</span></div>' +
-          '<h3>' + esc(t.title) + '</h3><p class="muted small">' + esc(t.description || '') + '</p>' +
-          '<p class="small muted">Choose ' + t.durations.join(' / ') + ' minutes &middot; ' + t.sec_per_q + ' s per question</p>' +
-          '<a class="btn block" href="/t/' + esc(t.slug) + '" data-link>Start</a></article>';
-      }).join('') || '<div class="card muted">New tests are on the way.</div>';
-      h('<section class="hero"><p class="eyebrow">Free practice by VKV Sir</p>' +
-        '<h1>Practice the way <em>examiners</em> think.</h1>' +
-        '<p class="muted" style="max-width:620px">Every paper is freshly balanced across units and difficulty. One question at a time, a gentle timer, instant results and a dashboard that shows exactly what to revise.</p>' +
-        shareBar(location.origin + '/', 'Free practice quizzes with instant results by VKV Sir:', 'Invite friends:') + '</section>' +
-        '<h2 style="margin-top:28px">Available tests</h2><div class="grid">' + cards + '</div>' +
-        '<div id="cat"></div>' + boardCard(board, 'Top performers'));
-      mountCatalog(q('#cat'));
+    Promise.all([rpc('catalog').catch(function () { return []; }), rpc('list_tests').catch(function () { return []; }),
+      sb.from('catalog').select('track,grp,title,description,subject_id,sort').eq('active', true).order('sort').then(function (r) { return r.data || []; }, function () { return []; }),
+      rpc('leaderboard', { p_subject: null }).catch(function () { return []; })]).then(function (r) {
+      var cat = r[0] || [], tests = r[1] || [], extra = r[2] || [], board = r[3] || [];
+      var sel = {}; // key "S|U|T" -> {s,u,t}
+      function trackOf(s) { return s.category === 'Exam' ? 'competitive' : 'foundation'; }
+      function chk(id, label, extraCls, dis) { return '<label class="tchk' + (extraCls || '') + '"><input type="checkbox" data-k="' + esc(id) + '"' + (dis ? ' disabled' : '') + '><span>' + label + '</span></label>'; }
+      function subjNode(s) {
+        return '<details class="tn"><summary><span class="caret"></span>' + chk(s.id, '<b>' + esc(s.name) + '</b>', ' lvl1', !s.durations.length) + '</summary><div class="tk">' +
+          s.units.map(function (u) {
+            var key = s.id + '|' + u.unit, many = u.topics.filter(function (t) { return t.durations.length; }).length >= 2;
+            return '<details class="tn"><summary><span class="caret"' + (u.topics.length ? '' : ' style="visibility:hidden"') + '></span>' + chk(key, 'Unit ' + u.unit + ': ' + esc(u.name), '', !u.durations.length) + '</summary>' +
+              (many ? '<div class="tk">' + u.topics.map(function (t) { return '<div class="leaf">' + chk(key + '|' + t.id, esc(t.name) + (t.new ? ' <span class="badge">New</span>' : ''), '', !t.durations.length) + '</div>'; }).join('') + '</div>' : '') + '</details>';
+          }).join('') + '</div></details>';
+      }
+      function ghost(rows) { return rows.length ? '<div class="ghosts">' + rows.map(function (x) { return '<span>' + esc(x.title) + '</span>'; }).join('') + '<span>…and many more</span></div>' : ''; }
+      var live = {}; cat.forEach(function (s) { live[s.id] = 1; });
+      var tracksHtml = TRACKS.map(function (tr, i) {
+        var subs = cat.filter(function (s) { return trackOf(s) === tr.k; });
+        var more = extra.filter(function (x) { return x.track === tr.k && !(x.subject_id && live[x.subject_id]); });
+        var rt = tr.k === 'competitive' ? tests.filter(function (t) { return !/-custom$/.test(t.slug); }) : [];
+        var body = (subs.length ? '<div class="tree">' + subs.map(subjNode).join('') + '</div>' : '') +
+          (rt.length ? '<p class="f" style="margin-top:14px">Ready-made tests</p><div class="rtl">' + rt.map(function (t) { return '<a href="/t/' + esc(t.slug) + '" data-link>' + esc(t.title) + ' <span>&rarr;</span></a>'; }).join('') + '</div>' : '') +
+          ghost(more);
+        return '<details class="trk ' + tr.k + '"' + (i === 0 ? ' id="tr0"' : '') + '><summary><span class="tic">' + tr.ic + '</span><span class="tt"><b>' + tr.t + '</b><small>' + tr.d + '</small></span><span class="tplus" aria-hidden="true"></span></summary><div class="tbody">' + body + '</div></details>';
+      }).join('');
+      h('<section class="hero" style="padding-bottom:6px"><p class="eyebrow">Free practice by VKV Sir</p><h1>Practice the way <em>examiners</em> think.</h1>' +
+        '<p class="muted" style="max-width:620px">Open a track, tick the subjects, units or topics you want, choose the time and start. Every paper is freshly balanced, with instant results.</p></section>' +
+        '<div class="tracks">' + tracksHtml + '</div>' +
+        '<div class="startbar" id="sbar" hidden><div><b id="sn"></b><span class="small muted" id="sd"></span></div><div class="seg mini" id="sdur">' + [5, 10, 15, 30].map(function (d, k) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (k === 1) + '">' + d + ' min</button>'; }).join('') + '</div><button class="btn" id="sgo">' + (session ? 'Start practice' : 'Sign in to start') + '</button><div class="err" id="se" role="alert"></div></div>' +
+        shareBar(location.origin + '/', 'Free practice quizzes with instant results by VKV Sir:', 'Invite friends:') + boardCard(board, 'Top performers'));
+      var dur = 10;
+      function selection() {
+        var out = [], keys = Object.keys(sel);
+        keys.forEach(function (k) {
+          var p = k.split('|');
+          if (p.length === 3 && (sel[p[0]] || sel[p[0] + '|' + p[1]])) return;
+          if (p.length === 2 && sel[p[0]]) return;
+          out.push(p.length === 1 ? { s: p[0] } : p.length === 2 ? { s: p[0], u: +p[1] } : { s: p[0], u: +p[1], t: p[2] });
+        });
+        return out;
+      }
+      function refresh() {
+        var s = selection(), bar = q('#sbar');
+        bar.hidden = !s.length;
+        q('#sn').textContent = s.length ? s.length + (s.length === 1 ? ' selection' : ' selections') + ' ready' : '';
+        q('#sd').textContent = s.length ? ' · ' + s.map(function (x) { return x.t ? 'topic' : x.u ? 'unit ' + x.u : 'full ' + x.s; }).slice(0, 4).join(', ') + (s.length > 4 ? '…' : '') : '';
+      }
+      if ($view._treeBound) { $view.removeEventListener('change', $view._treeChange); $view.removeEventListener('click', $view._treeClick, true); }
+      $view._treeBound = true;
+      $view.addEventListener('change', $view._treeChange = function (e) {
+        var c = e.target; if (!c.matches || !c.matches('.tchk input')) return;
+        var k = c.getAttribute('data-k');
+        if (c.checked) sel[k] = 1; else delete sel[k];
+        var node = c.closest('details');
+        if (node && c.closest('summary')) node.querySelectorAll('.tk input:not([disabled])').forEach(function (x) { x.checked = c.checked; var kk = x.getAttribute('data-k'); if (c.checked) sel[kk] = 1; else delete sel[kk]; });
+        refresh();
+      });
+      $view.addEventListener('click', $view._treeClick = function (e) {
+        var lab = e.target.closest('summary .tchk'); if (!lab) return;
+        e.preventDefault();
+        var inp = lab.querySelector('input'); if (inp.disabled) return;
+        inp.checked = !inp.checked; inp.dispatchEvent(new Event('change', { bubbles: true }));
+      }, true);
+      q('#sdur').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; dur = +b.getAttribute('data-d'); this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); };
+      q('#sgo').onclick = function () {
+        if (!requireAuth(location.pathname)) return;
+        var g = this, s = selection(); g.disabled = true; g.textContent = 'Preparing your paper…'; q('#se').textContent = '';
+        rpc('start_multi', { p_sel: s, p_duration: dur }).then(function (v) { go('/exam/' + v.attempt); })
+          .catch(function (e) { var m = errMsg(e); if (m === 'PROFILE_INCOMPLETE') return go('/profile?next=' + location.pathname); q('#se').textContent = lockText(m); g.disabled = false; g.textContent = 'Start practice'; });
+      };
+      guide(q('#tr0 summary'), 'Tap a track to open it, then tick what you want to practise');
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p><button class="btn" onclick="location.reload()">Try again</button></div>'); });
+  }
+  /* one-time floating hint per page */
+  function guide(target, text) {
+    if (!target) return;
+    var key = 'vkv-guide:' + location.pathname;
+    try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch (e) { return; }
+    var tip = document.createElement('div'); tip.className = 'guide-tip'; tip.innerHTML = '<span class="ga">&#8593;</span>' + esc(text);
+    document.body.appendChild(tip);
+    function place() { var r = target.getBoundingClientRect(); tip.style.top = (r.bottom + window.scrollY + 10) + 'px'; tip.style.left = Math.max(12, r.left + window.scrollX + 18) + 'px'; }
+    place(); window.addEventListener('resize', place);
+    target.classList.add('pulse');
+    setTimeout(function () { tip.classList.add('out'); target.classList.remove('pulse'); setTimeout(function () { tip.remove(); }, 600); }, 6500);
+    target.addEventListener('click', function () { tip.remove(); target.classList.remove('pulse'); }, { once: true });
   }
   function boardCard(board, title) {
     if (!board || !board.length) return '';
@@ -228,6 +303,7 @@
     rpc('test_info', { p_slug: slug }).then(function (t) {
       if (t) setTimeout(function () { rpc('leaderboard', { p_subject: null, p_test: slug }).then(function (b) { var n = q('.narrow'); if (n && b && b.length) n.insertAdjacentHTML('beforeend', boardCard(b, 'Top performers in this test')); }).catch(function () {}); }, 600);
       if (!t) { h('<div class="narrow card center"><h2>Test not found</h2><p class="muted">It may have been closed.</p><a class="btn" href="/" data-link>See all tests</a></div>'); return; }
+      setTimeout(function () { guide(q('#seg'), 'Choose how much time you have, then press Start'); }, 400);
       var dur = t.durations[Math.min(1, t.durations.length - 1)];
       var opens = t.open_at && new Date(t.open_at) > new Date();
       var segs = t.durations.map(function (d) {
