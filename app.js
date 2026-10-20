@@ -98,6 +98,34 @@
 
   /* ---------- home ---------- */
   /* ---------- home: three expandable tracks with a tick-box tree ---------- */
+  var WA_I = '<svg viewBox="0 0 32 32" width="20" height="20"><path fill="#25D366" d="M16 3C9 3 3.3 8.6 3.3 15.6c0 2.4.7 4.6 1.9 6.6L3 29l7-2.2c1.9 1 4 1.6 6.1 1.6 7 0 12.7-5.7 12.7-12.7S23 3 16 3z"/><path fill="#fff" d="M22.6 18.9c-.3-.2-2-1-2.3-1.1-.3-.1-.5-.2-.8.2-.2.3-.9 1.1-1.1 1.3-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.7-1.7-1-.9-1.7-2-1.9-2.3-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.4 0-.6l-1-2.5c-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.4 1.4 3.6c.2.2 2.4 3.7 5.9 5.2.8.4 1.5.6 2 .7.8.3 1.6.2 2.2.1.7-.1 2-.8 2.3-1.6.3-.8.3-1.5.2-1.6-.1-.1-.3-.2-.6-.4z"/></svg>';
+  var FOLLOW = [
+    ['WhatsApp channel', 'https://whatsapp.com/channel/0029Va5ka1rFHWq4y4OcYy3U', 'wa', WA_I],
+    ['YouTube', 'https://www.youtube.com/@vkvsirdotcom?sub_confirmation=1', 'yt', '<svg viewBox="0 0 24 24" width="20" height="20"><path fill="#FF0000" d="M23 7.2a3 3 0 0 0-2.1-2.1C19 4.6 12 4.6 12 4.6s-7 0-8.9.5A3 3 0 0 0 1 7.2 31 31 0 0 0 .5 12a31 31 0 0 0 .5 4.8 3 3 0 0 0 2.1 2.1c1.9.5 8.9.5 8.9.5s7 0 8.9-.5a3 3 0 0 0 2.1-2.1 31 31 0 0 0 .5-4.8 31 31 0 0 0-.5-4.8z"/><path fill="#fff" d="M9.8 15.2 15.6 12 9.8 8.8z"/></svg>'],
+    ['Telegram', 'https://t.me/vkvsir', 'tg', '<svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="11" fill="#229ED9"/><path fill="#fff" d="M5.6 11.7 17 7.3c.5-.2 1 .1.8.9l-1.9 9c-.1.6-.5.8-1 .5l-2.9-2.1-1.4 1.4c-.2.2-.3.3-.6.3l.2-3 5.4-4.9c.2-.2 0-.3-.3-.1l-6.7 4.2-2.9-.9c-.6-.2-.6-.6.1-.9z"/></svg>'],
+    ['Instagram', 'https://www.instagram.com/vkvsir', 'ig', '<svg viewBox="0 0 24 24" width="20" height="20"><defs><linearGradient id="igg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#feda75"/><stop offset=".5" stop-color="#d62976"/><stop offset="1" stop-color="#4f5bd5"/></linearGradient></defs><rect x="2" y="2" width="20" height="20" rx="6" fill="url(#igg)"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="#fff" stroke-width="2"/><circle cx="17.3" cy="6.7" r="1.2" fill="#fff"/></svg>'],
+    ['LinkedIn', 'https://www.linkedin.com/in/vkvsir', 'li', '<svg viewBox="0 0 24 24" width="20" height="20"><rect width="24" height="24" rx="4" fill="#0A66C2"/><path fill="#fff" d="M6.9 9.6h2.6V18H6.9zM8.2 5.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM11.2 9.6h2.5v1.2c.4-.7 1.2-1.4 2.6-1.4 2.7 0 3.2 1.8 3.2 4.1V18h-2.6v-4c0-1 0-2.2-1.4-2.2s-1.6 1-1.6 2.1V18h-2.6z"/></svg>'],
+    ['Facebook', 'https://www.facebook.com/vkvsir', 'fb', '<svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="11" fill="#1877F2"/><path fill="#fff" d="M13.3 19v-6h2l.3-2.4h-2.3V9.2c0-.7.2-1.2 1.2-1.2h1.2V5.9c-.2 0-1-.1-1.8-.1-1.8 0-3 1.1-3 3.1v1.7H8.9V13h2V19z"/></svg>'],
+    ['vkvsir.com', 'https://www.vkvsir.com', 'web', '<svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="10" fill="none" stroke="#0e6b5c" stroke-width="2"/><path d="M2 12h20M12 2c3 3 3 17 0 20M12 2c-3 3-3 17 0 20" fill="none" stroke="#0e6b5c" stroke-width="1.6"/></svg>']
+  ];
+  /* guided tour: shown once for new visitors */
+  function tour(steps, key) {
+    try { if (localStorage.getItem(key)) return; } catch (e) { return; }
+    steps = steps.filter(function (x) { return document.querySelector(x[0]); }); if (!steps.length) return;
+    var i = 0, ov = document.createElement('div'); ov.className = 'tour'; document.body.appendChild(ov);
+    function done() { try { localStorage.setItem(key, '1'); } catch (e) {} ov.remove(); document.querySelectorAll('.tour-on').forEach(function (x) { x.classList.remove('tour-on'); }); }
+    function show() {
+      document.querySelectorAll('.tour-on').forEach(function (x) { x.classList.remove('tour-on'); });
+      var el = document.querySelector(steps[i][0]); el.classList.add('tour-on'); el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(function () {
+        var r = el.getBoundingClientRect(), below = r.bottom + 190 < innerHeight;
+        ov.innerHTML = '<div class="tour-tip" style="top:' + (below ? r.bottom + scrollY + 14 : r.top + scrollY - 14) + 'px;left:' + Math.max(12, Math.min(r.left + scrollX, innerWidth - 312)) + 'px;' + (below ? '' : 'transform:translateY(-100%)') + '"><span class="tour-ar ' + (below ? 'up' : 'down') + '"></span><small>Step ' + (i + 1) + ' of ' + steps.length + '</small><b>' + steps[i][1] + '</b><p>' + steps[i][2] + '</p><div class="tour-b"><button class="linkbtn" data-t="skip">Skip tour</button><button class="btn" data-t="next">' + (i === steps.length - 1 ? 'Got it 👍' : 'Next →') + '</button></div></div>';
+      }, 350);
+    }
+    ov.onclick = function (e) { var b = e.target.closest('[data-t]'); if (!b) return; if (b.getAttribute('data-t') === 'skip' || i === steps.length - 1) return done(); i++; show(); };
+    show();
+  }
+  setTimeout(function () { var ff = document.getElementById('ff'); if (ff && !ff.innerHTML) ff.innerHTML = '<span class="ffl">Follow VKV Sir</span>' + FOLLOW.map(function (f) { return '<a href="' + f[1] + '" target="_blank" rel="noopener" title="' + f[0] + '" aria-label="' + f[0] + '" class="fi ' + f[2] + '">' + f[3] + '</a>'; }).join(''); }, 0);
   var TRACKS = [
     { k: 'foundation', ic: '📘', t: 'Fundamentals', d: 'Unit and topic MCQs for semester exams, practicals and viva: Diploma, UG, PG and PhD.' },
     { k: 'competitive', ic: '🏆', t: 'Competitive exams', d: 'GATE, ESE, PSU, ISRO, RTO/MVI, SSC, aptitude, reasoning and more, by level and domain.' },
@@ -133,9 +161,32 @@
           ghost(more);
         return '<details class="trk ' + tr.k + '"' + (i === 0 ? ' id="tr0"' : '') + '><summary><span class="tic">' + tr.ic + '</span><span class="tt"><b>' + tr.t + '</b><small>' + tr.d + '</small></span><span class="tplus" aria-hidden="true"></span></summary><div class="tbody">' + body + '</div></details>';
       }).join('');
-      h('<section class="hero" style="padding-bottom:6px"><p class="eyebrow">Free practice by VKV Sir</p><h1>Practice the way <em>examiners</em> think.</h1>' +
-        '<p class="muted" style="max-width:620px">Open a track, tick the subjects, units or topics you want, choose the time and start. Every paper is freshly balanced, with instant results.</p></section>' +
-        '<div class="tracks">' + tracksHtml + '</div>' +
+      h('<section class="hx"><div class="hx-l"><p class="eyebrow">Free practice platform by VKV Sir</p><h1>Practise smarter for <em>exams, viva &amp; interviews</em>.</h1>' +
+        '<p class="hx-sub">Pick any subject, unit or topic and get a freshly balanced paper in seconds, with fair timing, instant results and clear explanations.</p>' +
+        '<ul class="hx-pts"><li><i>✓</i>Free forever</li><li><i>✓</i>Instant results &amp; explanations</li><li><i>✓</i>Built by Dr. Vinod Kumar Verma</li></ul>' +
+        '<div class="hx-cta"><button class="btn" id="go-start">▶ Start practising</button><a class="btn ghost" href="#how">How it works</a></div>' +
+        '<div class="hx-stats"><span><b>Thousands</b> of questions</span><span><b>3</b> learning tracks</span><span><b>Fresh</b> paper every time</span></div></div>' +
+        '<div class="hx-r" aria-hidden="true"><div class="mockq"><div class="mq-top"><span>Automobile Engg · Unit 4</span><span class="mq-t">⏱ 0:42</span></div><div class="mq-bar"><i></i></div><p class="mq-q">Which gearbox uses dog clutches to engage gears?</p><div class="mq-o">A&nbsp; Sliding mesh</div><div class="mq-o ok">B&nbsp; Constant mesh ✓</div><div class="mq-o">C&nbsp; Epicyclic</div><div class="mq-o">D&nbsp; Torque converter</div></div></div></section>' +
+        '<section class="how" id="how"><h2 class="sh2">How it works</h2><div class="steps3"><div><span>1</span><b>Choose</b><p>Open a track and tick a whole subject, some units or single topics.</p></div><div><span>2</span><b>Practise</b><p>Pick your time and mode. Every paper is freshly mixed from easy to hard.</p></div><div><span>3</span><b>Improve</b><p>See your score, correct answers and explanations. Report any doubtful question.</p></div></div></section>' +
+        '<h2 class="sh2" id="tracks-h">Choose what to practise</h2><div class="tracks">' + tracksHtml + '</div>' +
+        '<section><h2 class="sh2">Ways to practise</h2><div class="modes">' + [
+          ['📝', 'Fixed paper', 'A set number of questions with fair time for each, like a real exam.'],
+          ['⚡', 'Rapid fire', 'Questions keep coming until time runs out. Unlocks after you cover all topics of a unit.'],
+          ['🎯', 'Topic focus', 'Tick a single topic to master it before moving on.'],
+          ['🏆', 'Ready-made tests', 'Full mock papers for exams such as RTO / MVI.'],
+          ['👥', 'Group tests', 'Teachers can share one link so a whole class takes the same paper.'],
+          ['🚩', 'Report & rate', 'Flag doubtful questions; repeatedly reported ones are paused for review.']
+        ].map(function (m) { return '<div class="mode"><span class="mi">' + m[0] + '</span><b>' + m[1] + '</b><p>' + m[2] + '</p></div>'; }).join('') + '</div></section>' +
+        '<section class="sample"><h2 class="sh2">Try a sample question</h2><div class="card sq"><p class="mq-q">In an Ackermann steering mechanism, the correct steering condition is:</p>' +
+          ['cot φ − cot θ = w / l', 'cot φ + cot θ = w / l', 'tan φ − tan θ = w / l', 'sin φ − sin θ = w / l'].map(function (o, i) { return '<button class="sqo" data-ok="' + (i === 0) + '">' + 'ABCD'[i] + '&nbsp; ' + o + '</button>'; }).join('') +
+          '<p class="small muted sqx" hidden>✓ <b>cot φ − cot θ = w / l</b>, where φ and θ are the outer and inner wheel angles, w the kingpin centre distance and l the wheelbase. Want more like this? Open <b>Fundamentals → Automobile Engineering</b>.</p></div></section>' +
+        '<section class="ask" id="ask"><div><h2 class="sh2" style="margin:0 0 6px">Didn\'t find your exam or topic? Ask for it.</h2><p class="muted">Tell us the subject, exam, or the company and role you are preparing for. We build new question banks from these requests.</p>' +
+          '<a class="btn" href="' + (session ? '/me#suggest' : '/login?next=/me') + '" data-link>💡 Send your request</a><p class="small muted" style="margin-top:8px">Find the request box on <b>My dashboard</b> and below every result.</p></div>' +
+          '<div class="reqs"><p class="small muted" style="margin:0 0 8px">Examples of requests you can send:</p>' + [
+            ['📘', 'Add Heat Transfer for B.Tech semester 5'], ['🏆', 'GATE Mechanical previous-year style numericals'], ['💼', 'Interview prep for Infosys / TCS graduate engineer (fresher)'],
+            ['🚗', 'EV battery questions for Tata Motors R&amp;D role (2 yrs exp.)'], ['🧮', 'SSC JE aptitude &amp; reasoning practice'], ['🔧', 'Viva questions for Workshop Practice lab']
+          ].map(function (r) { return '<div class="req"><span>' + r[0] + '</span>"' + r[1] + '"</div>'; }).join('') + '</div></section>' +
+        '<section class="follow"><h2 class="sh2">Follow VKV Sir</h2><div class="fl">' + FOLLOW.map(function (f) { return '<a href="' + f[1] + '" target="_blank" rel="noopener" class="fbtn ' + f[2] + '">' + f[3] + '<span>' + f[0] + '</span></a>'; }).join('') + '</div></section>' +
         '<div class="startbar" id="sbar" hidden><div class="sbtop"><b id="sn"></b><button type="button" class="linkbtn" id="sclr">Clear all</button></div><div class="snames" id="sd"></div>' +
         '<div class="sbrow"><div class="seg mini" id="smode"><button type="button" data-m="fixed" aria-pressed="true">📝 Fixed paper</button><button type="button" data-m="rapid" aria-pressed="false">⚡ Rapid fire</button></div>' +
         '<div class="seg mini" id="sdur">' + [5, 10, 15, 30].map(function (d, k) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (k === 1) + '">' + d + ' min</button>'; }).join('') + '</div>' +
@@ -192,7 +243,15 @@
         call.then(function (v) { go('/exam/' + v.attempt); })
           .catch(function (e) { var m = errMsg(e); if (m === 'PROFILE_INCOMPLETE') return go('/profile?next=' + location.pathname); q('#se').textContent = lockText(m); g.disabled = false; g.textContent = 'Start practice'; });
       };
-      guide(q('#tr0 summary'), 'Tap a track to open it, then tick what you want to practise');
+      q('#go-start').onclick = function () { var t = q('#tr0'); t.open = true; t.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+      $view.querySelectorAll('.sqo').forEach(function (b) { b.onclick = function () { $view.querySelectorAll('.sqo').forEach(function (x) { x.disabled = true; x.classList.add(x.getAttribute('data-ok') === 'true' ? 'ok' : (x === b ? 'bad' : '')); }); q('.sqx').hidden = false; }; });
+      setTimeout(function () { tour([
+        ['.hx-cta', 'Welcome to VKV Sir Test Lab 👋', 'A free practice platform for semester exams, viva, competitive exams and interviews. Tap “Start practising” any time.'],
+        ['.tracks', 'Choose what to practise', 'Open a track, then expand a subject like folders. Tick a whole subject, some units or single topics.'],
+        ['.modes', 'Pick your style', 'Fixed paper works like a real exam. Rapid fire unlocks after you cover a unit, for fast revision.'],
+        ['#ask', 'Ask for what you need', 'Missing an exam, subject or interview topic? Send a short request and we will add it.'],
+        ['.follow', 'Stay updated', 'Follow on WhatsApp for openings, new tests and updates.']
+      ], 'vkv-tour-home'); }, 700);
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p><button class="btn" onclick="location.reload()">Try again</button></div>'); });
   }
 
@@ -245,7 +304,7 @@
       if (!session) return paint({ can: false, why: 'signin' });
       rpc('suggestion_status').then(paint).catch(function () { el.remove(); });
     }, 300);
-    return '<section class="card suggest" id="' + id + '"></section>';
+    return '<span id="suggest"></span><section class="card suggest" id="' + id + '"></section>';
   }
 
   /* one-time floating hint per page */
