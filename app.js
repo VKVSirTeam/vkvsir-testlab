@@ -50,7 +50,7 @@
   function setNav(active) {
     if (active !== undefined) navActive = active;
     active = navActive;
-    var html = '<a href="https://www.vkvsir.com" class="site-link" title="Go to vkvsir.com">&larr; vkvsir.com</a><a href="/" data-link class="' + (active === 'home' ? 'on' : '') + '">Tests</a>';
+    var html = '<a href="https://www.vkvsir.com" class="site-link" title="Go to vkvsir.com">&larr; vkvsir.com</a><a href="/" data-link class="' + (active === 'home' ? 'on' : '') + '">Tests</a><a href="/career" data-link class="' + (active === 'career' ? 'on' : '') + '">Job Prep</a>';
     if (session) {
       html += '<a href="/me" data-link class="' + (active === 'me' ? 'on' : '') + '">Dashboard</a>';
       if (profile && profile.is_admin) html += '<a href="/admin" data-link class="' + (active === 'admin' ? 'on' : '') + '">Admin</a>';
@@ -83,6 +83,9 @@
     if (p === '/profile') return viewProfile();
     if (p === '/me') return viewDashboard();
     if (p === '/admin') return viewAdmin();
+    if (p === '/career' || p === '/jobprep') return viewCareer();
+    if (p === '/admin/jobprep') return viewJpAdmin();
+    if (p === '/drill') return viewDrill();
     if (p === '/disclaimer') return viewDisclaimer();
     if ((m = p.match(/^\/p\/([a-z0-9]+)(?:\/(\d+))?(?:\/([a-z0-9-]+))?$/i))) return viewFocus(m[1], m[2], m[3]);
     if ((m = p.match(/^\/t\/([a-z0-9-]+)$/))) return viewTest(m[1]);
@@ -129,12 +132,12 @@
   var TRACKS = [
     { k: 'foundation', ic: '📘', t: 'Fundamentals', d: 'Unit and topic MCQs for semester exams, practicals and viva: Diploma, UG, PG and PhD.' },
     { k: 'competitive', ic: '🏆', t: 'Competitive exams', d: 'GATE, ESE, PSU, ISRO, RTO/MVI, SSC, aptitude, reasoning and more, by level and domain.' },
-    { k: 'career', ic: '🚀', t: 'Interview & career', d: 'Job, interview and role-switch preparation for freshers to senior professionals.' }
+    { k: 'career', ic: '🚀', t: 'Interview & career', d: 'Company-wise prep, job-profile plan, placement mock tests, aptitude, branch core and HR for freshers to experienced.' }
   ];
   function viewHome() {
     setNav('home'); loading();
     Promise.all([rpc('catalog').catch(function () { return []; }), rpc('list_tests').catch(function () { return []; }),
-      sb.from('catalog').select('track,grp,title,description,subject_id,sort').eq('active', true).order('sort').then(function (r) { return r.data || []; }, function () { return []; }),
+      sb.from('catalog').select('track,grp,subgrp,title,description,subject_id,status,url,sort').eq('active', true).order('sort').then(function (r) { return r.data || []; }, function () { return []; }),
       rpc('leaderboard', { p_subject: null }).catch(function () { return []; })]).then(function (r) {
       var cat = r[0] || [], tests = r[1] || [], extra = r[2] || [], board = r[3] || [];
       var sel = {}; // key "S|U|T" -> {s,u,t}
@@ -151,15 +154,37 @@
           }).join('') + '</div></details>';
       }
       function ghost(rows) { return rows.length ? '<div class="ghosts">' + rows.map(function (x) { return '<span>' + esc(x.title) + '</span>'; }).join('') + '<span>…and many more</span></div>' : ''; }
+      function linkGroups(rows) {
+        if (!rows.length) return '';
+        var m = {}, order = [];
+        rows.forEach(function (x) { var g = x.subgrp || x.grp || 'More'; if (!m[g]) { m[g] = []; order.push(g); } m[g].push(x); });
+        return '<p class="f tr-g">📚 Prepare by area</p>' + order.map(function (g) {
+          return '<details class="tgrp"' + (m[g].length <= 4 ? ' open' : '') + '><summary><b>' + esc(g) + '</b> <span class="small muted">(' + m[g].length + ')</span></summary><div class="tr-items">' + m[g].map(function (x) {
+            var href = x.url || ('/p/' + String(x.subject_id).toLowerCase());
+            return '<a class="tr-item" href="' + esc(href) + '" data-link><b>' + esc(x.title) + '</b>' + (x.description ? '<span class="small muted">' + esc(x.description) + '</span>' : '') + '<span class="pill good">Open →</span></a>';
+          }).join('') + '</div></details>';
+        }).join('');
+      }
+      function careerTop() {
+        return '<div class="tr-quick"><p class="f" style="margin:0 0 8px">🎯 Get your interview preparation plan</p>' +
+          '<div class="qf"><input class="in" id="qc" placeholder="Company (e.g. Bhagwati Machines, L&amp;T, TCS)"><select class="in" id="qb"><option value="">Branch</option><option value="ME">Mechanical</option><option value="AUTO">Automobile</option><option value="EE">Electrical</option><option value="ECE">Electronics &amp; Comm.</option><option value="CE">Civil</option><option value="IN">Instrumentation</option><option value="CSE">Computer Science / IT</option></select>' +
+          '<select class="in" id="ql"><option value="student">Final-year student</option><option value="fresher" selected>Fresher (0–1 yr)</option><option value="junior">2–4 years</option><option value="senior">5+ years</option></select>' +
+          '<input class="in" id="qr" placeholder="Job role / post (e.g. Design Engineer, GET)"><button class="btn" id="qgo" type="button">Build my plan</button></div>' +
+          '<p class="small muted" style="margin:6px 0 0">Have the full job post? Open the <a href="/career" data-link>full planner</a> and paste it for an exact match.</p></div>' +
+          '<div class="tr-items" style="margin-top:12px"><a class="tr-item tr-feature" href="/career" data-link><b>🎯 Job Prep planner</b><span class="small muted">Company + role + level → topics to master, software to learn, likely interview questions with answers.</span><span class="pill good">Open planner →</span></a>' +
+          '<a class="tr-item tr-feature" href="/drill" data-link><b>⚡ Unlimited aptitude drill</b><span class="small muted">Fresh numeric questions every time, no sign-in needed.</span><span class="pill good">Start drilling →</span></a></div>';
+      }
       var live = {}; cat.forEach(function (s) { live[s.id] = 1; });
       var tracksHtml = TRACKS.map(function (tr, i) {
         var subs = cat.filter(function (s) { return trackOf(s) === tr.k; });
         var more = extra.filter(function (x) { return x.track === tr.k && !(x.subject_id && live[x.subject_id]); });
-        var rt = tr.k === 'competitive' ? tests.filter(function (t) { return !/-custom$/.test(t.slug); }) : [];
-        var body = (subs.length ? '<div class="tree">' + subs.map(function (x) { return subjNode(x, tr.k); }).join('') + '</div>' : '') +
-          (rt.length ? '<p class="f" style="margin-top:14px">Ready-made tests</p><div class="rtl">' + rt.map(function (t) { return '<a href="/t/' + esc(t.slug) + '" data-link>' + esc(t.title) + ' <span>&rarr;</span></a>'; }).join('') + '</div>' : '') +
-          ghost(more);
-        return '<details class="trk ' + tr.k + '"' + (i === 0 ? ' id="tr0"' : '') + '><summary><span class="tic">' + tr.ic + '</span><span class="tt"><b>' + tr.t + '</b><small>' + tr.d + '</small></span><span class="tplus" aria-hidden="true"></span></summary><div class="tbody">' + body + '</div></details>';
+        var rt = tests.filter(function (t) { return !/-custom$/.test(t.slug) && (t.track || 'competitive') === tr.k; });
+        var linked = extra.filter(function (x) { return x.track === tr.k && (x.url || (x.subject_id && live[x.subject_id] && tr.k === 'career')); });
+        more = more.filter(function (x) { return linked.indexOf(x) < 0; });
+        var body = (tr.k === 'career' ? careerTop() : '') +
+          (subs.length ? '<div class="tree">' + subs.map(function (x) { return subjNode(x, tr.k); }).join('') + '</div>' : '') +
+          testsTree(rt) + linkGroups(linked) + ghost(more);
+        return '<details class="trk ' + tr.k + '"' + (i === 0 ? ' id="tr0"' : '') + (tr.k === 'career' ? ' open' : '') + '><summary><span class="tic">' + tr.ic + '</span><span class="tt"><b>' + tr.t + '</b><small>' + tr.d + '</small></span><span class="tplus" aria-hidden="true"></span></summary><div class="tbody">' + body + '</div></details>';
       }).join('');
       h('<section class="hx"><div class="hx-l"><p class="eyebrow">Free practice platform by VKV Sir</p><h1>Practise smarter for <em>exams, viva &amp; interviews</em>.</h1>' +
         '<p class="hx-sub">Pick any subject, unit or topic and get a freshly balanced paper in seconds, with fair timing, instant results and clear explanations.</p>' +
@@ -192,6 +217,12 @@
         '<div class="seg mini" id="sdur">' + [5, 10, 15, 30].map(function (d, k) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (k === 1) + '">' + d + ' min</button>'; }).join('') + '</div>' +
         '<button class="btn" id="sgo">' + (session ? 'Start practice' : 'Sign in to start') + '</button></div><p class="small muted" id="smi">Fixed paper: a set number of questions with fair time for each.</p><div class="err" id="se" role="alert"></div></div>' +
         shareBar(location.origin + '/', 'Free practice quizzes with instant results by VKV Sir:', 'Invite friends:') + boardCard(board, 'Top performers'));
+      var qg = q('#qgo');
+      if (qg) qg.onclick = function () {
+        var inp = { company: q('#qc').value.trim(), role: '', branch: q('#qb').value, level: q('#ql').value, text: q('#qr').value.trim() };
+        try { localStorage.setItem('jp_last', JSON.stringify(inp)); } catch (e) {}
+        go('/career?auto=1');
+      };
       var dur = 10, mode = 'fixed', hint1 = false, hint2 = false;
       function selection() {
         var out = [], keys = Object.keys(sel);
@@ -533,6 +564,219 @@
       };
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
+
+  /* ---------- career / job preparation planner ---------- */
+  var jpOpts = null;
+  function viewCareer() {
+    setNav('career'); loading();
+    var load = jpOpts ? Promise.resolve(jpOpts) : rpc('jp_options').then(function (o) { jpOpts = o; return o; });
+    load.then(function (o) {
+      var saved = {}; try { saved = JSON.parse(localStorage.getItem('jp_last') || '{}'); } catch (e) {}
+      var fams = {}; (o.roles || []).forEach(function (r) { (fams[r.family] = fams[r.family] || []).push(r); });
+      var roleOpts = '<option value="">Not sure: detect from the job post</option>' + Object.keys(fams).map(function (f) {
+        return '<optgroup label="' + esc(f) + '">' + fams[f].map(function (r) { return '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>'; }).join('') + '</optgroup>';
+      }).join('');
+      var brOpts = '<option value="">Select your branch</option>' + (o.branches || []).map(function (b) { return '<option value="' + esc(b.id) + '">' + esc(b.name) + '</option>'; }).join('');
+      var levels = [['student', 'Student', 'Still studying'], ['fresher', 'Fresher', '0 to 1 year'], ['junior', 'Experienced', '2 to 4 years'], ['senior', 'Senior', '5+ years']];
+      h('<section class="hero jp-hero"><p class="eyebrow">Career &amp; interview preparation</p><h1>Know exactly what to prepare for <em>your</em> target job.</h1>' +
+        '<p class="muted" style="max-width:680px">Tell us the company, role and branch, or paste the job post. You get a clear plan: the most important subjects and topics, what to refresh, software to learn, likely interview questions, and one-click practice for each topic.</p></section>' +
+        '<div class="card stack jp-form">' +
+        '<div class="two"><div><label class="f" for="jc">Company (optional)</label><input class="in" id="jc" list="jcl" placeholder="e.g. Tata Motors, Infosys, L&amp;T" autocomplete="off"><datalist id="jcl">' + (o.companies || []).map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist></div>' +
+        '<div><label class="f" for="jr">Job role</label><select class="in" id="jr">' + roleOpts + '</select></div></div>' +
+        '<div class="two"><div><label class="f" for="jb">Your branch / degree</label><select class="in" id="jb">' + brOpts + '</select></div>' +
+        '<div><span class="f">Your level</span><div class="seg" id="jl">' + levels.map(function (l) { return '<button type="button" data-l="' + l[0] + '" aria-pressed="false"><b>' + l[1] + '</b><span>' + l[2] + '</span></button>'; }).join('') + '</div></div></div>' +
+        '<div><label class="f" for="jt">Job post or description (optional, but gives the best result)</label><textarea class="in" id="jt" rows="6" placeholder="Paste the full job post text from LinkedIn, Naukri, the company careers page or the campus notice. Include skills, eligibility and responsibilities."></textarea>' +
+        '<p class="small muted" style="margin:6px 0 0">Tip: links cannot be opened automatically (LinkedIn and Naukri block it). Open the post, select all its text, copy and paste it here.</p></div>' +
+        '<div class="err" id="je" role="alert"></div><button class="btn block" id="jgo">Build my preparation plan</button></div>' +
+        '<div id="jout"></div>');
+      var level = saved.level || 'fresher';
+      function setLevel(v) { level = v; Array.prototype.forEach.call(q('#jl').children, function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-l') === v); }); }
+      setLevel(level);
+      q('#jl').onclick = function (e) { var b = e.target.closest('button'); if (b) setLevel(b.getAttribute('data-l')); };
+      if (saved.company) q('#jc').value = saved.company; if (saved.role) q('#jr').value = saved.role; if (saved.branch) q('#jb').value = saved.branch; if (saved.text) q('#jt').value = saved.text;
+      q('#jgo').onclick = function () {
+        var inp = { company: q('#jc').value.trim(), role: q('#jr').value, branch: q('#jb').value, level: level, text: q('#jt').value.trim() };
+        if (!inp.company && !inp.role && !inp.text && !inp.branch) { q('#je').textContent = 'Choose a role or branch, or paste a job post.'; return; }
+        q('#je').textContent = '';
+        try { localStorage.setItem('jp_last', JSON.stringify(inp)); } catch (e) {}
+        var b = this; b.disabled = true; b.textContent = 'Building your plan…';
+        rpc('jp_plan', { p_text: inp.text || null, p_company: inp.company || null, p_role: inp.role || null, p_branch: inp.branch || null, p_level: inp.level, p_industry: null })
+          .then(function (plan) { renderPlan(plan); b.disabled = false; b.textContent = 'Rebuild plan'; q('#jout').scrollIntoView({ behavior: 'smooth' }); })
+          .catch(function (e) { q('#je').textContent = errMsg(e); b.disabled = false; b.textContent = 'Build my preparation plan'; });
+      };
+      if (/auto=1/.test(location.search) && (saved.company || saved.text || saved.branch)) q('#jgo').click();
+    }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
+  }
+
+  function renderPlan(p) {
+    var lvlName = { student: 'Student', fresher: 'Fresher (0–1 yr)', junior: 'Experienced (2–4 yrs)', senior: 'Senior (5+ yrs)' }[p.level] || p.level;
+    var tiers = [[1, 'Most important', 'Interviewers are most likely to ask these. Master them first and practise until you score 80%+.', 'hi'],
+                 [2, 'Normal level', 'Commonly asked follow-ups and related areas. Aim for 70%+.', 'mid'],
+                 [3, 'Fundamentals & refresh', 'Basics behind the role, plus aptitude, HR and company research. Revise and keep them warm.', 'lo']];
+    var sk = p.skills || [], sw = p.software || [];
+    function practice(l) {
+      var label = esc(l.name || (l.s + ' unit ' + l.u));
+      if (l.q >= 10) return '<li><span>' + label + ' <span class="muted small">· ' + l.q + ' questions</span></span><a class="btn small-btn" href="/p/' + esc(String(l.s).toLowerCase()) + '/' + esc(l.u) + '" data-link>Practise</a></li>';
+      return '<li><span>' + label + '</span><span class="pill">Questions coming soon</span></li>';
+    }
+    function skillCard(s) {
+      return '<article class="card jp-skill"><div class="spread"><h3>' + esc(s.name) + '</h3><span class="pill">' + esc(s.area || '') + '</span></div>' +
+        (s.why ? '<p class="muted small" style="margin:4px 0 10px">' + esc(s.why) + '</p>' : '') +
+        (s.subtopics && s.subtopics.length ? '<p class="f" style="margin:0">Topics to cover</p><div class="chips">' + s.subtopics.map(function (t) { return '<span class="chip">' + esc(t) + '</span>'; }).join('') + '</div>' : '') +
+        (s.links && s.links.length ? '<p class="f" style="margin:12px 0 4px">Practise on VKV Test Lab</p><ul class="jp-links">' + s.links.map(practice).join('') + '</ul>' : '<p class="small muted" style="margin-top:10px">Prepare with your notes and real examples from your projects or internship.</p>') +
+        '</article>';
+    }
+    function swCard(w) {
+      return '<article class="card jp-skill"><div class="spread"><h3>' + esc(w.name) + '</h3><span class="pill ' + (w.tier === 1 ? 'accent' : '') + '">' + (w.tier === 1 ? 'Must know' : w.tier === 2 ? 'Good to know' : 'Awareness') + '</span></div>' +
+        '<p class="small" style="margin:4px 0 10px"><b>Target level:</b> ' + esc(w.target || '') + '</p>' +
+        (w.learn && w.learn.length ? '<p class="f" style="margin:0">What to learn</p><ul class="list small">' + w.learn.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
+        (w.questions && w.questions.length ? '<p class="f" style="margin:10px 0 0">Questions interviewers ask</p><ul class="list small">' + w.questions.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
+        (w.practical ? '<p class="small jp-task"><b>Practical task:</b> ' + esc(w.practical) + '</p>' : '') + '</article>';
+    }
+    var steps = [];
+    steps.push('<b>Understand the job.</b> ' + esc((p.role && p.role.summary) || '') + (p.company && p.company.products ? ' <b>' + esc(p.company.name) + '</b> makes: ' + esc(p.company.products) + '.' : ''));
+    if (p.level === 'student' || p.level === 'fresher') steps.push('<b>Clear the online test.</b> Practise aptitude, reasoning and English daily (30–45 minutes) until you score 70%+.');
+    steps.push('<b>Master the most important topics</b> listed below. Learn each topic, then take the practice quiz; repeat the weak ones.');
+    steps.push('<b>Strengthen the normal-level topics</b> once tier 1 scores are steady.');
+    steps.push('<b>Refresh fundamentals</b> one or two per day so basic questions never trip you.');
+    if (sw.length) steps.push('<b>Learn the software</b> to the target level and finish at least one practical task you can show or explain.');
+    steps.push('<b>Prepare HR answers and company knowledge.</b> Write your "tell me about yourself", two project stories, and three facts about the company.');
+    steps.push('<b>Final week:</b> take mixed timed quizzes daily, revise mistakes from your Dashboard, and rest well before the interview.');
+    var mix = p.mix || {};
+    var html = '<section class="stack" style="margin-top:28px">' +
+      '<div class="card jp-sum"><p class="eyebrow">Your preparation plan</p><h2 style="margin:4px 0">' + esc(p.role ? p.role.name : 'Your target role') + '</h2>' +
+      '<div class="chips">' + (p.company ? '<span class="chip">🏢 ' + esc(p.company.name) + '</span>' : '') + (p.industry ? '<span class="chip">🏭 ' + esc(p.industry.name) + '</span>' : '') +
+      (p.branch ? '<span class="chip">🎓 ' + esc(p.branch) + '</span>' : '') + '<span class="chip">📈 ' + esc(lvlName) + '</span></div>' +
+      (p.industry && p.industry.about ? '<p class="small muted" style="margin:10px 0 0">' + esc(p.industry.about) + '</p>' : '') +
+      '<p class="small" style="margin:10px 0 0"><b>Expected question level:</b> about ' + (mix.E || 0) + '% basic, ' + (mix.M || 0) + '% moderate, ' + (mix.H || 0) + '% advanced.</p>' +
+      (p.hits && p.hits.length ? '<p class="small" style="margin:6px 0 0"><b>Picked up from the job post:</b> ' + p.hits.map(esc).join(', ') + '</p>' : '') + '</div>' +
+      '<div class="card"><h2>What to do, step by step</h2><ol class="jp-steps">' + steps.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol></div>';
+    tiers.forEach(function (t) {
+      var list = sk.filter(function (s) { return s.tier === t[0]; });
+      if (!list.length) return;
+      html += '<div class="jp-tier ' + t[3] + '"><h2><span class="jp-badge">' + t[0] + '</span>' + t[1] + ' <span class="muted small">(' + list.length + ')</span></h2><p class="muted small" style="margin-top:-6px">' + t[2] + '</p><div class="grid">' + list.map(skillCard).join('') + '</div></div>';
+    });
+    if (sw.length) html += '<div class="jp-tier sw"><h2><span class="jp-badge">⚙</span>Software &amp; practical skills</h2><p class="muted small" style="margin-top:-6px">Learn to the target level and be ready to explain one thing you built with it.</p><div class="grid">' + sw.map(swCard).join('') + '</div></div>';
+    var tr = (p.role && p.role.traits) || [];
+    if (tr.length) html += '<div class="card"><h2>Qualities they look for</h2><div class="chips">' + tr.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div><p class="small muted" style="margin:10px 0 0">Prepare one short real example for each quality. Interviewers remember stories, not adjectives.</p></div>';
+    html += '<div class="row" style="gap:10px;flex-wrap:wrap"><button class="btn ghost" onclick="window.print()">Save or print this plan</button><a class="btn" href="/me" data-link>Track my progress</a></div>' +
+      '<p class="small muted">This plan is generated from VKV Sir\'s knowledge base of companies, roles and skills. It is guidance, not a guarantee of the exact questions.</p></section>';
+    q('#jout').innerHTML = html;
+    var ids = sk.filter(function (s) { return s.tier <= 2; }).map(function (s) { return s.id; });
+    rpc('jp_iq_for', { p_role: p.role ? p.role.id : null, p_skills: ids, p_level: p.level }).then(function (list) {
+      if (!list || !list.length) return;
+      var tech = list.filter(function (x) { return x.grp !== 3; }), hr = list.filter(function (x) { return x.grp === 3; });
+      function block(title, arr, note) {
+        if (!arr.length) return '';
+        return '<div class="card"><h2>' + title + '</h2><p class="small muted" style="margin-top:-6px">' + note + '</p><div class="jp-iq">' + arr.map(function (x, i) {
+          return '<details><summary><b>Q' + (i + 1) + '.</b> ' + esc(x.q) + '</summary><p>' + esc(x.a) + '</p>' + (x.points && x.points.length ? '<div class="chips">' + x.points.map(function (pt) { return '<span class="chip">' + esc(pt) + '</span>'; }).join('') + '</div>' : '') + '</details>';
+        }).join('') + '</div></div>';
+      }
+      var box = document.createElement('div'); box.className = 'stack'; box.style.marginTop = '16px';
+      box.innerHTML = block('Likely technical interview questions', tech, 'Try answering aloud first, then tap to see a model answer and key points.') +
+        block('HR &amp; behavioural questions', hr, 'Prepare your own honest version of each answer.');
+      var sec = q('#jout section'); if (sec) sec.insertBefore(box, sec.querySelector('.row'));
+    }).catch(function () {});
+    if (profile && profile.is_admin) { var a = document.createElement('p'); a.className = 'small'; a.innerHTML = '<a href="/admin/jobprep" data-link>Admin: see what students are asking for →</a>'; q('#jout').appendChild(a); }
+  }
+
+  function viewJpAdmin() {
+    setNav('admin'); loading();
+    rpc('jp_admin_log', { p_days: 30 }).then(function (d) {
+      function list(arr, empty) { return arr && arr.length ? '<ol class="board">' + arr.map(function (x) { return '<li><span>' + esc(x.name) + '</span><span class="mono">' + x.n + '</span></li>'; }).join('') + '</ol>' : '<p class="muted small">' + empty + '</p>'; }
+      h('<div class="stack"><div><p class="eyebrow">Admin · Job Prep</p><h1>What students are asking for</h1><p class="muted">Last 30 days · ' + d.total + ' plans generated.</p></div>' +
+        '<div class="grid"><div class="card"><h2>Top roles</h2>' + list(d.roles, 'No data yet.') + '</div><div class="card"><h2>Top companies</h2>' + list(d.companies, 'No data yet.') + '</div>' +
+        '<div class="card"><h2>Companies not in the knowledge base</h2>' + list(d.unknown_companies, 'None so far.') + '<p class="small muted">Ask Claude to add these companies in the next "continue" session.</p></div></div>' +
+        '<div class="card"><h2>Recent requests</h2><div class="table-wrap" style="overflow-x:auto"><table class="table"><thead><tr><th>When</th><th>Company</th><th>Matched role</th><th>Branch</th><th>Level</th><th>Job post (start)</th></tr></thead><tbody>' +
+        (d.recent || []).map(function (r) { return '<tr><td class="small">' + esc(fmtDate(r.created_at)) + '</td><td>' + esc(r.company || '–') + '</td><td>' + esc(r.role || '–') + '</td><td>' + esc(r.branch || '–') + '</td><td>' + esc(r.level || '') + '</td><td class="small">' + esc(r.text || '') + '</td></tr>'; }).join('') +
+        '</tbody></table></div></div></div>');
+    }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
+  }
+
+  /* ---------- unlimited aptitude drill (generated in browser, always fresh) ---------- */
+  function ri(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function shuffleOpts(ans, wrongs, fmt) {
+    var seen = {}, opts = [];
+    [ans].concat(wrongs).forEach(function (v) { var s = fmt ? fmt(v) : String(v); if (!seen[s]) { seen[s] = 1; opts.push(s); } });
+    var k = 1; while (opts.length < 4) { var s = fmt ? fmt(ans + k * (ans > 20 ? 7 : 1)) : String(ans + k * (ans > 20 ? 7 : 1)); if (!seen[s]) { seen[s] = 1; opts.push(s); } k++; }
+    var a = fmt ? fmt(ans) : String(ans);
+    for (var i = opts.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = opts[i]; opts[i] = opts[j]; opts[j] = t; }
+    return { opts: opts, correct: opts.indexOf(a) };
+  }
+  var GEN = {
+    'Percentages': function () { var p = pick([5, 10, 12, 15, 20, 25, 30, 40, 50, 75]), n = ri(2, 40) * 20, a = n * p / 100;
+      return { q: 'What is ' + p + '% of ' + n + '?', ans: a, w: [a + n / 20, a - n / 20, a * 2], e: n + ' × ' + p + '/100 = ' + a + '.' }; },
+    'Successive change': function () { var a = pick([10, 20, 25, 30]), b = pick([10, 20, 25]), up = Math.random() < .5, net = up ? a + b + a * b / 100 : a - b - a * b / 100;
+      return { q: 'A price increases by ' + a + '% and then ' + (up ? 'increases' : 'decreases') + ' by ' + b + '%. Net change (%)?', ans: Math.round(net * 100) / 100, w: [up ? a + b : a - b, Math.round((net + 2) * 100) / 100, Math.round((net - 3) * 100) / 100], e: 'Net = a ± b ± ab/100.' , fmt: function (v) { return (v > 0 ? '+' : '') + v + '%'; } }; },
+    'Profit & loss': function () { var cp = ri(4, 40) * 50, p = pick([10, 12, 15, 20, 25, 30]), sp = cp * (100 + p) / 100;
+      return { q: 'An article bought for ₹' + cp + ' is sold at ' + p + '% profit. Selling price?', ans: sp, w: [cp + p, sp + cp / 10, cp * (100 - p) / 100], e: 'SP = CP × (100 + ' + p + ')/100 = ₹' + sp + '.', fmt: function (v) { return '₹' + v; } }; },
+    'Simple interest': function () { var P = ri(2, 30) * 500, R = pick([4, 5, 6, 8, 10, 12]), T = ri(2, 6), I = P * R * T / 100;
+      return { q: 'Simple interest on ₹' + P + ' at ' + R + '% per year for ' + T + ' years?', ans: I, w: [I + P * R / 100, I - P * R / 100, P * R / 100], e: 'SI = PRT/100 = ₹' + I + '.', fmt: function (v) { return '₹' + v; } }; },
+    'Compound interest': function () { var P = ri(1, 20) * 1000, R = pick([5, 10, 20]), A = Math.round(P * Math.pow(1 + R / 100, 2)), CI = A - P;
+      return { q: 'Compound interest on ₹' + P + ' at ' + R + '% per year for 2 years?', ans: CI, w: [P * R * 2 / 100, CI + P * R / 100, CI - P / 100], e: 'A = P(1 + R/100)² = ₹' + A + '; CI = ₹' + CI + '.', fmt: function (v) { return '₹' + v; } }; },
+    'Time & work': function () { var x = pick([6, 8, 10, 12, 15, 20, 24, 30]), y = pick([10, 12, 15, 20, 24, 30, 40, 60]); if (x === y) y = y * 2; var t = Math.round(x * y / (x + y) * 100) / 100;
+      return { q: 'A can do a work in ' + x + ' days and B in ' + y + ' days. Together they take how many days?', ans: t, w: [(x + y) / 2, Math.round((t + 1.5) * 100) / 100, Math.abs(y - x)], e: 'Together = xy/(x + y) = ' + t + ' days.', fmt: function (v) { return v + ' days'; } }; },
+    'Speed & distance': function () { var v = pick([36, 45, 54, 72, 90, 108]), L = ri(10, 40) * 10, ms = v * 5 / 18, t = Math.round(L / ms * 100) / 100;
+      return { q: 'A train ' + L + ' m long runs at ' + v + ' km/h. Time to cross a pole (seconds)?', ans: t, w: [Math.round(L / v * 100) / 100, Math.round(t * 2 * 100) / 100, Math.round((t + 3) * 100) / 100], e: v + ' km/h = ' + ms + ' m/s; time = ' + L + '/' + ms + ' = ' + t + ' s.', fmt: function (v) { return v + ' s'; } }; },
+    'Averages': function () { var n = ri(4, 7), arr = []; for (var i = 0; i < n; i++) arr.push(ri(10, 90)); var s = arr.reduce(function (a, b) { return a + b; }, 0), av = Math.round(s / n * 100) / 100;
+      return { q: 'Average of ' + arr.join(', ') + ' is:', ans: av, w: [Math.round((av + 2) * 100) / 100, Math.round((av - 3) * 100) / 100, s], e: 'Sum ' + s + ' ÷ ' + n + ' = ' + av + '.' }; },
+    'Ratio': function () { var a = ri(1, 7), b = ri(1, 9); if (a === b) b++; var k = ri(5, 30), T = (a + b) * k;
+      return { q: '₹' + T + ' is divided in the ratio ' + a + ':' + b + '. The larger share is:', ans: Math.max(a, b) * k, w: [Math.min(a, b) * k, T / 2, Math.max(a, b) * k + k], e: 'One part = ' + T + '/' + (a + b) + ' = ' + k + '.', fmt: function (v) { return '₹' + v; } }; },
+    'Number system': function () { var b = pick([2, 3, 7, 8]), e = ri(11, 99), cyc = { 2: [2, 4, 8, 6], 3: [3, 9, 7, 1], 7: [7, 9, 3, 1], 8: [8, 4, 2, 6] }[b], ans = cyc[(e - 1) % 4];
+      return { q: 'Unit digit of ' + b + '^' + e + ' is:', ans: ans, w: cyc.filter(function (x) { return x !== ans; }), e: 'Cycle of ' + b + ': ' + cyc.join(', ') + '; ' + e + ' mod 4 = ' + (e % 4) + '.' }; },
+    'Clock angle': function () { var h = ri(1, 11), m = pick([0, 10, 15, 20, 30, 40, 45, 50]), d = Math.abs(30 * h - 5.5 * m); if (d > 180) d = 360 - d;
+      return { q: 'Angle between the hands of a clock at ' + h + ':' + (m < 10 ? '0' : '') + m + '?', ans: d, w: [Math.abs(30 * h - 6 * m) % 360, d + 15, Math.abs(180 - d) || 90], e: '|30H − 5.5M| = ' + d + '°.', fmt: function (v) { return v + '°'; } }; },
+    'Mensuration': function () { var r = pick([7, 14, 21, 3.5]), A = Math.round(22 / 7 * r * r * 100) / 100;
+      return { q: 'Area of a circle of radius ' + r + ' cm (π = 22/7)?', ans: A, w: [Math.round(2 * 22 / 7 * r * 100) / 100, A * 2, Math.round(A / 2 * 100) / 100], e: 'πr² = ' + A + ' cm².', fmt: function (v) { return v + ' cm²'; } }; }
+  };
+  function viewDrill() {
+    setNav('home');
+    var topics = Object.keys(GEN), chosen = topics.slice(), score = 0, total = 0, cur = null;
+    h('<div class="narrow stack"><div><p class="eyebrow">Unlimited practice</p><h1>Aptitude speed drill</h1><p class="muted">Fresh numbers every time, so you can practise as much as you like. Pick topics, answer, and see the working instantly. No sign-in needed.</p></div>' +
+      '<div class="card"><p class="f">Topics</p><div class="chips" id="dt">' + topics.map(function (t) { return '<button class="chip sel" aria-pressed="true" data-t="' + esc(t) + '">' + esc(t) + '</button>'; }).join('') + '</div></div>' +
+      '<div class="card" id="dq"></div><p class="center small muted" id="ds"></p></div>');
+    q('#dt').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; var on = b.getAttribute('aria-pressed') !== 'true', t = b.getAttribute('data-t');
+      if (!on && chosen.length === 1) return; b.setAttribute('aria-pressed', on); chosen = on ? chosen.concat(t) : chosen.filter(function (x) { return x !== t; }); next(); };
+    function next() {
+      var t = pick(chosen), g = GEN[t](), s = shuffleOpts(g.ans, g.w, g.fmt); cur = { g: g, s: s, t: t };
+      q('#dq').innerHTML = '<p class="pill accent">' + esc(t) + '</p><h2 style="margin:10px 0 14px">' + esc(g.q) + '</h2><div class="opts">' +
+        s.opts.map(function (o, i) { return '<button class="opt" data-i="' + i + '">' + esc(o) + '</button>'; }).join('') + '</div><div id="dx"></div>';
+      q('#dq .opts').onclick = function (e) {
+        var b = e.target.closest('button'); if (!b || cur.done) return; cur.done = true; var i = +b.getAttribute('data-i'); total++;
+        var ok = i === cur.s.correct; if (ok) score++;
+        Array.prototype.forEach.call(this.children, function (c, k) { if (k === cur.s.correct) c.classList.add('ok'); else if (k === i) c.classList.add('no'); });
+        q('#dx').innerHTML = '<p class="small" style="margin:12px 0"><b>' + (ok ? 'Correct.' : 'Not quite.') + '</b> ' + esc(cur.g.e) + '</p><button class="btn block" id="dn">Next question</button>';
+        q('#dn').onclick = next; q('#ds').textContent = 'Score: ' + score + ' / ' + total;
+      };
+    }
+    next();
+  }
+
+
+  function testsTree(list) {
+    if (!list.length) return '';
+    function bucket(arr, key) {
+      var m = {}, order = [];
+      arr.forEach(function (t) { var k = t[key] || 'Others'; if (!m[k]) { m[k] = []; order.push(k); } m[k].push(t); });
+      var others = [];
+      order = order.filter(function (k) { if (k !== 'Others' && m[k].length < 2) { others = others.concat(m[k]); return false; } return true; });
+      if (others.length) { if (!m.Others) { m.Others = []; order.push('Others'); } m.Others = m.Others.concat(others); }
+      order.sort(function (a, b) { return (a === 'Others') - (b === 'Others'); });
+      return order.map(function (k) { return [k, m[k]]; });
+    }
+    function card(t) {
+      return '<a class="tr-item" href="/t/' + esc(t.slug) + '" data-link><b>' + esc(t.title) + '</b>' + (t.description ? '<span class="small muted">' + esc(t.description) + '</span>' : '') +
+        '<span class="small muted">' + (t.durations || []).join(' / ') + ' min</span><span class="pill good">Start →</span></a>';
+    }
+    return '<p class="f tr-g">📝 Ready-made tests (' + list.length + ')</p>' + bucket(list, 'grp').map(function (g) {
+      var subs = bucket(g[1], 'subgrp');
+      var inner = (subs.length === 1 && subs[0][0] === 'Others') ? '<div class="tr-items">' + g[1].map(card).join('') + '</div>' :
+        subs.map(function (s) { return '<p class="small" style="margin:10px 0 6px"><b>' + esc(s[0]) + '</b></p><div class="tr-items">' + s[1].map(card).join('') + '</div>'; }).join('');
+      return '<details class="tgrp"' + (list.length <= 12 ? ' open' : '') + '><summary><b>' + esc(g[0]) + '</b> <span class="small muted">(' + g[1].length + ')</span></summary>' + inner + '</details>';
+    }).join('');
+  }
+
 
   /* ---------- personal group link ---------- */
   function viewGroup(tok) {
