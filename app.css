@@ -485,3 +485,5 @@ table{max-width:100%}
 .swcol>b{display:block}.swcol ul{padding-left:16px;margin:8px 0 0;font-size:14px}
 .swcol li{margin-bottom:6px}
 @media print{.rv{opacity:1!important;transform:none!important;transition:none!important}}
+
+.cp-ov{font-size:14.5px;line-height:1.6;margin:0 0 8px;color:var(--ink)}
