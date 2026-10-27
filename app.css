@@ -331,7 +331,7 @@ body.modal-open{overflow:hidden}
 .jp-badge{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-size:15px;flex:none}
 .jp-tier.mid .jp-badge{background:var(--muted)}
 .jp-tier.lo .jp-badge{background:var(--soft);color:var(--muted)}
-.jp-tier.sw .jp-badge{background:var(--good)}
+.jp-tier.jp-swt .jp-badge{background:var(--good)}
 .jp-skill h3{margin:0;font-size:17px}
 .jp-links{list-style:none;padding:0;margin:0;display:grid;gap:6px}
 .jp-links li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line, rgba(0,0,0,.08))}
@@ -369,3 +369,9 @@ body.modal-open{overflow:hidden}
 .tgrp .tr-items{margin-top:10px}
 
 .tr-quick{margin-bottom:6px}
+
+.jp-tier>.grid{margin-top:10px}
+.jp-tier h2{flex-wrap:wrap}
+.jp-skill{min-width:0}
+.jp-iq details summary{list-style:revert}
+a.chip{text-decoration:none}
