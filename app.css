@@ -375,3 +375,23 @@ body.modal-open{overflow:hidden}
 .jp-skill{min-width:0}
 .jp-iq details summary{list-style:revert}
 a.chip{text-decoration:none}
+
+.bd-c{color:var(--muted);font-size:13px}
+.bd-n{min-width:0;overflow-wrap:anywhere}
+/* mobile: no sideways scroll */
+html,body{max-width:100%;overflow-x:hidden}
+@supports (overflow:clip){html,body{overflow-x:clip}}
+img,svg,video,canvas,iframe{max-width:100%;height:auto}
+pre,code{white-space:pre-wrap;overflow-wrap:anywhere}
+table{max-width:100%}
+.card,.tr-item,.jp-skill,.chip,.pill{min-width:0;overflow-wrap:anywhere}
+
+.about-vkv{margin-top:28px}
+.ab-strip{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 2px 12px;-webkit-overflow-scrolling:touch;max-width:100%}
+.ab-card{flex:0 0 240px;scroll-snap-align:start;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;text-decoration:none;color:inherit;display:flex;flex-direction:column}
+.ab-card img{width:100%;height:160px;object-fit:cover;display:block}
+.ab-ph{height:160px;display:grid;place-items:center;font-size:44px;background:var(--soft);font-weight:800;color:#0a66c2}
+.ab-t{padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.ab-t span{font-size:13px;color:var(--muted)}
+.ab-more .ab-ph{background:#0a66c2;color:#fff}
+@media (max-width:480px){.ab-card{flex-basis:78%}}
