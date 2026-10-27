@@ -585,7 +585,7 @@
       h('<section class="hero jp-hero"><p class="eyebrow">Career &amp; interview preparation</p><h1>Know exactly what to prepare for <em>your</em> target job.</h1>' +
         '<p class="muted" style="max-width:680px">Tell us the company, role and branch, or paste the job post. You get a clear plan: the most important subjects and topics, what to refresh, software to learn, likely interview questions, and one-click practice for each topic.</p></section>' +
         '<div class="card stack jp-form">' +
-        '<div class="two"><div><label class="f" for="jc">Company (optional)</label><input class="in" id="jc" list="jcl" placeholder="e.g. Tata Motors, Infosys, L&amp;T" autocomplete="off"><datalist id="jcl">' + (o.companies || []).map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist></div>' +
+        '<div class="two"><div><label class="f" for="jc">Company (optional)</label><input class="in" id="jc" list="jcl" placeholder="e.g. Tata Motors, Infosys, L&amp;T" autocomplete="off"><datalist id="jcl">' + (o.companies || []).map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist><input class="in" id="ju" placeholder="Company website (optional), e.g. www.tatamotors.com" style="margin-top:6px"></div>' +
         '<div><label class="f" for="jr">Job role</label><select class="in" id="jr">' + roleOpts + '</select></div></div>' +
         '<div class="two"><div><label class="f" for="jb">Your branch / degree</label><select class="in" id="jb">' + brOpts + '</select></div>' +
         '<div><span class="f">Your level</span><div class="seg" id="jl">' + levels.map(function (l) { return '<button type="button" data-l="' + l[0] + '" aria-pressed="false"><b>' + l[1] + '</b><span>' + l[2] + '</span></button>'; }).join('') + '</div></div></div>' +
@@ -597,15 +597,15 @@
       function setLevel(v) { level = v; Array.prototype.forEach.call(q('#jl').children, function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-l') === v); }); }
       setLevel(level);
       q('#jl').onclick = function (e) { var b = e.target.closest('button'); if (b) setLevel(b.getAttribute('data-l')); };
-      if (saved.company) q('#jc').value = saved.company; if (saved.role) q('#jr').value = saved.role; if (saved.branch) q('#jb').value = saved.branch; if (saved.text) q('#jt').value = saved.text;
+      if (saved.company) q('#jc').value = saved.company; if (saved.url && q('#ju')) q('#ju').value = saved.url; if (saved.role) q('#jr').value = saved.role; if (saved.branch) q('#jb').value = saved.branch; if (saved.text) q('#jt').value = saved.text;
       q('#jgo').onclick = function () {
-        var inp = { company: q('#jc').value.trim(), role: q('#jr').value, branch: q('#jb').value, level: level, text: q('#jt').value.trim() };
+        var inp = { url: (q('#ju') ? q('#ju').value.trim() : ''), company: q('#jc').value.trim(), role: q('#jr').value, branch: q('#jb').value, level: level, text: q('#jt').value.trim() };
         if (!inp.company && !inp.role && !inp.text && !inp.branch) { q('#je').textContent = 'Choose a role or branch, or paste a job post.'; return; }
         q('#je').textContent = '';
         try { localStorage.setItem('jp_last', JSON.stringify(inp)); } catch (e) {}
         var b = this; b.disabled = true; b.textContent = 'Building your plan…';
         rpc('jp_plan', { p_text: inp.text || null, p_company: inp.company || null, p_role: inp.role || null, p_branch: inp.branch || null, p_level: inp.level, p_industry: null })
-          .then(function (plan) { renderPlan(plan); b.disabled = false; b.textContent = 'Rebuild plan'; q('#jout').scrollIntoView({ behavior: 'smooth' }); })
+          .then(function (plan) { window.__jpInp = inp; renderPlan(plan); b.disabled = false; b.textContent = 'Rebuild plan'; q('#jout').scrollIntoView({ behavior: 'smooth' }); })
           .catch(function (e) { q('#je').textContent = errMsg(e); b.disabled = false; b.textContent = 'Build my preparation plan'; });
       };
       if (/auto=1/.test(location.search) && (saved.company || saved.text || saved.branch)) q('#jgo').click();
@@ -667,11 +667,39 @@
     if (tr.length) html += '<div class="card"><h2>Qualities they look for</h2><div class="chips">' + tr.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div><p class="small muted" style="margin:10px 0 0">Prepare one short real example for each quality. Interviewers remember stories, not adjectives.</p></div>';
     html += '<div class="row" style="gap:10px;flex-wrap:wrap"><button class="btn ghost" onclick="window.print()">Save or print this plan</button><a class="btn" href="/me" data-link>Track my progress</a></div>' +
       '<p class="small muted">This plan is prepared from VKV Sir\'s research on companies, roles and skills to guide your preparation. Actual interview questions can vary by panel and position.</p></section>';
-    html = '<div class="print-only pr-head"><img src="/favicon.svg" alt=""><span><b>VKV Sir Test Lab</b> · Interview Preparation Plan</span><span>test.vkvsir.com · www.vkvsir.com</span></div>' +
-      '<div class="print-only pr-foot">Prepared on VKV Sir Test Lab (test.vkvsir.com) · www.vkvsir.com · Practise every topic free online</div>' +
-      '<div class="print-only pr-wm"><img src="/favicon.svg" alt=""><span>www.vkvsir.com</span></div>' + html;
+    html = '<div class="print-only pr-wm"><img src="/favicon.svg" alt=""><span>www.vkvsir.com</span></div>' +
+      '<table class="prt"><thead><tr><td><div class="pr-head"><img src="/favicon.svg" alt=""><span><b>VKV Sir Test Lab</b> · Interview Preparation Plan</span><span>test.vkvsir.com · www.vkvsir.com</span></div></td></tr></thead>' +
+      '<tfoot><tr><td><div class="pr-foot">Prepared on VKV Sir Test Lab (test.vkvsir.com) · www.vkvsir.com · Practise every topic free online</div></td></tr></tfoot>' +
+      '<tbody><tr><td>' + html + '</td></tr></tbody></table>';
     q('#jout').innerHTML = html;
     var ids = sk.filter(function (s) { return s.tier <= 2; }).map(function (s) { return s.id; });
+    var secEl = q('#jout section');
+    var inp0 = window.__jpInp || {};
+    if (inp0.company || inp0.url) rpc('jp_company_profile', { p_company: inp0.company || null, p_url: inp0.url || null }).then(function (c) {
+      if (!c) { if (inp0.company && secEl) { var n = document.createElement('div'); n.className = 'card'; n.innerHTML = '<h2>About ' + esc(inp0.company) + '</h2><p class="small muted">We are still building the profile of this company. Before the interview, collect: full name, head office, founders/CEO, main products, plants/branches, turnover trend, share price (if listed) and one recent news item from the company website and annual report.</p>'; secEl.insertBefore(n, secEl.children[1]); } return; }
+      var pf = c.profile || {}, rows = [];
+      function row(k, v) { if (v && (!Array.isArray(v) || v.length)) rows.push('<div class="cp-r"><span>' + k + '</span><div>' + (Array.isArray(v) ? '<ul>' + v.map(function (x) { return '<li>' + (Array.isArray(x) ? '<b>' + esc(x[0]) + ':</b> ' + esc(x[1]) : esc(x)) + '</li>'; }).join('') + '</ul>' : esc(v)) + '</div></div>'); }
+      row('Full name', pf.full_name || c.name); row('Founded', pf.founded); row('Head office', pf.hq); row('Presence', pf.presence); row('Employees', pf.employees);
+      row('Leadership', pf.leaders); row('Ownership', pf.ownership); row('Business verticals', pf.verticals); row('Turnover', pf.revenue); row('Growth trend', pf.trend);
+      row('Key products', pf.products || (c.products ? [c.products] : null)); row('Milestones & news', pf.milestones);
+      var lst = pf.listing ? '<div class="cp-r"><span>Stock listing</span><div>NSE: <b>' + esc(pf.listing.nse || '–') + '</b> · BSE: <b>' + esc(pf.listing.bse || '–') + '</b> · <a href="https://www.nseindia.com/get-quotes/equity?symbol=' + encodeURIComponent((pf.listing.nse || '').split(' ')[0]) + '" target="_blank" rel="noopener">Check live share price →</a></div></div>' : '';
+      var tips = pf.tips && pf.tips.length ? '<p class="f" style="margin:12px 0 4px">💡 Impress the interviewer</p><ul class="list small">' + pf.tips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' : '';
+      var n2 = document.createElement('div'); n2.className = 'card cp';
+      n2.innerHTML = '<p class="eyebrow">Know your company</p><h2 style="margin:4px 0 10px">' + esc(pf.full_name || c.name) + '</h2>' + rows.join('') + lst + tips +
+        '<p class="small muted" style="margin:10px 0 0">Based on ' + esc(c.as_of || 'public information') + '. Before the interview, recheck the latest figures on ' + (c.website ? '<a href="' + esc(c.website) + '" target="_blank" rel="noopener">' + esc(c.website.replace(/^https?:\/\//, '')) + '</a>' : 'the company website') + ' and its latest annual report.</p>';
+      if (secEl) secEl.insertBefore(n2, secEl.children[1]);
+    }).catch(function () {});
+    rpc('jp_tools_for', { p_role: p.role ? p.role.id : null, p_skills: sk.map(function (s) { return s.id; }), p_industry: null }).then(function (tl) {
+      if (!tl || !tl.length || !secEl) return;
+      var bands = [['essential', 'Essential: must know', 'Expected in the interview; learn to working level.'], ['lead', 'Gives you a lead', 'Knowing these makes you stand out among freshers.'], ['pro', 'Pro level', 'Learn if you want to grow into a specialist in this field.']];
+      var box = document.createElement('div'); box.className = 'card';
+      box.innerHTML = '<h2>Software map for this role</h2><div class="swmap">' + bands.map(function (b) {
+        var l = tl.filter(function (x) { return x.band === b[0]; }).slice(0, 8); if (!l.length) return '';
+        return '<div class="swcol sw-' + b[0] + '"><b>' + b[1] + '</b><span class="small muted">' + b[2] + '</span><ul>' + l.map(function (x) { return '<li><b>' + esc(x.name) + '</b>' + (x.vendor ? ' <span class="muted small">· ' + esc(x.vendor) + '</span>' : '') + (x.why ? '<br><span class="small">' + esc(x.why) + '</span>' : '') + '</li>'; }).join('') + '</ul></div>';
+      }).join('') + '</div><p class="small muted" style="margin:8px 0 0">Many of these offer free student or trial editions. Learn one essential tool well before adding more.</p>';
+      var sw0 = secEl.querySelector('.jp-swt');
+      if (sw0) secEl.insertBefore(box, sw0.nextSibling); else secEl.insertBefore(box, secEl.querySelector('.row'));
+    }).catch(function () {});
     rpc('jp_iq_for', { p_role: p.role ? p.role.id : null, p_skills: ids, p_level: p.level }).then(function (list) {
       if (!list || !list.length) return;
       var tech = list.filter(function (x) { return x.grp !== 3; }), hr = list.filter(function (x) { return x.grp === 3; });
