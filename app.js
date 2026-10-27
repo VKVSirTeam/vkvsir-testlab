@@ -600,7 +600,7 @@
       if (saved.company) q('#jc').value = saved.company; if (saved.url && q('#ju')) q('#ju').value = saved.url; if (saved.role) q('#jr').value = saved.role; if (saved.branch) q('#jb').value = saved.branch; if (saved.text) q('#jt').value = saved.text;
       q('#jgo').onclick = function () {
         var inp = { url: (q('#ju') ? q('#ju').value.trim() : ''), company: q('#jc').value.trim(), role: q('#jr').value, branch: q('#jb').value, level: level, text: q('#jt').value.trim() };
-        if (!inp.company && !inp.role && !inp.text && !inp.branch) { q('#je').textContent = 'Choose a role or branch, or paste a job post.'; return; }
+        if (!inp.company && !inp.url && !inp.role && !inp.text && !inp.branch) { q('#je').textContent = 'Choose a role or branch, or paste a job post.'; return; }
         q('#je').textContent = '';
         try { localStorage.setItem('jp_last', JSON.stringify(inp)); } catch (e) {}
         var b = this; b.disabled = true; b.textContent = 'Building your plan…';
@@ -675,20 +675,48 @@
     var ids = sk.filter(function (s) { return s.tier <= 2; }).map(function (s) { return s.id; });
     var secEl = q('#jout section');
     var inp0 = window.__jpInp || {};
-    if (inp0.company || inp0.url) rpc('jp_company_profile', { p_company: inp0.company || null, p_url: inp0.url || null }).then(function (c) {
-      if (!c) { if (inp0.company && secEl) { var n = document.createElement('div'); n.className = 'card'; n.innerHTML = '<h2>About ' + esc(inp0.company) + '</h2><p class="small muted">We are still building the profile of this company. Before the interview, collect: full name, head office, founders/CEO, main products, plants/branches, turnover trend, share price (if listed) and one recent news item from the company website and annual report.</p>'; secEl.insertBefore(n, secEl.children[1]); } return; }
-      var pf = c.profile || {}, rows = [];
-      function row(k, v) { if (v && (!Array.isArray(v) || v.length)) rows.push('<div class="cp-r"><span>' + k + '</span><div>' + (Array.isArray(v) ? '<ul>' + v.map(function (x) { return '<li>' + (Array.isArray(x) ? '<b>' + esc(x[0]) + ':</b> ' + esc(x[1]) : esc(x)) + '</li>'; }).join('') + '</ul>' : esc(v)) + '</div></div>'); }
-      row('Full name', pf.full_name || c.name); row('Founded', pf.founded); row('Head office', pf.hq); row('Presence', pf.presence); row('Employees', pf.employees);
-      row('Leadership', pf.leaders); row('Ownership', pf.ownership); row('Business verticals', pf.verticals); row('Turnover', pf.revenue); row('Growth trend', pf.trend);
-      row('Key products', pf.products || (c.products ? [c.products] : null)); row('Milestones & news', pf.milestones);
-      var lst = pf.listing ? '<div class="cp-r"><span>Stock listing</span><div>NSE: <b>' + esc(pf.listing.nse || '–') + '</b> · BSE: <b>' + esc(pf.listing.bse || '–') + '</b> · <a href="https://www.nseindia.com/get-quotes/equity?symbol=' + encodeURIComponent((pf.listing.nse || '').split(' ')[0]) + '" target="_blank" rel="noopener">Check live share price →</a></div></div>' : '';
-      var tips = pf.tips && pf.tips.length ? '<p class="f" style="margin:12px 0 4px">💡 Impress the interviewer</p><ul class="list small">' + pf.tips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' : '';
-      var n2 = document.createElement('div'); n2.className = 'card cp';
-      n2.innerHTML = '<p class="eyebrow">Know your company</p><h2 style="margin:4px 0 10px">' + esc(pf.full_name || c.name) + '</h2>' + rows.join('') + lst + tips +
-        '<p class="small muted" style="margin:10px 0 0">Based on ' + esc(c.as_of || 'public information') + '. Before the interview, recheck the latest figures on ' + (c.website ? '<a href="' + esc(c.website) + '" target="_blank" rel="noopener">' + esc(c.website.replace(/^https?:\/\//, '')) + '</a>' : 'the company website') + ' and its latest annual report.</p>';
-      if (secEl) secEl.insertBefore(n2, secEl.children[1]);
-    }).catch(function () {});
+    if (inp0.company || inp0.url) {
+      var cpBox = document.createElement('div'); cpBox.className = 'card cp';
+      cpBox.innerHTML = '<p class="eyebrow">Know your company</p><h2 style="margin:4px 0 10px">' + esc(inp0.company || inp0.url) + '</h2><p class="small muted">Collecting company information…</p>';
+      if (secEl) secEl.insertBefore(cpBox, secEl.children[1]);
+      var live = sb.functions.invoke('jp-company', { body: { name: inp0.company || null, url: inp0.url || null } }).then(function (r) { return (r && r.data) || {}; }).catch(function () { return {}; });
+      Promise.all([rpc('jp_company_profile', { p_company: inp0.company || null, p_url: inp0.url || null }).catch(function () { return null; }), live,
+        rpc('jp_competitors', { p_company: inp0.company || null, p_url: inp0.url || null }).catch(function () { return null; })]).then(function (res) {
+        var c = res[0] || {}, L = res[1] || {}, comp = res[2] || {}, pf = c.profile || {}, W = (L.wiki && L.wiki.fields) || {}, S = L.site || {};
+        function sp(v) { return v ? String(v).split(/;\s*/).map(function (x) { return x.trim(); }).filter(Boolean) : null; }
+        var rows = [];
+        function row(k, v) { if (!v || (Array.isArray(v) && !v.length)) return; rows.push('<div class="cp-r"><span>' + k + '</span><div>' + (Array.isArray(v) ? (v.length === 1 && !Array.isArray(v[0]) ? esc(v[0]) : '<ul>' + v.map(function (x) { return '<li>' + (Array.isArray(x) ? '<b>' + esc(x[0]) + ':</b> ' + esc(x[1]) : esc(x)) + '</li>'; }).join('') + '</ul>') : esc(v)) + '</div></div>'); }
+        var title = pf.full_name || (L.wiki && L.wiki.title) || c.name || (S.title ? S.title.split(/[|\-–:]/)[0].trim() : '') || inp0.company || inp0.url;
+        var overview = (L.wiki && L.wiki.summary) || S.about || S.description;
+        row('Full name', pf.full_name || (L.wiki && L.wiki.title) || c.name);
+        row('Industry', c.industry || comp.industry || W.industry);
+        row('Type', W.type);
+        row('Founded', pf.founded || W.founded); row('Founders', sp(W.founders));
+        row('Head office', pf.hq || W.hq); row('Presence', pf.presence || W.area_served);
+        row('Employees', pf.employees || W.employees);
+        row('Leadership', pf.leaders || sp(W.key_people)); row('Ownership / parent', pf.ownership || W.parent);
+        row('Business verticals', pf.verticals || sp(W.subsidiaries));
+        row('Turnover', pf.revenue || (W.revenue ? [W.revenue + (W.net_income ? ' (net profit ' + W.net_income + ')' : '')] : null)); row('Growth trend', pf.trend);
+        row('Key products', pf.products || sp(W.products) || (c.products ? [c.products] : null));
+        row('From their website', S.highlights && S.highlights.length ? S.highlights.slice(0, 6) : null);
+        row('Milestones & news', pf.milestones);
+        var listed = comp.listed != null ? comp.listed : (pf.listing ? true : (W.type ? /public/i.test(W.type) : null));
+        if (listed != null) row('Stock market', listed ? 'Listed company' + (pf.listing ? ' (NSE: ' + pf.listing.nse + ', BSE: ' + pf.listing.bse + ')' : '') : 'Not listed (private / unlisted)');
+        var peers = (comp.peers || []).filter(function (x) { return x !== c.name; }).slice(0, 8);
+        row('Competitors / peers', peers.length ? [peers.join(', ')] : null);
+        var tips = (pf.tips || []).slice();
+        tips.push('Say one line on what ' + (title || 'the company') + ' makes and who its customers are.');
+        if (peers.length) tips.push('Know how it differs from ' + peers.slice(0, 2).join(' and ') + '.');
+        var src = [];
+        if (c.website || S.url) src.push('<a href="' + esc(c.website || S.url) + '" target="_blank" rel="noopener">Official website</a>');
+        if (L.wiki && L.wiki.url) src.push('<a href="' + esc(L.wiki.url) + '" target="_blank" rel="noopener">Wikipedia</a>');
+        cpBox.innerHTML = '<p class="eyebrow">Know your company</p><h2 style="margin:4px 0 8px">' + esc(title) + '</h2>' +
+          (overview ? '<p class="cp-ov">' + esc(String(overview).slice(0, 700)) + '</p>' : '') + rows.join('') +
+          '<p class="f" style="margin:12px 0 4px">💡 Impress the interviewer</p><ul class="list small">' + tips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' +
+          '<p class="small muted" style="margin:10px 0 0">Compiled from VKV Sir research' + (src.length ? ', ' + src.join(' and ') : '') + (c.as_of ? ' (' + esc(c.as_of) + ')' : '') + '. Figures change every year; recheck before the interview.</p>';
+        if (rows.length < 2 && !overview) cpBox.querySelector('.cp-ov') || (cpBox.innerHTML += '<p class="small">Add the company website in the form for a more detailed profile.</p>');
+      });
+    }
     rpc('jp_tools_for', { p_role: p.role ? p.role.id : null, p_skills: sk.map(function (s) { return s.id; }), p_industry: null }).then(function (tl) {
       if (!tl || !tl.length || !secEl) return;
       var bands = [['essential', 'Essential: must know', 'Expected in the interview; learn to working level.'], ['lead', 'Gives you a lead', 'Knowing these makes you stand out among freshers.'], ['pro', 'Pro level', 'Learn if you want to grow into a specialist in this field.']];
