@@ -338,7 +338,7 @@ body.modal-open{overflow:hidden}
 .small-btn{padding:6px 12px;font-size:13px;min-height:0}
 .jp-steps{padding-left:20px;margin:0;display:grid;gap:8px}
 .jp-task{background:var(--soft);padding:8px 10px;border-radius:8px;margin:10px 0 0}
-@media print{#bar,.jp-form,.jp-hero,.toast,.share{display:none!important}.card{break-inside:avoid}}
+@media print{#bar,.jp-form,.jp-hero,.toast,.share{display:none!important}}
 
 .jp-iq details{border-top:1px solid var(--line, rgba(0,0,0,.08));padding:10px 0}
 .jp-iq summary{cursor:pointer;line-height:1.5}
@@ -411,14 +411,14 @@ table{max-width:100%}
 .print-only{display:none}
 @media print{
   .print-only{display:flex}
-  .pr-head{position:fixed;top:0;left:0;right:0;justify-content:space-between;align-items:center;gap:10px;font-size:11px;color:#444;border-bottom:1px solid #ccc;padding:4px 0;background:#fff}
+  
   .pr-head img{width:20px;height:20px}
-  .pr-foot{position:fixed;bottom:0;left:0;right:0;justify-content:center;font-size:10px;color:#666;border-top:1px solid #ddd;padding:4px 0;background:#fff}
+  
   .pr-wm{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-24deg);flex-direction:column;align-items:center;gap:10px;opacity:.08;z-index:9999;pointer-events:none}
   .pr-wm img{width:300px;height:auto}
   .pr-wm span{font:800 42px/1 Georgia,serif;letter-spacing:.04em;color:#000}
   #jout>section{position:relative;z-index:1}
-  @page{margin:22mm 14mm 18mm}
+  @page{size:A4;margin:9mm 9mm 9mm}
   .sitefoot,#bar,.jp-form,.jp-hero,.toast,.tour,.tour-tip,.tour-pop,[class*='tour']{display:none!important}
   .card{box-shadow:none!important}
 }
@@ -455,3 +455,33 @@ table{max-width:100%}
 .fbtn.fb,.fi.fb{margin-top:0!important;padding-top:0!important;border-top:1px solid var(--line,#e2e2e2)!important}
 .fbtn.fb{padding:0 14px!important}
 @media (max-width:520px){.ff{gap:7px}.ff a.fi{width:36px;height:36px}.ff a.fi svg{width:20px;height:20px}}
+
+/* plan print table (header/footer repeat on every page) */
+.prt{width:100%;border-collapse:collapse}
+.prt>thead,.prt>tfoot{display:none}
+.prt>tbody>tr>td{padding:0}
+@media print{
+  html,body{background:#fff!important}
+  main,.wrap,#view,.narrow,.container{max-width:none!important;width:auto!important;padding:0!important;margin:0!important}
+  .prt>thead{display:table-header-group}.prt>tfoot{display:table-footer-group}
+  .pr-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:10px;color:#444;border-bottom:1px solid #ccc;padding:0 0 4px;margin-bottom:8px}
+  .pr-head img{width:18px;height:18px}
+  .pr-foot{text-align:center;font-size:9.5px;color:#666;border-top:1px solid #ddd;padding:4px 0 0;margin-top:8px}
+  .jp-skill,.swcol,.cp-r,.jp-iq details{break-inside:avoid;page-break-inside:avoid}
+  .jp-tier,.card{break-inside:auto!important;page-break-inside:auto!important}
+  .jp-tier h2,h2{break-after:avoid}
+  .grid{grid-template-columns:1fr 1fr!important}
+  .jp-iq details{display:block}.jp-iq details>*{display:block}
+  a{color:inherit;text-decoration:none}
+}
+/* company profile + software map */
+.cp-r{display:grid;grid-template-columns:150px 1fr;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:14.5px}
+.cp-r>span{color:var(--muted);font-weight:600;font-size:13px}
+.cp-r ul{margin:0;padding-left:18px}
+@media (max-width:560px){.cp-r{grid-template-columns:1fr;gap:2px}}
+.swmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}
+.swcol{border:1px solid var(--line);border-radius:12px;padding:12px;border-top:4px solid var(--accent)}
+.swcol.sw-lead{border-top-color:#c9971c}.swcol.sw-pro{border-top-color:#6b4bd8}
+.swcol>b{display:block}.swcol ul{padding-left:16px;margin:8px 0 0;font-size:14px}
+.swcol li{margin-bottom:6px}
+@media print{.rv{opacity:1!important;transform:none!important;transition:none!important}}
