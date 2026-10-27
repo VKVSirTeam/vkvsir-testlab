@@ -616,21 +616,21 @@
     var sk = p.skills || [], sw = p.software || [];
     function practice(l) {
       var label = esc(l.name || (l.s + ' unit ' + l.u));
-      if (l.q >= 10) return '<li><span>' + label + ' <span class="muted small">· ' + l.q + ' questions</span></span><a class="btn small-btn" href="/p/' + esc(String(l.s).toLowerCase()) + '/' + esc(l.u) + '" data-link>Practise</a></li>';
-      return '<li><span>' + label + '</span><span class="pill">Questions coming soon</span></li>';
+      if (l.q >= 10) return '<li><span>' + label + '</span><a class="btn small-btn" href="/p/' + esc(String(l.s).toLowerCase()) + '/' + esc(l.u) + '" data-link>Practise</a></li>';
+      return '';
     }
     function skillCard(s) {
       return '<article class="card jp-skill"><div class="spread"><h3>' + esc(s.name) + '</h3><span class="pill">' + esc(s.area || '') + '</span></div>' +
         (s.why ? '<p class="muted small" style="margin:4px 0 10px">' + esc(s.why) + '</p>' : '') +
-        (s.subtopics && s.subtopics.length ? '<p class="f" style="margin:0">Topics to cover</p><div class="chips">' + s.subtopics.map(function (t) { return '<span class="chip">' + esc(t) + '</span>'; }).join('') + '</div>' : '') +
-        (s.links && s.links.length ? '<p class="f" style="margin:12px 0 4px">Practise on VKV Test Lab</p><ul class="jp-links">' + s.links.map(practice).join('') + '</ul>' : '<p class="small muted" style="margin-top:10px">Prepare with your notes and real examples from your projects or internship.</p>') +
+        (s.subtopics && s.subtopics.length ? '<p class="f" style="margin:0">Key topics</p><div class="chips">' + s.subtopics.slice(0, s.tier === 1 ? 4 : 3).map(function (t) { return '<span class="chip">' + esc(t) + '</span>'; }).join('') + '</div>' : '') +
+        (s.links && s.links.filter(function (l) { return l.q >= 10; }).length ? '<p class="f" style="margin:12px 0 4px">Practise</p><ul class="jp-links">' + s.links.slice(0, 3).map(practice).join('') + '</ul>' : '<p class="small muted" style="margin-top:10px">Prepare with your notes and real examples from your projects or internship.</p>') +
         '</article>';
     }
     function swCard(w) {
       return '<article class="card jp-skill"><div class="spread"><h3>' + esc(w.name) + '</h3><span class="pill ' + (w.tier === 1 ? 'accent' : '') + '">' + (w.tier === 1 ? 'Must know' : w.tier === 2 ? 'Good to know' : 'Awareness') + '</span></div>' +
         '<p class="small" style="margin:4px 0 10px"><b>Target level:</b> ' + esc(w.target || '') + '</p>' +
-        (w.learn && w.learn.length ? '<p class="f" style="margin:0">What to learn</p><ul class="list small">' + w.learn.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
-        (w.questions && w.questions.length ? '<p class="f" style="margin:10px 0 0">Questions interviewers ask</p><ul class="list small">' + w.questions.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
+        (w.learn && w.learn.length ? '<p class="f" style="margin:0">What to learn</p><ul class="list small">' + w.learn.slice(0, 3).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
+        (w.questions && w.questions.length ? '<p class="f" style="margin:10px 0 0">Likely questions</p><ul class="list small">' + w.questions.slice(0, 2).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
         (w.practical ? '<p class="small jp-task"><b>Practical task:</b> ' + esc(w.practical) + '</p>' : '') + '</article>';
     }
     var steps = [];
@@ -652,11 +652,13 @@
       (p.hits && p.hits.length ? '<p class="small" style="margin:6px 0 0"><b>Picked up from the job post:</b> ' + p.hits.map(esc).join(', ') + '</p>' : '') + '</div>' +
       '<div class="card"><h2>What to do, step by step</h2><ol class="jp-steps">' + steps.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ol></div>';
     tiers.forEach(function (t) {
-      var list = sk.filter(function (s) { return s.tier === t[0]; });
+      var list = sk.filter(function (s) { return s.tier === t[0]; }).slice(0, t[0] === 1 ? 6 : 5);
       if (!list.length) return;
+      if (t[0] === 3) { html += '<div class="jp-tier lo"><h2><span class="jp-badge">3</span>' + t[1] + '</h2><p class="muted small" style="margin-top:-6px">' + t[2] + '</p><div class="card"><div class="chips">' + list.map(function (s) { var l = (s.links || []).filter(function (x) { return x.q >= 10; })[0]; return l ? '<a class="chip" href="/p/' + esc(String(l.s).toLowerCase()) + '/' + esc(l.u) + '" data-link>' + esc(s.name) + ' →</a>' : '<span class="chip">' + esc(s.name) + '</span>'; }).join('') + '</div></div></div>'; return; }
       html += '<div class="jp-tier ' + t[3] + '"><h2><span class="jp-badge">' + t[0] + '</span>' + t[1] + ' <span class="muted small">(' + list.length + ')</span></h2><p class="muted small" style="margin-top:-6px">' + t[2] + '</p><div class="grid">' + list.map(skillCard).join('') + '</div></div>';
     });
-    if (sw.length) html += '<div class="jp-tier sw"><h2><span class="jp-badge">⚙</span>Software &amp; practical skills</h2><p class="muted small" style="margin-top:-6px">Learn to the target level and be ready to explain one thing you built with it.</p><div class="grid">' + sw.map(swCard).join('') + '</div></div>';
+    sw = sw.filter(function (w) { return w.tier <= 2; }).slice(0, 4);
+    if (sw.length) html += '<div class="jp-tier jp-swt"><h2><span class="jp-badge">⚙</span>Software &amp; practical skills</h2><p class="muted small" style="margin-top:-6px">Learn to the target level and be ready to explain one thing you built with it.</p><div class="grid">' + sw.map(swCard).join('') + '</div></div>';
     var tr = (p.role && p.role.traits) || [];
     if (tr.length) html += '<div class="card"><h2>Qualities they look for</h2><div class="chips">' + tr.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div><p class="small muted" style="margin:10px 0 0">Prepare one short real example for each quality. Interviewers remember stories, not adjectives.</p></div>';
     html += '<div class="row" style="gap:10px;flex-wrap:wrap"><button class="btn ghost" onclick="window.print()">Save or print this plan</button><a class="btn" href="/me" data-link>Track my progress</a></div>' +
