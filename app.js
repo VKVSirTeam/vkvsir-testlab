@@ -194,6 +194,8 @@
         '<div class="hx-stats"><span><b>Thousands</b> of questions</span><span><b>3</b> learning tracks</span><span><b>Fresh</b> paper every time</span></div></div>' +
         '<div class="hx-r" aria-hidden="true"><div class="mockq"><div class="mq-top"><span>Automobile Engg · Unit 4</span><span class="mq-t">⏱ 0:42</span></div><div class="mq-bar"><i></i></div><p class="mq-q">Which gearbox uses dog clutches to engage gears?</p><div class="mq-o">A&nbsp; Sliding mesh</div><div class="mq-o ok">B&nbsp; Constant mesh ✓</div><div class="mq-o">C&nbsp; Epicyclic</div><div class="mq-o">D&nbsp; Torque converter</div></div></div></section>' +
         '<section class="how" id="how"><h2 class="sh2">How it works</h2><div class="steps3"><div><span>1</span><b>Choose</b><p>Open a track and tick a whole subject, some units or single topics.</p></div><div><span>2</span><b>Practise</b><p>Pick your time and mode. Every paper is freshly mixed from easy to hard.</p></div><div><span>3</span><b>Improve</b><p>See your score, correct answers and explanations. Report any doubtful question.</p></div></div></section>' +
+        '<div class="stats reveal">' + [['20', '+', 'Subjects & skills'], ['40', '+', 'Job roles mapped'], ['200', '+', 'Recruiters covered'], ['100', '%', 'Free practice']].map(function (s) { return '<div class="st"><b class="cnt" data-to="' + s[0] + '">0</b><i>' + s[1] + '</i><span>' + s[2] + '</span></div>'; }).join('') + '</div>' +
+        '<div class="marq" aria-hidden="true"><div class="marq-in">' + (function () { var c = ['TCS', 'Infosys', 'L&amp;T', 'Tata Motors', 'Shri Bhagwati Machines', 'NTPC', 'BHEL', 'JK Tyre', 'Maruti Suzuki', 'Wipro', 'Bosch', 'Siemens', 'UltraTech', 'Tata Steel', 'Accenture', 'Mahindra', 'IOCL', 'ABB']; var s = c.map(function (x) { return '<span>' + x + '</span>'; }).join(''); return s + s; })() + '</div></div>' +
         '<h2 class="sh2" id="tracks-h">Choose what to practise</h2><div class="tracks">' + tracksHtml + '</div>' +
         '<section><h2 class="sh2">Ways to practise</h2><div class="modes">' + [
           ['📝', 'Fixed paper', 'A set number of questions with fair time for each, like a real exam.'],
@@ -304,7 +306,7 @@
       ['10. Changes and acceptance', 'These terms may be updated at any time without prior notice; the version on this page applies. By accessing or using this platform, you acknowledge that you have read, understood and accepted this disclaimer and these terms. Any dispute shall be subject to the jurisdiction of courts at Ajmer, Rajasthan, India.']
     ];
     h('<div class="narrow stack legal"><div><p class="eyebrow">Legal</p><h1>Disclaimer &amp; terms of use</h1><p class="muted small">Last updated: 19 October 2026</p></div>' +
-      '<div class="card" style="border-left:4px solid var(--warn,#b4531a)"><p style="margin:0"><b>In short:</b> every question on VKV Sir Test Lab is written with care and reviewed before it goes live, so you can practise with confidence. Like any learning resource, an occasional answer may be read differently in another reference book; when that happens, simply report it from the quiz or result page and we will review it. This platform is designed for learning and self-assessment, so its answer keys serve as practice guidance; for any examination, the official key of the examining body is always the final word.</p></div>' +
+      '<div class="card" style="border-left:4px solid var(--warn,#b4531a)"><p style="margin:0"><b>In short:</b> every question on VKV Sir Test Lab is written with care and reviewed before it goes live, so you can practise with confidence. Although our content is thoroughly checked, if you ever find an answer or question wording that seems ambiguous compared with your reference book, simply report it from the quiz or result page and we will review it promptly. This platform is designed for learning and self-assessment, so its answer keys serve as practice guidance; for any examination, the official key of the examining body is always the final word.</p></div>' +
       S.map(function (x) { return '<section><h3>' + x[0] + '</h3><p>' + x[1] + '</p></section>'; }).join('') +
       '<p class="small muted">Questions about these terms: <a href="https://mail.google.com/mail/?view=cm&fs=1&to=vinodvermavkvsir@gmail.com&su=Test%20Lab%20disclaimer%20query" target="_blank" rel="noopener">vinodvermavkvsir@gmail.com</a></p></div>');
   }
@@ -665,6 +667,9 @@
     if (tr.length) html += '<div class="card"><h2>Qualities they look for</h2><div class="chips">' + tr.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div><p class="small muted" style="margin:10px 0 0">Prepare one short real example for each quality. Interviewers remember stories, not adjectives.</p></div>';
     html += '<div class="row" style="gap:10px;flex-wrap:wrap"><button class="btn ghost" onclick="window.print()">Save or print this plan</button><a class="btn" href="/me" data-link>Track my progress</a></div>' +
       '<p class="small muted">This plan is prepared from VKV Sir\'s research on companies, roles and skills to guide your preparation. Actual interview questions can vary by panel and position.</p></section>';
+    html = '<div class="print-only pr-head"><img src="/favicon.svg" alt=""><span><b>VKV Sir Test Lab</b> · Interview Preparation Plan</span><span>test.vkvsir.com · www.vkvsir.com</span></div>' +
+      '<div class="print-only pr-foot">Prepared on VKV Sir Test Lab (test.vkvsir.com) · www.vkvsir.com · Practise every topic free online</div>' +
+      '<div class="print-only pr-wm"><img src="/favicon.svg" alt=""><span>www.vkvsir.com</span></div>' + html;
     q('#jout').innerHTML = html;
     var ids = sk.filter(function (s) { return s.tier <= 2; }).map(function (s) { return s.id; });
     rpc('jp_iq_for', { p_role: p.role ? p.role.id : null, p_skills: ids, p_level: p.level }).then(function (list) {
@@ -782,6 +787,18 @@
   }
 
 
+
+  /* ---------- light animations: reveal on scroll + count-up ---------- */
+  function animateIn() {
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var els = document.querySelectorAll('.card, .tr-item, .trk, .st, .ab-card, .reveal');
+    if (!('IntersectionObserver' in window) || reduce) { Array.prototype.forEach.call(els, function (e) { e.classList.add('in'); }); return; }
+    var io = new IntersectionObserver(function (es) { es.forEach(function (en) { if (!en.isIntersecting) return; var e = en.target; e.classList.add('in'); io.unobserve(e);
+      Array.prototype.forEach.call(e.querySelectorAll ? e.querySelectorAll('.cnt') : [], function (c) { var to = +c.getAttribute('data-to'), t0 = performance.now(); (function tick(t) { var k = Math.min(1, (t - t0) / 900); c.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(tick); })(t0); }); }); }, { threshold: 0.08 });
+    Array.prototype.forEach.call(els, function (e) { if (!e.classList.contains('in')) { e.classList.add('rv'); io.observe(e); } });
+  }
+  new MutationObserver(function () { clearTimeout(animateIn.t); animateIn.t = setTimeout(animateIn, 60); }).observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
+  window.addEventListener('scroll', function () { var b = document.getElementById('bar'); if (b) b.classList.toggle('scrolled', scrollY > 8); }, { passive: true });
 
   /* ---------- About VKV Sir: achievements strip ---------- */
   var LINKEDIN = 'https://www.linkedin.com/in/vkvsir';
@@ -1143,7 +1160,7 @@
         (r.units && r.units.length > 1 ? '<h3 style="margin-top:18px">By unit</h3>' + unitBars(r.units, 'ok') : '') +
         '<div class="row" style="margin-top:18px">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/" data-link>Practise again</a><a class="btn ghost" href="/me" data-link>My dashboard</a>') + '</div></div>' +
         (rev ? '<h2 style="margin-top:28px">Learn from your mistakes</h2><p class="small muted">Questions you missed, with the right answer.</p>' + rev : '<div class="card center"><h2>Perfect score!</h2><p class="muted">Every answer was correct.</p></div>') + '</div>');
-      var rv = q('.stack'); if (rv) rv.insertAdjacentHTML('beforeend', '<p class="small muted" style="text-align:center;margin:4px 0 0">Questions are carefully prepared and double-checked. If you have a different view on any answer, use 🚩 <b>Report</b> on that question; our team reviews every report. <a href="/disclaimer" data-link>Terms of use</a></p>' + suggestBox());
+      var rv = q('.stack'); if (rv) rv.insertAdjacentHTML('beforeend', '<p class="small muted" style="text-align:center;margin:4px 0 0">Questions are expert-prepared and double-checked. Although every answer is carefully reviewed, if you find any ambiguity in an answer or in the wording, use 🚩 <b>Report</b> on that question; our team reviews every report. <a href="/disclaimer" data-link>Terms of use</a></p>' + suggestBox());
       renderMath($view);
       $view.querySelectorAll('.rfb').forEach(function (box) {
         var no = +box.getAttribute('data-no'), rating = null, flags = [], chips = box.querySelector('.chips');
