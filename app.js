@@ -86,6 +86,7 @@
     if (p === '/career' || p === '/jobprep') return viewCareer();
     if (p === '/admin/jobprep') return viewJpAdmin();
     if (p === '/drill') return viewDrill();
+    if (p === '/admin/about') return viewAboutAdmin();
     if (p === '/disclaimer') return viewDisclaimer();
     if ((m = p.match(/^\/p\/([a-z0-9]+)(?:\/(\d+))?(?:\/([a-z0-9-]+))?$/i))) return viewFocus(m[1], m[2], m[3]);
     if ((m = p.match(/^\/t\/([a-z0-9-]+)$/))) return viewTest(m[1]);
@@ -216,7 +217,8 @@
         '<div class="sbrow"><div class="seg mini" id="smode"><button type="button" data-m="fixed" aria-pressed="true">📝 Fixed paper</button><button type="button" data-m="rapid" aria-pressed="false">⚡ Rapid fire</button></div>' +
         '<div class="seg mini" id="sdur">' + [5, 10, 15, 30].map(function (d, k) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (k === 1) + '">' + d + ' min</button>'; }).join('') + '</div>' +
         '<button class="btn" id="sgo">' + (session ? 'Start practice' : 'Sign in to start') + '</button></div><p class="small muted" id="smi">Fixed paper: a set number of questions with fair time for each.</p><div class="err" id="se" role="alert"></div></div>' +
-        shareBar(location.origin + '/', 'Free practice quizzes with instant results by VKV Sir:', 'Invite friends:') + boardCard(board, 'Top performers'));
+        shareBar(location.origin + '/', 'Free practice quizzes with instant results by VKV Sir:', 'Invite friends:') + boardCard(board, 'Top performers') + '<div id="about"></div>');
+      mountAbout(q('#about'));
       var qg = q('#qgo');
       if (qg) qg.onclick = function () {
         var inp = { company: q('#qc').value.trim(), role: '', branch: q('#qb').value, level: q('#ql').value, text: q('#qr').value.trim() };
@@ -354,8 +356,8 @@
   function boardCard(board, title) {
     if (!board || !board.length) return '';
     return '<section class="card" style="margin-top:24px"><h2>' + esc(title) + '</h2><ol class="board">' + board.map(function (b, i) {
-      return '<li class="' + (b.me ? 'me' : '') + '"><span>' + (i + 1) + '. ' + esc(b.name) + (b.me ? ' (you)' : '') + '</span><span class="mono">' + b.pct + '%</span></li>';
-    }).join('') + '</ol><p class="small muted" style="margin-top:10px">Last 30 days &middot; first attempt of each test &middot; at least 20 questions answered &middot; first names only. Scores are smoothed so one lucky short test cannot top the board.</p></section>';
+      return '<li class="' + (b.me ? 'me' : '') + '"><span class="bd-n">' + (i + 1) + '. ' + esc(b.name) + (b.me ? ' (you)' : '') + (b.college ? ' <span class="bd-c">· ' + esc(b.college) + '</span>' : '') + '</span><span class="mono">' + b.pct + '%</span></li>';
+    }).join('') + '</ol><p class="small muted" style="margin-top:10px">Last 30 days &middot; first attempt of each test &middot; at least 20 questions answered &middot; first names with college. Scores are smoothed so one lucky short test cannot top the board.</p></section>';
   }
 
   /* ---------- login ---------- */
@@ -779,6 +781,58 @@
     }).join('');
   }
 
+
+
+  /* ---------- About VKV Sir: achievements strip ---------- */
+  var LINKEDIN = 'https://www.linkedin.com/in/vkvsir';
+  function mountAbout(el) {
+    if (!el) return;
+    sb.from('about_items').select('id,title,caption,image_url,link,sort').eq('active', true).order('sort').order('id', { ascending: false }).then(function (r) {
+      var items = (r && r.data) || [];
+      var admin = profile && profile.is_admin;
+      el.innerHTML = '<section class="about-vkv"><div class="spread"><h2 class="sh2">About VKV Sir</h2>' + (admin ? '<a class="small" href="/admin/about" data-link>Manage photos</a>' : '') + '</div>' +
+        '<p class="small muted" style="margin:-4px 0 12px">Dr. Vinod Kumar Verma: teaching, achievements and milestones. Swipe to see more →</p>' +
+        '<div class="ab-strip">' + items.map(function (x) {
+          var img = x.image_url ? '<img src="' + esc(x.image_url) + '" alt="' + esc(x.title) + '" loading="lazy">' : '<div class="ab-ph">🏅</div>';
+          var inner = img + '<div class="ab-t"><b>' + esc(x.title) + '</b>' + (x.caption ? '<span>' + esc(x.caption) + '</span>' : '') + '</div>';
+          return x.link ? '<a class="ab-card" href="' + esc(x.link) + '" target="_blank" rel="noopener">' + inner + '</a>' : '<div class="ab-card">' + inner + '</div>';
+        }).join('') +
+        '<a class="ab-card ab-more" href="' + LINKEDIN + '" target="_blank" rel="noopener"><div class="ab-ph">in</div><div class="ab-t"><b>See all on LinkedIn</b><span>Posts, achievements and updates</span></div></a></div></section>';
+    }, function () {});
+  }
+  function viewAboutAdmin() {
+    setNav('admin');
+    if (!(profile && profile.is_admin)) { h('<div class="card narrow center"><p>Admins only.</p></div>'); return; }
+    loading();
+    sb.from('about_items').select('*').order('sort').order('id', { ascending: false }).then(function (r) {
+      var items = (r && r.data) || [];
+      h('<div class="narrow stack"><div><p class="eyebrow">Admin</p><h1>About VKV Sir: photos</h1><p class="muted small">Add photos from your LinkedIn posts (download the image, then upload here). They appear on the home page in a horizontal strip.</p></div>' +
+        '<div class="card stack"><label class="f" for="ai">Photo</label><input type="file" id="ai" accept="image/*" class="in">' +
+        '<label class="f" for="at">Title (short)</label><input class="in" id="at" maxlength="80" placeholder="e.g. Best Teacher Award 2025">' +
+        '<label class="f" for="ac">Caption (optional)</label><input class="in" id="ac" maxlength="140" placeholder="One line about it">' +
+        '<label class="f" for="al">Link (optional)</label><input class="in" id="al" placeholder="LinkedIn post URL">' +
+        '<label class="f" for="as">Order (smaller shows first)</label><input class="in" id="as" type="number" value="100">' +
+        '<div class="err" id="ae"></div><button class="btn" id="ago">Add to About section</button></div>' +
+        '<div class="card"><h2>Current items (' + items.length + ')</h2>' + (items.length ? items.map(function (x) {
+          return '<div class="spread" style="padding:8px 0;border-top:1px solid var(--line)"><span>' + (x.image_url ? '<img src="' + esc(x.image_url) + '" style="width:56px;height:40px;object-fit:cover;border-radius:6px;vertical-align:middle;margin-right:8px">' : '') + '<b>' + esc(x.title) + '</b> <span class="small muted">#' + x.sort + '</span></span><button class="linkbtn" data-del="' + x.id + '">Delete</button></div>';
+        }).join('') : '<p class="muted small">Nothing yet.</p>') + '</div></div>');
+      q('#ago').onclick = function () {
+        var f = q('#ai').files[0], t = q('#at').value.trim(), b = this;
+        if (!t) { q('#ae').textContent = 'Please add a title.'; return; }
+        if (f && f.size > 5 * 1024 * 1024) { q('#ae').textContent = 'Image must be under 5 MB.'; return; }
+        b.disabled = true; b.textContent = 'Uploading…';
+        var up = f ? sb.storage.from('about').upload(Date.now() + '-' + f.name.replace(/[^a-z0-9.]+/gi, '-').toLowerCase(), f, { upsert: false }).then(function (res) {
+          if (res.error) throw res.error; return sb.storage.from('about').getPublicUrl(res.data.path).data.publicUrl; }) : Promise.resolve(null);
+        up.then(function (url) {
+          return sb.from('about_items').insert({ title: t, caption: q('#ac').value.trim() || null, link: q('#al').value.trim() || null, sort: +q('#as').value || 100, image_url: url });
+        }).then(function (res) { if (res && res.error) throw res.error; viewAboutAdmin(); })
+          .catch(function (e) { q('#ae').textContent = errMsg(e); b.disabled = false; b.textContent = 'Add to About section'; });
+      };
+      Array.prototype.forEach.call(document.querySelectorAll('[data-del]'), function (d) {
+        d.onclick = function () { if (!confirm('Delete this item?')) return; sb.from('about_items').delete().eq('id', +d.getAttribute('data-del')).then(function () { viewAboutAdmin(); }); };
+      });
+    });
+  }
 
   /* ---------- personal group link ---------- */
   function viewGroup(tok) {
