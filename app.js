@@ -85,6 +85,7 @@
     if (p === '/admin') return viewAdmin();
     if (p === '/career' || p === '/jobprep') return viewCareer();
     if (p === '/admin/jobprep') return viewJpAdmin();
+    if (p === '/admin/software') return viewSwAdmin();
     if (p === '/drill') return viewDrill();
     if (p === '/admin/about') return viewAboutAdmin();
     if (p === '/admin/companies') return viewCompaniesAdmin();
@@ -826,24 +827,56 @@
       if (!tl || !tl.length || !secEl) return;
       var bands = [['essential', 'Essential: must know', 'Expected in the interview; learn to working level.'], ['lead', 'Gives you a lead', 'Knowing these makes you stand out among freshers.'], ['pro', 'Pro level', 'Learn if you want to grow into a specialist in this field.']];
       var box = document.createElement('div'); box.className = 'card';
-      box.innerHTML = '<h2>Software map for this role</h2><div class="swmap">' + bands.map(function (b) {
+      box.innerHTML = '<h2>General software for this role</h2><p class="small muted" style="margin-top:-6px">Typical for the role across companies. Check the company footprint above first.</p><div class="swmap">' + bands.map(function (b) {
         var l = tl.filter(function (x) { return x.band === b[0]; }).slice(0, 8); if (!l.length) return '';
         return '<div class="swcol sw-' + b[0] + '"><b>' + b[1] + '</b><span class="small muted">' + b[2] + '</span><ul>' + l.map(function (x) { return '<li><b>' + esc(x.name) + '</b>' + (x.vendor ? ' <span class="muted small">· ' + esc(x.vendor) + '</span>' : '') + (x.why ? '<br><span class="small">' + esc(x.why) + '</span>' : '') + '</li>'; }).join('') + '</ul></div>';
       }).join('') + '</div><p class="small muted" style="margin:8px 0 0">Many of these offer free student or trial editions. Learn one essential tool well before adding more.</p>';
-      var sw0 = secEl.querySelector('.jp-swt');
-      if (sw0) secEl.insertBefore(box, sw0.nextSibling); else secEl.insertBefore(box, secEl.querySelector('.row'));
+      box.className = 'card swgen';
+      var anchor = secEl.querySelector('.swfp') || secEl.querySelector('.jp-swt');
+      if (anchor) secEl.insertBefore(box, anchor.nextSibling); else secEl.insertBefore(box, secEl.querySelector('.row'));
     }).catch(function () {});
-    rpc('jp_iq_for', { p_role: p.role ? p.role.id : null, p_skills: ids, p_level: p.level }).then(function (list) {
-      if (!list || !list.length) return;
+    var coName = (window.__jpInp && window.__jpInp.company) || (p.company && p.company.name) || null;
+    if (coName || p.industry) {
+      rpc('jp_company_software', { p_company: coName, p_industry: p.industry ? p.industry.name : null, p_branch: p.branch || null, p_role: p.role ? p.role.id : null }).then(function (fp) {
+        if (!fp || !secEl) return;
+        var own = fp.own || [], peers = fp.peers || [];
+        if (!own.length && !peers.length) return;
+        function mon(d) { if (!d) return ''; var x = new Date(d); return isNaN(+x) ? '' : x.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }); }
+        function item(x) {
+          var ev = x.bucket === 'peers'
+            ? 'Used by ' + x.peer_n + ' similar compan' + (x.peer_n === 1 ? 'y' : 'ies') + (x.peer_names && x.peer_names.length ? ' (' + x.peer_names.map(esc).join(', ') + ')' : '')
+            : 'Seen in ' + x.seen + ' job post' + (x.seen === 1 ? '' : 's') + (x.latest ? ' · latest ' + mon(x.latest) : '') + (x.src ? ' · <a href="' + esc(x.src) + '" target="_blank" rel="noopener">source</a>' : '');
+          return '<li><div class="spread"><b>' + esc(x.name) + '</b>' + (x.bucket === 'rising' ? '<span class="pill accent">↑ Rising</span>' : '') + '</div>' +
+            (x.target ? '<span class="small"><b>Learn to:</b> ' + esc(x.target) + '</span><br>' : '') + '<span class="small muted">' + ev + '</span></li>';
+        }
+        var now = own.filter(function (x) { return x.bucket !== 'earlier'; }), old = own.filter(function (x) { return x.bucket === 'earlier'; });
+        var cols = [];
+        if (now.length) cols.push(['now', '🔥 Asked now', 'Seen in this company\'s job posts in the last 12 months.', now]);
+        if (old.length) cols.push(['old', '🕘 Used earlier', 'Seen only in older posts; may still be used.', old]);
+        if (peers.length) cols.push(['peer', own.length ? '🏭 Also common at similar companies' : '🏭 Common at similar companies', own.length ? 'Good additions from companies in the same field.' : 'No public job-post evidence for ' + esc(fp.company || 'this company') + ' yet, so this is based on companies in the same field.', peers.slice(0, 6)]);
+        var box = document.createElement('div'); box.className = 'card swfp';
+        box.innerHTML = '<h2>Software footprint' + (fp.company ? ' at ' + esc(fp.company) : '') + '</h2>' +
+          '<p class="small muted" style="margin-top:-6px">Built from real job posts and career pages' + (fp.evidence_n ? ' (' + fp.evidence_n + ' mentions tracked' + (fp.updated ? ', updated ' + esc(fmtDate(fp.updated)) : '') + ')' : '') + '. Learn the 🔥 tools first.</p>' +
+          '<div class="swfp-cols">' + cols.map(function (c) { return '<div class="swfp-col fp-' + c[0] + '"><b>' + c[1] + '</b><span class="small muted">' + c[2] + '</span><ul>' + c[3].map(item).join('') + '</ul></div>'; }).join('') + '</div>';
+        var sw0 = secEl.querySelector('.jp-swt'), gen = secEl.querySelector('.swgen');
+        if (sw0) secEl.insertBefore(box, sw0); else if (gen) secEl.insertBefore(box, gen); else secEl.insertBefore(box, secEl.querySelector('.row'));
+      }).catch(function () {});
+    }
+    var coQ = (coName || p.industry) ? rpc('jp_iq_company', { p_company: coName, p_industry: p.industry ? p.industry.name : null }).catch(function () { return null; }) : Promise.resolve(null);
+    Promise.all([rpc('jp_iq_for', { p_role: p.role ? p.role.id : null, p_skills: ids, p_level: p.level }), coQ]).then(function (rr) {
+      var list = rr[0] || [], cq = rr[1] || {};
+      if (!list.length && !(cq.own && cq.own.length) && !(cq.peers && cq.peers.length)) return;
       var tech = list.filter(function (x) { return x.grp !== 3; }), hr = list.filter(function (x) { return x.grp === 3; });
       function block(title, arr, note) {
         if (!arr.length) return '';
         return '<div class="card"><h2>' + title + '</h2><p class="small muted" style="margin-top:-6px">' + note + '</p><div class="jp-iq">' + arr.map(function (x, i) {
-          return '<details><summary><b>Q' + (i + 1) + '.</b> ' + esc(x.q) + '</summary><p>' + esc(x.a) + '</p>' + (x.points && x.points.length ? '<div class="chips">' + x.points.map(function (pt) { return '<span class="chip">' + esc(pt) + '</span>'; }).join('') + '</div>' : '') + '</details>';
+          return '<details><summary><b>Q' + (i + 1) + '.</b> ' + (x.round ? '<span class="pill small">' + esc(x.round) + '</span> ' : '') + esc(x.q) + (x.from ? ' <span class="small muted">· ' + esc(x.from) + '</span>' : '') + '</summary><p>' + esc(x.a) + '</p>' + (x.points && x.points.length ? '<div class="chips">' + x.points.map(function (pt) { return '<span class="chip">' + esc(pt) + '</span>'; }).join('') + '</div>' : '') + '</details>';
         }).join('') + '</div></div>';
       }
       var box = document.createElement('div'); box.className = 'stack'; box.style.marginTop = '16px';
-      box.innerHTML = block('Likely technical interview questions', tech, 'Try answering aloud first, then tap to see a model answer and key points.') +
+      box.innerHTML = (cq.own && cq.own.length ? block('Asked at ' + esc(cq.company) + ' (as reported by candidates)', cq.own, 'Common themes from candidates\' interview reports, with model answers in our own words. Answer aloud first, then tap to check.') : '') +
+        (cq.peers && cq.peers.length ? block('Asked at similar companies', cq.peers, (cq.own && cq.own.length ? 'More practice from companies in the same field.' : 'We have no reports for this company yet, so these come from companies in the same field.')) : '') +
+        block('Likely technical interview questions', tech, 'Try answering aloud first, then tap to see a model answer and key points.') +
         block('HR &amp; behavioural questions', hr, 'Prepare your own honest version of each answer.');
       var sec = q('#jout section'); if (sec) sec.insertBefore(box, sec.querySelector('.row'));
     }).catch(function () {});
@@ -877,12 +910,40 @@
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
 
+  function viewSwAdmin() {
+    setNav('admin');
+    if (!(profile && profile.is_admin)) { h('<div class="card narrow center"><p>Admins only.</p></div>'); return; }
+    loading();
+    rpc('jp_admin_sw_overview').then(function (d) {
+      var bs = d.by_source || {};
+      h('<div class="stack"><div><p class="eyebrow">Admin · Job Prep</p><h1>Software footprint tracker</h1><p class="muted">' + d.evidence + ' tool mentions from ' + d.companies + ' companies · ' + Object.keys(bs).map(function (k) { return esc(k.replace('_', ' ')) + ' ' + bs[k]; }).join(' · ') + '</p></div>' +
+        '<div class="grid"><div class="card"><h2>Add a job description</h2><p class="small muted">Paste any job post (Naukri, LinkedIn, company site). Tools are detected automatically and dated.</p>' +
+          '<input class="in" id="sj-co" placeholder="Company name (as in the library)"><input class="in" id="sj-url" placeholder="Link to the post (optional)" style="margin-top:8px"><input class="in" id="sj-date" type="date" style="margin-top:8px" title="Posted on"><textarea class="in" id="sj-text" rows="7" placeholder="Paste the job description" style="margin-top:8px"></textarea>' +
+          '<button class="btn" id="sj-go" style="margin-top:8px">Detect &amp; save</button><p class="small" id="sj-out"></p></div>' +
+        '<div class="card"><h2>Add a career page to crawl</h2><p class="small muted">The crawler visits these every week and reads job links on the same site. Pages that load jobs with JavaScript show “may load jobs with JavaScript”: add a direct job link instead.</p>' +
+          '<input class="in" id="ss-co" placeholder="Company name"><input class="in" id="ss-url" placeholder="https://careers.company.com/…" style="margin-top:8px"><button class="btn" id="ss-go" style="margin-top:8px">Add source</button><p class="small" id="ss-out"></p></div></div>' +
+        '<div class="card"><h2>Latest mentions</h2><div style="overflow-x:auto"><table class="table"><thead><tr><th>Date</th><th>Company</th><th>Tool</th><th>Source</th></tr></thead><tbody>' +
+          (d.recent || []).map(function (r) { return '<tr><td class="small">' + esc(r.date || '') + '</td><td>' + esc(r.company) + '</td><td>' + esc(r.tool) + '</td><td class="small">' + (r.url && /^http/.test(r.url) ? '<a href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.source.replace('_', ' ')) + '</a>' : esc(r.source.replace('_', ' '))) + '</td></tr>'; }).join('') + '</tbody></table></div></div>' +
+        '<div class="card"><h2>Crawl sources (' + (d.sources || []).length + ')</h2><div style="overflow-x:auto"><table class="table"><thead><tr><th>Company</th><th>URL</th><th>Last run</th><th>Found</th><th>Status</th></tr></thead><tbody>' +
+          (d.sources || []).map(function (s) { return '<tr><td>' + esc(s.company) + '</td><td class="small" style="max-width:260px;overflow-wrap:anywhere">' + esc(s.url) + '</td><td class="small">' + (s.last_run ? esc(fmtDate(s.last_run)) : 'not yet') + '</td><td>' + (s.found == null ? '–' : s.found) + '</td><td class="small muted">' + esc(s.status || '') + '</td></tr>'; }).join('') + '</tbody></table></div></div></div>');
+      q('#sj-go').onclick = function () {
+        var b = this; b.disabled = true;
+        rpc('jp_admin_add_jd', { p_company: q('#sj-co').value, p_text: q('#sj-text').value, p_url: q('#sj-url').value || null, p_posted: q('#sj-date').value || null, p_source: 'job_post' })
+          .then(function (r) { q('#sj-out').innerHTML = r.found ? '✓ Saved ' + r.found + ' tool' + (r.found > 1 ? 's' : '') + ': <b>' + r.tools.map(esc).join(', ') + '</b>' : 'No catalogue tools found (or company not in the library).'; })
+          .catch(function (e) { q('#sj-out').textContent = errMsg(e); }).finally(function () { b.disabled = false; });
+      };
+      q('#ss-go').onclick = function () {
+        rpc('jp_admin_sw_source', { p_company: q('#ss-co').value, p_url: q('#ss-url').value, p_active: true }).then(function () { q('#ss-out').textContent = '✓ Added. It will be crawled in the next nightly run.'; }).catch(function (e) { q('#ss-out').textContent = errMsg(e); });
+      };
+    }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
+  }
+
   function viewJpAdmin() {
     setNav('admin'); loading();
     rpc('jp_admin_log', { p_days: 30 }).then(function (d) {
       function list(arr, empty) { return arr && arr.length ? '<ol class="board">' + arr.map(function (x) { return '<li><span>' + esc(x.name) + '</span><span class="mono">' + x.n + '</span></li>'; }).join('') + '</ol>' : '<p class="muted small">' + empty + '</p>'; }
       h('<div class="stack"><div><p class="eyebrow">Admin · Job Prep</p><h1>What students are asking for</h1><p class="muted">Last 30 days · ' + d.total + ' plans generated.</p></div>' +
-        '<p><a class="btn" href="/admin/companies" data-link>Open company library (campus companies) →</a></p><div class="grid"><div class="card"><h2>Top roles</h2>' + list(d.roles, 'No data yet.') + '</div><div class="card"><h2>Top companies</h2>' + list(d.companies, 'No data yet.') + '</div>' +
+        '<p class="row" style="gap:10px;flex-wrap:wrap"><a class="btn" href="/admin/companies" data-link>Open company library (campus companies) →</a><a class="btn ghost" href="/admin/software" data-link>⚙ Software footprint tracker →</a></p><div class="grid"><div class="card"><h2>Top roles</h2>' + list(d.roles, 'No data yet.') + '</div><div class="card"><h2>Top companies</h2>' + list(d.companies, 'No data yet.') + '</div>' +
         '<div class="card"><h2>Companies not in the knowledge base</h2>' + list(d.unknown_companies, 'None so far.') + '<p class="small muted">Ask Claude to add these companies in the next "continue" session.</p></div></div>' +
         '<div class="card"><h2>Recent requests</h2><div class="table-wrap" style="overflow-x:auto"><table class="table"><thead><tr><th>When</th><th>Company</th><th>Matched role</th><th>Branch</th><th>Level</th><th>Job post (start)</th></tr></thead><tbody>' +
         (d.recent || []).map(function (r) { return '<tr><td class="small">' + esc(fmtDate(r.created_at)) + '</td><td>' + esc(r.company || '–') + '</td><td>' + esc(r.role || '–') + '</td><td>' + esc(r.branch || '–') + '</td><td>' + esc(r.level || '') + '</td><td class="small">' + esc(r.text || '') + '</td></tr>'; }).join('') +

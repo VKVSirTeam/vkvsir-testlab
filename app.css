@@ -625,3 +625,14 @@ body.veil .exam .qzoom{display:none!important}
 .pdfx .jp-badge{display:inline-block;width:16px;height:16px;line-height:16px;font-size:10px;text-align:center;border-radius:50%;margin-right:5px}
 .pdfx .cp-r{display:grid;grid-template-columns:120px 1fr;gap:6px;padding:3px 0;border-top:1px solid #eee}
 .pdfx img{max-width:100%;height:auto}
+
+/* ---- software footprint card ---- */
+.swfp-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:8px}
+.swfp-col{border:1px solid var(--line,#e2e2e2);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:2px}
+.swfp-col>b{font-size:15px}
+.swfp-col ul{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:8px}
+.swfp-col li{border-top:1px solid var(--line,#eee);padding-top:8px}
+.fp-now{border-color:#0e6b5c;background:rgba(14,107,92,.05)}
+.fp-old{opacity:.92}
+.fp-peer{background:rgba(59,111,182,.05);border-color:rgba(59,111,182,.35)}
+.jp-iq .pill.small{font-size:10.5px;padding:1px 7px;vertical-align:middle}
