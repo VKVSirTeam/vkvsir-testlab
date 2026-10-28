@@ -636,3 +636,55 @@ body.veil .exam .qzoom{display:none!important}
 .fp-old{opacity:.92}
 .fp-peer{background:rgba(59,111,182,.05);border-color:rgba(59,111,182,.35)}
 .jp-iq .pill.small{font-size:10.5px;padding:1px 7px;vertical-align:middle}
+
+/* ================= ATS resume builder ================= */
+.rb-promo{display:flex;align-items:center;gap:14px;margin:14px 0 4px;padding:14px 16px;border:1px solid var(--line,#e2e2e2);border-radius:14px;background:var(--card,#fff);text-decoration:none;color:inherit;box-shadow:0 6px 18px rgba(0,0,0,.05)}
+.rb-promo>span:first-child{font-size:28px}.rb-promo small{display:block;color:var(--muted,#666);font-size:13px;margin-top:2px}.rb-promo em{margin-left:auto;font-style:normal;font-weight:700;color:#b5541a;white-space:nowrap}
+@media(max-width:560px){.rb-promo{flex-wrap:wrap}.rb-promo em{margin-left:42px}}
+.rb{max-width:1240px;margin:0 auto}
+.rb-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.rb-head h1{margin:2px 0 4px}.rb-headr{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.rb-mini{font-size:14px;padding:6px 12px;border-radius:999px;background:#eee}.rb-mini b{font-size:18px}
+.rb-mini.great,.rb-score.great{background:#e3f5ec;color:#16613f}.rb-mini.good,.rb-score.good{background:#e8f0fb;color:#24508f}.rb-mini.fair,.rb-score.fair{background:#fff2e0;color:#8a4b0f}.rb-mini.low,.rb-score.low{background:#fdecec;color:#9b2c2c}
+.rb-steps{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}.rb-steps::-webkit-scrollbar{display:none}
+.rb-steps button{display:flex;align-items:center;gap:7px;white-space:nowrap;border:1px solid var(--line,#ddd);background:var(--card,#fff);color:inherit;border-radius:999px;padding:6px 12px 6px 6px;font:inherit;font-size:13.5px;cursor:pointer}
+.rb-steps i{font-style:normal;width:22px;height:22px;border-radius:50%;display:inline-grid;place-items:center;background:#eee;font-size:12px;font-weight:700}
+.rb-steps .on{border-color:#b5541a;box-shadow:0 0 0 2px rgba(181,84,26,.15)}.rb-steps .on i{background:#b5541a;color:#fff}.rb-steps .done i{background:#2e9d6a;color:#fff}
+.rb-body{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:18px;align-items:start}
+.rb-form h2{margin:0 0 6px}.rb-form h3{margin:18px 0 6px;font-size:16px}
+.rb-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin:10px 0}
+.rb-f{display:flex;flex-direction:column;gap:4px;min-width:0}.rb-f.wide{grid-column:1/-1;margin:10px 0}
+.rb-f label{font-weight:600;font-size:13.5px}.rb-f small{color:var(--muted,#666);font-size:12px}.req{color:#c0392b}
+.rb-goals{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.rb-goal{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line,#ddd);border-radius:12px;padding:10px;cursor:pointer}
+.rb-goal input{margin-top:3px;width:18px;height:18px;flex:none}.rb-goal b{display:block;font-size:14px}.rb-goal small{color:var(--muted,#666);font-size:12.5px}
+.rb-goal:has(input:checked){border-color:#0e6b5c;background:rgba(14,107,92,.06)}
+.rb-note{border-radius:10px;padding:10px 12px;margin:10px 0;font-size:13.5px;line-height:1.5}
+.rb-note.info{background:rgba(59,111,182,.08);border:1px solid rgba(59,111,182,.25)}.rb-note.warn{background:rgba(224,122,47,.09);border:1px solid rgba(224,122,47,.3)}.rb-note.ok{background:rgba(46,157,106,.09);border:1px solid rgba(46,157,106,.3)}
+.rb-chip{display:inline-block;font-size:12px;border:1px solid var(--line,#ccc);border-radius:999px;padding:1px 8px;margin:2px 2px 0 0;background:var(--card,#fff)}
+.rb-item{border:1px dashed var(--line,#ccc);border-radius:12px;padding:6px 12px 10px;margin:8px 0}
+.btn.small{padding:6px 10px;font-size:13px}
+.rb-nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px;border-top:1px solid var(--line,#eee);padding-top:14px}
+.rb-side{position:sticky;top:76px}.rb-ptitle{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 6px}
+#rb-prev{max-height:calc(100vh - 120px);overflow:auto;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.rv-paper{background:#fff;color:#111;font-family:Helvetica,Arial,sans-serif;font-size:10.5px;line-height:1.38;padding:26px 30px;min-height:420px}
+.rv-name{text-align:center;font-size:19px;font-weight:700}.rv-contact{text-align:center;font-size:10px;margin:3px 0 6px;overflow-wrap:anywhere}
+.rv-h{font-weight:700;font-size:11.5px;border-bottom:1px solid #222;margin:9px 0 4px;padding-bottom:1px;letter-spacing:.02em}
+.rv-paper p{margin:2px 0}.rv-paper ul{margin:2px 0 4px;padding-left:15px}.rv-paper li{margin:1px 0}
+.rv-it{margin:0 0 4px}.rv-row{display:flex;justify-content:space-between;gap:10px}.rv-row span{white-space:nowrap}
+.rb-score{display:flex;align-items:baseline;gap:8px;border-radius:14px;padding:14px 18px;margin:8px 0}.rb-score b{font-size:40px;line-height:1}.rb-score em{font-style:normal;font-weight:600;margin-left:8px}
+.rb-parts{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.rb-part{display:grid;grid-template-columns:minmax(0,1fr) 120px 48px;gap:10px;align-items:center;font-size:13.5px}
+.rb-part i{height:8px;border-radius:99px;background:#eee;position:relative;overflow:hidden}.rb-part i:after{content:"";position:absolute;inset:0 auto 0 0;width:var(--w);background:#0e6b5c;border-radius:99px}.rb-part b{text-align:right}
+.rb-tips{margin:4px 0;padding-left:18px}.rb-tips li{margin:4px 0}
+.rb-boost{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rb-boost>div{border:1px solid var(--line,#ddd);border-radius:12px;padding:10px 12px}.rb-boost p{margin:4px 0 0;font-size:13px;color:var(--muted,#555)}
+.rb-actions{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 6px}
+@media(max-width:900px){.rb-body{grid-template-columns:1fr}.rb-side{position:static}#rb-prev{max-height:none}.rb-headr{align-items:flex-start}}
+@media(max-width:560px){.rb-grid,.rb-goals,.rb-boost{grid-template-columns:1fr}.rv-paper{padding:16px;font-size:10px}.rb-part{grid-template-columns:minmax(0,1fr) 70px 42px}}
+@media (prefers-color-scheme:dark){.rb-mini{background:#333}.rb-steps i{background:#444}}
+.rb-headr{flex-direction:row!important;flex-wrap:wrap;align-items:center!important;gap:8px 10px}
+.rb-headr .btn.small{height:auto;line-height:1.2}
+.rb-headr select.in{width:auto;max-width:230px;padding:6px 10px}
+.rb-goal small{display:block;line-height:1.4;margin-top:2px}.rb-goal b{line-height:1.3}
+.rb-score{flex-wrap:wrap}.rb-score b,.rb-score span{white-space:nowrap}
+@media(max-width:560px){.rb-score b{font-size:34px}.rb-score em{margin-left:0;flex-basis:100%}}

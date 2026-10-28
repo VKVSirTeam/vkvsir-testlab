@@ -84,6 +84,7 @@
     if (p === '/me') return viewDashboard();
     if (p === '/admin') return viewAdmin();
     if (p === '/career' || p === '/jobprep') return viewCareer();
+    if (p === '/resume') return viewResume();
     if (p === '/admin/jobprep') return viewJpAdmin();
     if (p === '/admin/software') return viewSwAdmin();
     if (p === '/admin/iq-reports') return viewIqReportsAdmin();
@@ -193,7 +194,7 @@
       h('<section class="hx"><div class="hx-l"><p class="eyebrow">Free practice platform by VKV Sir</p><h1>Practise smarter for <em>exams, viva &amp; interviews</em>.</h1>' +
         '<p class="hx-sub">Pick any subject, unit or topic and get a freshly balanced paper in seconds, with fair timing, instant results and clear explanations.</p>' +
         '<ul class="hx-pts"><li><i>✓</i>Free forever</li><li><i>✓</i>Instant results &amp; explanations</li><li><i>✓</i>Works on mobile &amp; laptop</li></ul>' +
-        '<div class="hx-cta"><button class="btn" id="go-start">▶ Start practising</button><a class="btn ghost" href="#how">How it works</a></div>' +
+        '<div class="hx-cta"><button class="btn" id="go-start">▶ Start practising</button><a class="btn ghost" href="#how">How it works</a><a class="btn ghost" href="/resume" data-link>📄 Free resume builder</a></div>' +
         '</div>' +
         '<div class="hx-r2"><div class="hx-panel"><div class="hxp-grid">' +
           [['📚', 'Thousands', 'of practice questions'], ['🧭', '3 tracks', 'Semester · Competitive · Career'], ['🖼️', 'Image questions', 'Diagrams, figures & charts'], ['⚡', 'Fresh paper', 'Balanced mix every time']].map(function (s) { return '<div class="hxp"><span class="hxp-i">' + s[0] + '</span><b>' + s[1] + '</b><small>' + s[2] + '</small></div>'; }).join('') +
@@ -625,6 +626,17 @@
     }
   }
 
+  /* ---------- resume builder (loaded on demand) ---------- */
+  function viewResume() {
+    setNav('career'); loading();
+    var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, get session() { return session; }, get profile() { return profile; } };
+    function run() { window.RB.render(api); }
+    if (window.RB) return run();
+    var s = document.createElement('script'); s.src = '/resume.js?v=1'; s.onload = run;
+    s.onerror = function () { h('<div class="card narrow center"><p>Could not load the resume builder. Please refresh.</p></div>'); };
+    document.head.appendChild(s);
+  }
+
   /* ---------- career / job preparation planner ---------- */
   var jpOpts = null;
   function viewCareer() {
@@ -639,6 +651,7 @@
       var brOpts = '<option value="">Select your branch</option>' + (o.branches || []).map(function (b) { return '<option value="' + esc(b.id) + '">' + esc(b.name) + '</option>'; }).join('');
       var levels = [['student', 'Student', 'Still studying'], ['fresher', 'Fresher', '0 to 1 year'], ['junior', 'Experienced', '2 to 4 years'], ['senior', 'Senior', '5+ years']];
       h('<section class="hero jp-hero"><p class="eyebrow">Career &amp; interview preparation</p><h1>Know exactly what to prepare for <em>your</em> target job.</h1>' +
+        '<a class="rb-promo" href="/resume" data-link><span>📄</span><span><b>Free ATS Resume Builder</b><small>Build a recruiter-ready resume with keywords from real job posts, an instant ATS score and a plan to strengthen your profile.</small></span><em>Build my resume →</em></a>' +
         '<p class="muted" style="max-width:680px">Tell us the company, role and branch, or paste the job post. You get a clear plan: the most important subjects and topics, what to refresh, software to learn, likely interview questions, and one-click practice for each topic.</p></section>' +
         '<div class="card stack jp-form">' +
         '<div class="two"><div><label class="f" for="jc">Company (optional)</label><input class="in" id="jc" list="jcl" placeholder="e.g. Tata Motors, Infosys, L&amp;T" autocomplete="off"><datalist id="jcl">' + (o.companies || []).map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist><input class="in" id="ju" placeholder="Company website (optional), e.g. www.tatamotors.com" style="margin-top:6px"></div>' +
