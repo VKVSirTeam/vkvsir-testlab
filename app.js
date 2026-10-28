@@ -193,7 +193,7 @@
         '<ul class="hx-pts"><li><i>✓</i>Free forever</li><li><i>✓</i>Instant results &amp; explanations</li><li><i>✓</i>Built by Dr. Vinod Kumar Verma</li></ul>' +
         '<div class="hx-cta"><button class="btn" id="go-start">▶ Start practising</button><a class="btn ghost" href="#how">How it works</a></div>' +
         '<div class="hx-stats"><span><b>Thousands</b> of questions</span><span><b>3</b> learning tracks</span><span><b>Fresh</b> paper every time</span></div></div>' +
-        '<div class="hx-r" aria-hidden="true"><div class="mockq"><div class="mq-top"><span>Automobile Engg · Unit 4</span><span class="mq-t">⏱ 0:42</span></div><div class="mq-bar"><i></i></div><p class="mq-q">Which gearbox uses dog clutches to engage gears?</p><div class="mq-o">A&nbsp; Sliding mesh</div><div class="mq-o ok">B&nbsp; Constant mesh ✓</div><div class="mq-o">C&nbsp; Epicyclic</div><div class="mq-o">D&nbsp; Torque converter</div></div></div></section>' +
+        '<div class="hx-r">' + heroSamples() + '</div></section>' +
         '<section class="how" id="how"><h2 class="sh2">How it works</h2><div class="steps3"><div><span>1</span><b>Choose</b><p>Open a track and tick a whole subject, some units or single topics.</p></div><div><span>2</span><b>Practise</b><p>Pick your time and mode. Every paper is freshly mixed from easy to hard.</p></div><div><span>3</span><b>Improve</b><p>See your score, correct answers and explanations. Report any doubtful question.</p></div></div></section>' +
         '<div class="stats reveal">' + [['20', '+', 'Subjects & skills'], ['40', '+', 'Job roles mapped'], ['200', '+', 'Recruiters covered'], ['100', '%', 'Free practice']].map(function (s) { return '<div class="st"><b class="cnt" data-to="' + s[0] + '">0</b><i>' + s[1] + '</i><span>' + s[2] + '</span></div>'; }).join('') + '</div>' +
         '<div class="marq" aria-hidden="true"><div class="marq-in">' + (function () { var c = ['TCS', 'Infosys', 'L&amp;T', 'Tata Motors', 'Shri Bhagwati Machines', 'NTPC', 'BHEL', 'JK Tyre', 'Maruti Suzuki', 'Wipro', 'Bosch', 'Siemens', 'UltraTech', 'Tata Steel', 'Accenture', 'Mahindra', 'IOCL', 'ABB']; var s = c.map(function (x) { return '<span>' + x + '</span>'; }).join(''); return s + s; })() + '</div></div>' +
@@ -1358,6 +1358,32 @@
       window.renderMathInElement(el, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '\\[', right: '\\]', display: true }, { left: '$', right: '$', display: false }, { left: '\\(', right: '\\)', display: false }], throwOnError: false });
     } catch (e) {}
   }
+
+  /* ---------- homepage: four sample image questions ---------- */
+  var HERO_Q = [
+    { dom: 'Mechanical', c: 'm', img: '/img/milling-cutters-3d.webp', q: 'Figure 3 shows which milling cutter?', o: ['Side and face', 'Double angle', 'End mill', 'Plain (slab)'], a: 1, x: 'Two toothed conical faces meet in a V: a double angle cutter.' },
+    { dom: 'CS / IT', c: 'c', img: '/img/network-topologies.webp', q: 'Which network gives the highest fault tolerance?', o: ['Figure 1', 'Figure 2', 'Figure 3', 'Figure 4'], a: 3, x: 'Full mesh (Figure 4): every node has a direct link to every other node.' },
+    { dom: 'Aptitude', c: 'a', img: '/img/di-pie-income.webp', q: 'How much does the family spend on Food each month?', o: ['₹10,000', '₹12,000', '₹14,000', '₹16,000'], a: 1, x: 'Food = 30% of ₹40,000 = ₹12,000.' },
+    { dom: 'Reasoning', c: 'r', img: '/img/figure-series-arrow.webp', q: 'Which answer figure replaces the “?”', o: ['Figure 1', 'Figure 2', 'Figure 3', 'Figure 4'], a: 2, x: 'Arrow turns 45° clockwise and one dot is added each step: Figure 3.' }
+  ];
+  function heroSamples() {
+    return '<div class="hq-head"><b>Try a real question</b><span>Image-based questions from 4 domains · tap an answer<span class="hz-mouse"> · hover a picture to enlarge</span></span></div><div class="hq-grid">' +
+      HERO_Q.map(function (s, n) {
+        return '<div class="hq hq-' + s.c + '" data-n="' + n + '"><span class="hq-dom">' + s.dom + '</span>' +
+          '<figure class="qzw hq-fig"><img class="qimg" alt="Question figure" loading="lazy" src="' + s.img + '"><img class="qzoom" alt="" aria-hidden="true" src="' + s.img + '"></figure>' +
+          '<p class="hq-q">' + esc(s.q) + '</p><div class="hq-o">' +
+          s.o.map(function (o, k) { return '<button type="button" data-k="' + k + '"><i>' + 'ABCD'[k] + '</i>' + esc(o) + '</button>'; }).join('') +
+          '</div><p class="hq-x" hidden></p></div>';
+      }).join('') + '</div>';
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.hq-o button'); if (!b) return;
+    var card = b.closest('.hq'), s = HERO_Q[+card.getAttribute('data-n')], k = +b.getAttribute('data-k');
+    if (card.classList.contains('done')) return;
+    card.classList.add('done');
+    Array.prototype.forEach.call(card.querySelectorAll('.hq-o button'), function (x, i) { x.disabled = true; if (i === s.a) x.classList.add('ok'); else if (i === k) x.classList.add('bad'); });
+    var p = card.querySelector('.hq-x'); p.hidden = false; p.innerHTML = (k === s.a ? '<b>✓ Correct.</b> ' : '<b>✗ Not quite.</b> ') + esc(s.x);
+  });
 
   /* ---------- question image with hover-zoom (laptop) and hint ---------- */
   function zimg(src, cls, alt) {
