@@ -86,6 +86,7 @@
     if (p === '/career' || p === '/jobprep') return viewCareer();
     if (p === '/admin/jobprep') return viewJpAdmin();
     if (p === '/admin/software') return viewSwAdmin();
+    if (p === '/admin/iq-reports') return viewIqReportsAdmin();
     if (p === '/drill') return viewDrill();
     if (p === '/admin/about') return viewAboutAdmin();
     if (p === '/admin/companies') return viewCompaniesAdmin();
@@ -836,7 +837,7 @@
       if (anchor) secEl.insertBefore(box, anchor.nextSibling); else secEl.insertBefore(box, secEl.querySelector('.row'));
     }).catch(function () {});
     var coName = (window.__jpInp && window.__jpInp.company) || (p.company && p.company.name) || null;
-    if (coName || p.industry) {
+    function drawFootprint() {
       rpc('jp_company_software', { p_company: coName, p_industry: p.industry ? p.industry.name : null, p_branch: p.branch || null, p_role: p.role ? p.role.id : null }).then(function (fp) {
         if (!fp || !secEl) return;
         var own = fp.own || [], peers = fp.peers || [];
@@ -858,8 +859,17 @@
         box.innerHTML = '<h2>Software footprint' + (fp.company ? ' at ' + esc(fp.company) : '') + '</h2>' +
           '<p class="small muted" style="margin-top:-6px">Built from real job posts and career pages' + (fp.evidence_n ? ' (' + fp.evidence_n + ' mentions tracked' + (fp.updated ? ', updated ' + esc(fmtDate(fp.updated)) : '') + ')' : '') + '. Learn the 🔥 tools first.</p>' +
           '<div class="swfp-cols">' + cols.map(function (c) { return '<div class="swfp-col fp-' + c[0] + '"><b>' + c[1] + '</b><span class="small muted">' + c[2] + '</span><ul>' + c[3].map(item).join('') + '</ul></div>'; }).join('') + '</div>';
+        var prev = secEl.querySelector('.swfp');
+        if (prev) { prev.replaceWith(box); return; }
         var sw0 = secEl.querySelector('.jp-swt'), gen = secEl.querySelector('.swgen');
         if (sw0) secEl.insertBefore(box, sw0); else if (gen) secEl.insertBefore(box, gen); else secEl.insertBefore(box, secEl.querySelector('.row'));
+      }).catch(function () {});
+    }
+    if (coName || p.industry) {
+      drawFootprint();
+      // live: refresh this company's job posts now if our data is more than a day old
+      if (session && coName) sb.functions.invoke('jp-sw-crawl', { body: { company: coName } }).then(function (r) {
+        var d = r && r.data; if (d && d.refreshed && (d.report || []).some(function (x) { return x.found > 0; })) drawFootprint();
       }).catch(function () {});
     }
     var coQ = (coName || p.industry) ? rpc('jp_iq_company', { p_company: coName, p_industry: p.industry ? p.industry.name : null }).catch(function () { return null; }) : Promise.resolve(null);
@@ -879,6 +889,7 @@
         block('Likely technical interview questions', tech, 'Try answering aloud first, then tap to see a model answer and key points.') +
         block('HR &amp; behavioural questions', hr, 'Prepare your own honest version of each answer.');
       var sec = q('#jout section'); if (sec) sec.insertBefore(box, sec.querySelector('.row'));
+      if (sec) sec.insertBefore(reportBox(coName, p.role ? p.role.name : ''), sec.querySelector('.row'));
     }).catch(function () {});
     if (profile && profile.is_admin) { var a = document.createElement('p'); a.className = 'small'; a.innerHTML = '<a href="/admin/jobprep" data-link>Admin: see what students are asking for →</a>'; q('#jout').appendChild(a); }
   }
@@ -907,6 +918,50 @@
           .then(function () { viewCompaniesAdmin(); }).catch(function (e) { q('#ce').textContent = errMsg(e); b.disabled = false; b.textContent = 'Add & build profile'; });
       };
       Array.prototype.forEach.call(document.querySelectorAll('[data-ref]'), function (b) { b.onclick = function () { build(b.getAttribute('data-ref'), b).then(function () { viewCompaniesAdmin(); }); }; });
+    }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
+  }
+
+  /* ---------- students share interview questions (reviewed before publishing) ---------- */
+  function reportBox(company, role) {
+    var d = document.createElement('div'); d.className = 'card iqr no-pdf';
+    var yr = new Date().getFullYear();
+    d.innerHTML = '<h2>🎤 Interviewed recently? Help your juniors</h2><p class="small muted" style="margin-top:-6px">Share the questions you were asked. We check each one, add a model answer and show it to students preparing for the same company.</p>' +
+      '<div class="two"><div><label class="f">Company</label><input class="in" id="iqr-co" value="' + esc(company || '') + '" placeholder="Company name"></div><div><label class="f">Role / post</label><input class="in" id="iqr-ro" value="' + esc(role || '') + '" placeholder="e.g. GET Mechanical"></div></div>' +
+      '<div class="two" style="margin-top:8px"><div><label class="f">Round</label><select class="in" id="iqr-rd"><option>Technical</option><option>HR</option><option>Managerial</option><option>Aptitude</option><option>Coding</option><option>Group discussion</option></select></div><div><label class="f">Year</label><select class="in" id="iqr-yr">' + [yr, yr - 1, yr - 2].map(function (y) { return '<option>' + y + '</option>'; }).join('') + '</select></div></div>' +
+      '<label class="f" style="margin-top:8px;display:block">Questions (one per line)</label><textarea class="in" id="iqr-q" rows="5" placeholder="What is the difference between…\nExplain your final-year project…"></textarea>' +
+      '<label class="f" style="margin-top:8px;display:block">Tip for juniors (optional)</label><input class="in" id="iqr-tip" placeholder="e.g. They asked a lot about the internship">' +
+      '<button class="btn" id="iqr-go" type="button" style="margin-top:10px">Share questions</button><p class="small" id="iqr-out"></p>';
+    d.querySelector('#iqr-go').onclick = function () {
+      if (!session) { toast('Please sign in to share.'); go('/login?next=' + encodeURIComponent(location.pathname)); return; }
+      var b = this; b.disabled = true;
+      rpc('jp_report_iq', { p_company: d.querySelector('#iqr-co').value, p_role: d.querySelector('#iqr-ro').value, p_round: d.querySelector('#iqr-rd').value, p_year: +d.querySelector('#iqr-yr').value, p_questions: d.querySelector('#iqr-q').value, p_tip: d.querySelector('#iqr-tip').value })
+        .then(function (r) { d.querySelector('#iqr-out').innerHTML = r.saved ? '✓ Thank you! ' + r.saved + ' question' + (r.saved > 1 ? 's' : '') + ' sent for review.' : 'Please write at least one full question.'; if (r.saved) d.querySelector('#iqr-q').value = ''; })
+        .catch(function (e) { d.querySelector('#iqr-out').textContent = errMsg(e); }).finally(function () { b.disabled = false; });
+    };
+    return d;
+  }
+  function viewIqReportsAdmin() {
+    setNav('admin');
+    if (!(profile && profile.is_admin)) { h('<div class="card narrow center"><p>Admins only.</p></div>'); return; }
+    loading();
+    rpc('jp_admin_iq_reports', { p_status: 'pending' }).then(function (list) {
+      h('<div class="stack"><div><p class="eyebrow">Admin · Job Prep</p><h1>Interview questions from students</h1><p class="muted">' + list.length + ' waiting for review. Add a short model answer and approve; it then appears under “Asked at [company]”.</p></div>' +
+        (list.length ? list.map(function (r) {
+          return '<div class="card iqrv" data-id="' + r.id + '"><div class="spread small muted"><span><b>' + esc(r.company) + '</b>' + (r.company_id ? '' : ' <span class="pill bad">not in library</span>') + ' · ' + esc(r.round || '') + ' · ' + (r.year || '') + (r.role ? ' · ' + esc(r.role) : '') + '</span><span>' + esc(r.by || 'Student') + ' · ' + esc(fmtDate(r.created_at)) + '</span></div>' +
+            '<label class="f" style="margin-top:8px;display:block">Question</label><input class="in rq" value="' + esc(r.question) + '">' +
+            (r.tip ? '<p class="small muted">Tip: ' + esc(r.tip) + '</p>' : '') +
+            '<label class="f" style="margin-top:8px;display:block">Model answer</label><textarea class="in ra" rows="3" placeholder="2–3 sentences in simple words"></textarea>' +
+            '<div class="two" style="margin-top:8px"><input class="in rp" placeholder="Key points separated by |"><input class="in rc" value="' + esc(r.company_id ? '' : r.company) + '" placeholder="' + (r.company_id ? 'Company (unchanged)' : 'Company name in the library') + '"></div>' +
+            '<div class="row" style="gap:8px;margin-top:10px"><button class="btn" data-a="approve">Approve</button><button class="btn ghost" data-a="reject">Reject</button><span class="small rout"></span></div></div>';
+        }).join('') : '<div class="card"><p class="muted">Nothing to review right now.</p></div>') + '</div>');
+      Array.prototype.forEach.call(document.querySelectorAll('.iqrv button'), function (b) {
+        b.onclick = function () {
+          var c = b.closest('.iqrv'), a = b.getAttribute('data-a');
+          rpc('jp_admin_iq_review', { p_id: +c.getAttribute('data-id'), p_action: a, p_question: c.querySelector('.rq').value, p_answer: c.querySelector('.ra').value, p_points: c.querySelector('.rp').value, p_company: c.querySelector('.rc').value || null })
+            .then(function () { c.style.opacity = .45; c.querySelector('.rout').textContent = a === 'approve' ? '✓ Published' : 'Rejected'; Array.prototype.forEach.call(c.querySelectorAll('button'), function (x) { x.disabled = true; }); })
+            .catch(function (e) { c.querySelector('.rout').textContent = errMsg(e); });
+        };
+      });
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
 
@@ -943,7 +998,7 @@
     rpc('jp_admin_log', { p_days: 30 }).then(function (d) {
       function list(arr, empty) { return arr && arr.length ? '<ol class="board">' + arr.map(function (x) { return '<li><span>' + esc(x.name) + '</span><span class="mono">' + x.n + '</span></li>'; }).join('') + '</ol>' : '<p class="muted small">' + empty + '</p>'; }
       h('<div class="stack"><div><p class="eyebrow">Admin · Job Prep</p><h1>What students are asking for</h1><p class="muted">Last 30 days · ' + d.total + ' plans generated.</p></div>' +
-        '<p class="row" style="gap:10px;flex-wrap:wrap"><a class="btn" href="/admin/companies" data-link>Open company library (campus companies) →</a><a class="btn ghost" href="/admin/software" data-link>⚙ Software footprint tracker →</a></p><div class="grid"><div class="card"><h2>Top roles</h2>' + list(d.roles, 'No data yet.') + '</div><div class="card"><h2>Top companies</h2>' + list(d.companies, 'No data yet.') + '</div>' +
+        '<p class="row" style="gap:10px;flex-wrap:wrap"><a class="btn" href="/admin/companies" data-link>Open company library (campus companies) →</a><a class="btn ghost" href="/admin/software" data-link>⚙ Software footprint tracker →</a><a class="btn ghost" href="/admin/iq-reports" data-link>🎤 Student interview reports →</a></p><div class="grid"><div class="card"><h2>Top roles</h2>' + list(d.roles, 'No data yet.') + '</div><div class="card"><h2>Top companies</h2>' + list(d.companies, 'No data yet.') + '</div>' +
         '<div class="card"><h2>Companies not in the knowledge base</h2>' + list(d.unknown_companies, 'None so far.') + '<p class="small muted">Ask Claude to add these companies in the next "continue" session.</p></div></div>' +
         '<div class="card"><h2>Recent requests</h2><div class="table-wrap" style="overflow-x:auto"><table class="table"><thead><tr><th>When</th><th>Company</th><th>Matched role</th><th>Branch</th><th>Level</th><th>Job post (start)</th></tr></thead><tbody>' +
         (d.recent || []).map(function (r) { return '<tr><td class="small">' + esc(fmtDate(r.created_at)) + '</td><td>' + esc(r.company || '–') + '</td><td>' + esc(r.role || '–') + '</td><td>' + esc(r.branch || '–') + '</td><td>' + esc(r.level || '') + '</td><td class="small">' + esc(r.text || '') + '</td></tr>'; }).join('') +
