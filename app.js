@@ -160,12 +160,12 @@
         if (!rows.length) return '';
         var m = {}, order = [];
         rows.forEach(function (x) { var g = x.subgrp || x.grp || 'More'; if (!m[g]) { m[g] = []; order.push(g); } m[g].push(x); });
-        return '<p class="f tr-g">📚 Prepare by area</p>' + order.map(function (g) {
-          return '<details class="tgrp"' + (m[g].length <= 4 ? ' open' : '') + '><summary><b>' + esc(g) + '</b> <span class="small muted">(' + m[g].length + ')</span></summary><div class="tr-items">' + m[g].map(function (x) {
+        return '<p class="f tr-g">📚 Prepare by area</p><div class="tgrps">' + order.map(function (g) {
+          return '<details class="tgrp n' + Math.min(m[g].length, 3) + '"' + (m[g].length <= 4 ? ' open' : '') + '><summary><b>' + esc(g) + '</b> <span class="small muted">(' + m[g].length + ')</span></summary><div class="tr-items">' + m[g].map(function (x) {
             var href = x.url || ('/p/' + String(x.subject_id).toLowerCase());
             return '<a class="tr-item" href="' + esc(href) + '" data-link><b>' + esc(x.title) + '</b>' + (x.description ? '<span class="small muted">' + esc(x.description) + '</span>' : '') + '<span class="pill good">Open →</span></a>';
           }).join('') + '</div></details>';
-        }).join('');
+        }).join('') + '</div>';
       }
       function careerTop() {
         return '<div class="tr-quick"><p class="f" style="margin:0 0 8px">🎯 Get your interview preparation plan</p>' +
@@ -190,9 +190,12 @@
       }).join('');
       h('<section class="hx"><div class="hx-l"><p class="eyebrow">Free practice platform by VKV Sir</p><h1>Practise smarter for <em>exams, viva &amp; interviews</em>.</h1>' +
         '<p class="hx-sub">Pick any subject, unit or topic and get a freshly balanced paper in seconds, with fair timing, instant results and clear explanations.</p>' +
-        '<ul class="hx-pts"><li><i>✓</i>Free forever</li><li><i>✓</i>Instant results &amp; explanations</li><li><i>✓</i>Built by Dr. Vinod Kumar Verma</li></ul>' +
+        '<ul class="hx-pts"><li><i>✓</i>Free forever</li><li><i>✓</i>Instant results &amp; explanations</li><li><i>✓</i>Works on mobile &amp; laptop</li></ul>' +
         '<div class="hx-cta"><button class="btn" id="go-start">▶ Start practising</button><a class="btn ghost" href="#how">How it works</a></div>' +
-        '<div class="hx-stats"><span><b>Thousands</b> of questions</span><span><b>3</b> learning tracks</span><span><b>Fresh</b> paper every time</span></div></div>' +
+        '</div>' +
+        '<div class="hx-r2"><div class="hx-panel"><div class="hxp-grid">' +
+          [['📚', 'Thousands', 'of practice questions'], ['🧭', '3 tracks', 'Semester · Competitive · Career'], ['🖼️', 'Image questions', 'Diagrams, figures & charts'], ['⚡', 'Fresh paper', 'Balanced mix every time']].map(function (s) { return '<div class="hxp"><span class="hxp-i">' + s[0] + '</span><b>' + s[1] + '</b><small>' + s[2] + '</small></div>'; }).join('') +
+          '</div><div class="hxp-by"><img src="/favicon.svg" alt=""><span>Questions prepared and reviewed by <b>Dr. Vinod Kumar Verma</b></span></div></div></div>' +
         '</section><section class="hqs">' + heroSamples() + '</section>' +
         '<section class="how" id="how"><h2 class="sh2">How it works</h2><div class="steps3"><div><span>1</span><b>Choose</b><p>Open a track and tick a whole subject, some units or single topics.</p></div><div><span>2</span><b>Practise</b><p>Pick your time and mode. Every paper is freshly mixed from easy to hard.</p></div><div><span>3</span><b>Improve</b><p>See your score, correct answers and explanations. Report any doubtful question.</p></div></div></section>' +
         '<div class="stats reveal">' + [['20', '+', 'Subjects & skills'], ['40', '+', 'Job roles mapped'], ['200', '+', 'Recruiters covered'], ['100', '%', 'Free practice']].map(function (s) { return '<div class="st"><b class="cnt" data-to="' + s[0] + '">0</b><i>' + s[1] + '</i><span>' + s[2] + '</span></div>'; }).join('') + '</div>' +
@@ -570,6 +573,42 @@
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
 
+  /* ---------- plan: real PDF file, then download or share (Drive, Gmail, WhatsApp…) ---------- */
+  function loadPdfLib() {
+    if (window.html2pdf) return Promise.resolve();
+    return new Promise(function (ok, bad) { var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'; s.onload = ok; s.onerror = bad; document.head.appendChild(s); });
+  }
+  function planPdf(p) {
+    var name = 'VKV-Sir-Preparation-Plan-' + String((p.role && p.role.name) || 'Plan').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.pdf';
+    return loadPdfLib().then(function () {
+      var src = q('#jout section'); var wrap = document.createElement('div'); wrap.className = 'pdfx';
+      wrap.innerHTML = '<div class="pdfx-h"><b>VKV Sir Test Lab</b> · Interview Preparation Plan<span>test.vkvsir.com</span></div>' + src.outerHTML +
+        '<div class="pdfx-f">Prepared on VKV Sir Test Lab (test.vkvsir.com) · www.vkvsir.com · Practise every topic free online</div>';
+      Array.prototype.forEach.call(wrap.querySelectorAll('button,.btn'), function (b) { b.remove(); });
+      return window.html2pdf().set({ margin: [10, 10, 12, 10], filename: name, image: { type: 'jpeg', quality: 0.92 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' }, jsPDF: { unit: 'mm', format: 'a4' }, pagebreak: { mode: ['css', 'legacy'], avoid: ['.card', '.jp-skill', 'li'] } })
+        .from(wrap).outputPdf('blob').then(function (blob) { return { blob: blob, name: name }; });
+    });
+  }
+  function planSaveButtons(p) {
+    var bd = q('#jp-pdf'), bs = q('#jp-share'); if (!bd) return;
+    var cache = null;
+    function make(btn, label) { btn.disabled = true; btn.textContent = 'Preparing PDF…'; return (cache || (cache = planPdf(p))).finally(function () { btn.disabled = false; btn.textContent = label; }); }
+    bd.onclick = function () {
+      make(bd, '⬇ Download PDF').then(function (r) { var a = document.createElement('a'); a.href = URL.createObjectURL(r.blob); a.download = r.name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000); })
+        .catch(function () { toast('Could not make the PDF. Use Print → Save as PDF instead.'); });
+    };
+    var probe = null; try { probe = new File([''], 'x.pdf', { type: 'application/pdf' }); } catch (e) {}
+    if (probe && navigator.canShare && navigator.canShare({ files: [probe] })) {
+      bs.hidden = false;
+      bs.onclick = function () {
+        make(bs, '📤 Save to Drive / Email / WhatsApp').then(function (r) {
+          var f = new File([r.blob], r.name, { type: 'application/pdf' });
+          return navigator.share({ files: [f], title: 'My preparation plan', text: 'My interview preparation plan from VKV Sir Test Lab (test.vkvsir.com)' });
+        }).catch(function (e) { if (e && e.name !== 'AbortError') toast('Sharing is not available here. Use Download PDF.'); });
+      };
+    }
+  }
+
   /* ---------- career / job preparation planner ---------- */
   var jpOpts = null;
   function viewCareer() {
@@ -666,13 +705,14 @@
     if (sw.length) html += '<div class="jp-tier jp-swt"><h2><span class="jp-badge">⚙</span>Software &amp; practical skills</h2><p class="muted small" style="margin-top:-6px">Learn to the target level and be ready to explain one thing you built with it.</p><div class="grid">' + sw.map(swCard).join('') + '</div></div>';
     var tr = (p.role && p.role.traits) || [];
     if (tr.length) html += '<div class="card"><h2>Qualities they look for</h2><div class="chips">' + tr.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div><p class="small muted" style="margin:10px 0 0">Prepare one short real example for each quality. Interviewers remember stories, not adjectives.</p></div>';
-    html += '<div class="row" style="gap:10px;flex-wrap:wrap"><button class="btn ghost" onclick="window.print()">Save or print this plan</button><a class="btn" href="/me" data-link>Track my progress</a></div>' +
+    html += '<div class="row" style="gap:10px;flex-wrap:wrap"><button class="btn" type="button" id="jp-pdf">⬇ Download PDF</button><button class="btn ghost" type="button" id="jp-share" hidden>📤 Save to Drive / Email / WhatsApp</button><button class="btn ghost" type="button" onclick="window.print()">🖨 Print</button><a class="btn" href="/me" data-link>Track my progress</a></div>' +
       '<p class="small muted">This plan is prepared from VKV Sir\'s research on companies, roles and skills to guide your preparation. Actual interview questions can vary by panel and position.</p></section>';
     html = '<div class="print-only pr-wm"><img src="/favicon.svg" alt=""><span>www.vkvsir.com</span></div>' +
       '<table class="prt"><thead><tr><td><div class="pr-head"><img src="/favicon.svg" alt=""><span><b>VKV Sir Test Lab</b> · Interview Preparation Plan</span><span>test.vkvsir.com · www.vkvsir.com</span></div></td></tr></thead>' +
       '<tfoot><tr><td><div class="pr-foot">Prepared on VKV Sir Test Lab (test.vkvsir.com) · www.vkvsir.com · Practise every topic free online</div></td></tr></tfoot>' +
       '<tbody><tr><td>' + html + '</td></tr></tbody></table>';
     q('#jout').innerHTML = html;
+    planSaveButtons(p);
     var ids = sk.filter(function (s) { return s.tier <= 2; }).map(function (s) { return s.id; });
     var secEl = q('#jout section');
     var inp0 = window.__jpInp || {};
@@ -1358,6 +1398,26 @@
       window.renderMathInElement(el, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '\\[', right: '\\]', display: true }, { left: '$', right: '$', display: false }, { left: '\\(', right: '\\)', display: false }], throwOnError: false });
     } catch (e) {}
   }
+
+  /* ---------- hover zoom: one overlay on <body>, always on top ---------- */
+  (function () {
+    var lay = null;
+    function show(src) {
+      if (!lay) { lay = document.createElement('div'); lay.className = 'zlayer'; lay.innerHTML = '<img alt="">'; document.body.appendChild(lay); }
+      lay.firstChild.src = src; lay.classList.add('on');
+    }
+    function hide() { if (lay) lay.classList.remove('on'); }
+    var fine = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (!fine) return;
+    var cur = null;
+    document.addEventListener('mousemove', function (e) {
+      var im = e.target.closest && e.target.closest('.qzw .qimg');
+      if (im && !document.body.classList.contains('veil')) { if (cur !== im || !lay || !lay.classList.contains('on')) { cur = im; show(im.currentSrc || im.src); } }
+      else if (cur) { cur = null; hide(); }
+    }, { passive: true });
+    document.addEventListener('mouseleave', function () { cur = null; hide(); });
+    window.addEventListener('blur', hide);
+  })();
 
   /* ---------- homepage: four sample image questions ---------- */
   var HERO_Q = [
