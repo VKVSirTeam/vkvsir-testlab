@@ -39,7 +39,77 @@
     'Core GET / PSU': ['Completed [N]-week vocational training at [PSU/plant], covering [departments]', 'Prepared a technical report on [process/equipment] observed during training, presented to [N] engineers', 'Secured GATE [year] score [X] (AIR [Y]) in [paper]', 'Led a [N]-member team in the major project on [topic], delivering a working [prototype/model]', 'Applied [safety/quality] procedures such as permit-to-work and LOTO during plant training'],
     General: ['Organised [event] for [N]+ participants with a team of [M] volunteers', 'Presented a paper on [topic] at [conference], [year]', 'Coordinated with [N] companies as student placement coordinator, scheduling [M] interviews', 'Represented the university in [sport] at [level] level', 'Mentored [N] juniors in [subject/tool] through weekly sessions']
   };
-  var lastArea = null;
+  var lastArea = null, SUG = null;
+  var LIB = {
+    soft: ['Communication', 'Teamwork', 'Leadership', 'Problem solving', 'Time management', 'Technical writing', 'Presentation skills', 'Critical thinking', 'Adaptability', 'Attention to detail', 'Report writing', 'Negotiation'],
+    langs: ['English', 'Hindi', 'Rajasthani', 'Marathi', 'Gujarati', 'Punjabi', 'Bengali', 'Tamil', 'Telugu', 'Kannada', 'Malayalam', 'Odia', 'Urdu', 'Sanskrit', 'German (A1)', 'French (A1)', 'Japanese (N5)'],
+    certs: ['NPTEL – Industrial Engineering', 'NPTEL – Python for Data Science', 'NPTEL – Design of Machine Elements', 'NPTEL – Programming in Java', 'Six Sigma Yellow Belt', 'Six Sigma Green Belt', 'Autodesk Certified User – AutoCAD', 'CSWA – Certified SolidWorks Associate', 'CATIA V5 Part Design', 'ANSYS Workbench – Fundamentals', 'AWS Certified Cloud Practitioner', 'Microsoft Azure Fundamentals (AZ-900)', 'Google Data Analytics Certificate', 'Cisco CCNA', 'Cisco Packet Tracer', 'Oracle Java SE Programmer', 'Microsoft Power BI Data Analyst (PL-300)', 'MS Excel – Advanced', 'PLC & SCADA Programming', 'STAAD.Pro Certification', 'Revit Architecture', 'Primavera P6 Planning', 'IoT Fundamentals', 'Embedded Systems with Arduino', 'Lean Manufacturing Fundamentals', 'ISO 9001 Internal Auditor', 'Electric Vehicle Technology', 'Solar PV Design (PVsyst)'],
+    issuers: ['NPTEL (IIT Madras)', 'NPTEL (IIT Kharagpur)', 'NPTEL (IIT Bombay)', 'Coursera', 'edX', 'Udemy', 'Infosys Springboard', 'TCS iON', 'AICTE', 'Autodesk', 'Dassault Systemes', 'Cisco Networking Academy', 'Amazon Web Services', 'Microsoft', 'Google', 'IBM SkillsBuild', 'Simplilearn', 'Skill India', 'MSME Tool Room'],
+    ach: ['Finalist, Smart India Hackathon [year] (team of [N]; built [solution])', 'Winner, [event] at [college fest], [year]', 'Secured AIR [X] in [competition/olympiad]', 'Participated in SAE BAJA [year] as [role] in a team of [N]', 'Ranked in top [X]% in [coding contest], [year]', 'Awarded [scholarship] for academic excellence, [year]', 'Represented [university] in [sport] at [state/national] level', 'Published paper "[title]" in [journal/conference], [year]', 'Filed patent application on [invention], [year]', 'Selected for [internship/fellowship] out of [N]+ applicants', 'Department rank [X] in [semester/year]'],
+    por: ['Coordinator', 'Joint Secretary', 'President', 'Vice-President', 'Technical Head', 'Event Head', 'Campus Ambassador', 'Student Placement Coordinator', 'Class Representative', 'NSS Volunteer', 'NCC Cadet', 'Team Captain', 'Core Committee Member', 'Editor, College Magazine', 'Chapter Lead (SAE / IEEE / ASME / IEI)'],
+    intern: ['Summer Intern – Production', 'Summer Intern – Quality', 'Summer Intern – Maintenance', 'Vocational Trainee', 'Industrial Trainee', 'Design Intern', 'Site Engineer Intern', 'Software Development Intern', 'Data Analyst Intern', 'Electrical Maintenance Trainee', 'Embedded Systems Intern', 'Research Intern', 'Virtual Intern'],
+    kinds: ['Major project', 'Minor project', 'Mini project', 'Personal project', 'Hackathon project', 'Research project', 'Competition project'],
+    degrees: ['B.Tech', 'B.E.', 'Diploma', 'M.Tech', 'M.E.', 'B.Sc', 'BCA', 'MCA', 'B.Arch'],
+    branches: ['Mechanical Engineering', 'Automobile Engineering', 'Civil Engineering', 'Electrical Engineering', 'Electrical & Electronics Engineering', 'Electronics & Communication Engineering', 'Computer Science & Engineering', 'Information Technology', 'Instrumentation & Control Engineering', 'Chemical Engineering', 'Production & Industrial Engineering', 'Mining Engineering', 'Artificial Intelligence & Data Science'],
+    summary: ['Final-year [branch] student skilled in [skill 1], [skill 2] and [software], seeking a Graduate Engineer Trainee role in [industry].', 'Third-year [branch] student with hands-on internship experience at [company], looking for a summer internship in [area].', '[Branch] graduate with GATE [year] score [X], seeking a technical role in a PSU / core engineering company.', 'Detail-oriented [branch] student with projects in [area 1] and [area 2], aiming for an MS in [field] focused on [research interest].', 'Aspiring [role] with strong fundamentals in [subjects] and practical exposure through [N] projects using [tools].']
+  };
+  function nice2(k) { return k.length <= 4 && !/\s/.test(k) ? k.toUpperCase() : k.replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); }).replace(/\b([A-Z][a-z])\b/g, function (w) { return w.toUpperCase(); }); }
+  function allBullets() { var r = (V.__roles || []).filter(function (x) { return x.id === d.role; })[0], fam = r && BULLETS[r.family] ? r.family : null, out = []; if (fam) out = out.concat(BULLETS[fam]); Object.keys(BULLETS).forEach(function (k) { if (k !== fam) out = out.concat(BULLETS[k]); }); return out; }
+  function sugFor(id) { // [list, mode] mode: comma | line | whole
+    var S = SUG || { software: [], skills: [], subjects: [] };
+    if (id === 'skSoft' || /^projects\.\d+\.tools$/.test(id)) return [S.software, 'comma'];
+    if (id === 'skTech') return [S.subjects.concat(S.skills.map(nice2)), 'comma'];
+    if (id === 'skOther') return [LIB.soft, 'comma'];
+    if (id === 'langs') return [LIB.langs, 'comma'];
+    if (/\.bullets$/.test(id) || /^por\.\d+\.text$/.test(id)) return [allBullets(), 'line'];
+    if (id === 'summary') return [LIB.summary, 'whole'];
+    if (/^ach\.\d+\.text$/.test(id)) return [LIB.ach, 'whole'];
+    if (/^certs\.\d+\.name$/.test(id)) return [LIB.certs, 'whole'];
+    if (/^certs\.\d+\.org$/.test(id)) return [LIB.issuers, 'whole'];
+    if (/^por\.\d+\.role$/.test(id)) return [LIB.por, 'whole'];
+    if (/^exp\.\d+\.role$/.test(id)) return [LIB.intern, 'whole'];
+    if (/^projects\.\d+\.kind$/.test(id)) return [LIB.kinds, 'whole'];
+    if (id === 'degree') return [LIB.degrees, 'whole'];
+    if (id === 'branch') return [LIB.branches, 'whole'];
+    return null;
+  }
+  /* type-ahead: shows matching presets under the field; click or Enter to insert */
+  var box = null, cur = null, items = [], hi = -1;
+  function token(el, mode) {
+    var v = el.value, p = el.selectionStart == null ? v.length : el.selectionStart;
+    if (mode === 'comma') { var a = v.lastIndexOf(',', p - 1) + 1; return { s: a, e: p, t: v.slice(a, p).trim() }; }
+    if (mode === 'line') { var b = v.lastIndexOf('\n', p - 1) + 1, e = v.indexOf('\n', p); e = e < 0 ? v.length : e; return { s: b, e: e, t: v.slice(b, p).trim() }; }
+    return { s: 0, e: v.length, t: v.trim() };
+  }
+  function hideSug() { if (box) box.hidden = true; items = []; hi = -1; }
+  function showSug(el) {
+    var cfg = sugFor(el.id); if (!cfg) { hideSug(); return; }
+    var tk = token(el, cfg[1]), words = tk.t.toLowerCase().split(/\s+/).filter(Boolean);
+    var used = cfg[1] === 'comma' ? el.value.toLowerCase().split(',').map(function (x) { return x.trim(); }) : [];
+    var list = cfg[0].filter(function (x) { var l = x.toLowerCase(); return used.indexOf(l) < 0 && words.every(function (w) { return l.indexOf(w) >= 0; }); });
+    if (words.length) list.sort(function (a, b) { var q = words[0], A = a.toLowerCase().indexOf(q) === 0 ? 0 : 1, B = b.toLowerCase().indexOf(q) === 0 ? 0 : 1; return A - B; });
+    if (!words.length && cfg[1] === 'comma') { hideSug(); return; }
+    items = list.slice(0, 8); hi = -1; cur = { el: el, mode: cfg[1], tk: tk };
+    if (!items.length) { hideSug(); return; }
+    if (!box) { box = document.createElement('div'); box.className = 'rb-sug'; box.setAttribute('role', 'listbox'); document.body.appendChild(box);
+      box.addEventListener('mousedown', function (e) { var b = e.target.closest('[data-i]'); if (b) { e.preventDefault(); pick(+b.dataset.i); } }); }
+    var re = words.length ? new RegExp('(' + words.map(function (w) { return w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('|') + ')', 'gi') : null;
+    box.innerHTML = '<div class="rb-sug-h">' + (words.length ? 'Suggestions' : 'Popular lines: tap to insert, then edit [ ]') + '</div>' + items.map(function (x, i) { return '<div class="rb-sug-i" data-i="' + i + '" role="option">' + (re ? esc(x).replace(re, '<mark>$1</mark>') : esc(x)) + '</div>'; }).join('');
+    var r = el.getBoundingClientRect();
+    box.style.left = (r.left + window.scrollX) + 'px'; box.style.top = (r.bottom + window.scrollY + 4) + 'px'; box.style.width = Math.max(260, r.width) + 'px';
+    box.hidden = false;
+  }
+  function pick(i) {
+    if (!cur || !items[i]) return;
+    var el = cur.el, v = el.value, tk = token(el, cur.mode), x = items[i], nv, pos;
+    if (cur.mode === 'comma') { var before = v.slice(0, tk.s), after = v.slice(tk.e).replace(/^\s*,?\s*/, ''); nv = before + (before && !/\s$/.test(before) ? ' ' : '') + x + ', ' + after; pos = (before + (before && !/\s$/.test(before) ? ' ' : '') + x + ', ').length; }
+    else if (cur.mode === 'line') { nv = v.slice(0, tk.s) + x + v.slice(tk.e); pos = tk.s + x.length; }
+    else { nv = x; pos = x.length; }
+    el.value = nv; el.focus(); try { el.setSelectionRange(pos, pos); } catch (e) {}
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    hideSug();
+    if (/\[/.test(x)) V.toast('Inserted. Replace the [ ] parts with your real details.');
+  }
 
   function blank() {
     return { v: 1, title: 'My resume', goals: ['private'], role: '', company: '', name: '', email: '', phone: '', city: '', linkedin: '', github: '', portfolio: '',
@@ -167,7 +237,7 @@
 
   /* ---------------- steps ---------------- */
   var STEPS = ['Goal', 'Basics', 'Education', 'Skills', 'Projects & experience', 'Achievements & activities', 'Score & download'];
-  function inp(id, label, ph, opt) { opt = opt || {}; return '<div class="rb-f' + (opt.wide ? ' wide' : '') + '"><label for="' + id + '">' + label + (opt.req ? ' <span class="req">*</span>' : '') + '</label>' + (opt.area ? '<textarea class="in" id="' + id + '" rows="' + (opt.rows || 3) + '" placeholder="' + esc(ph || '') + '">' + esc(get(id)) + '</textarea>' : '<input class="in" id="' + id + '" type="' + (opt.type || 'text') + '" placeholder="' + esc(ph || '') + '" value="' + esc(get(id)) + '">') + (opt.hint ? '<small>' + opt.hint + '</small>' : '') + '</div>'; }
+  function inp(id, label, ph, opt) { opt = opt || {}; return '<div class="rb-f' + (opt.wide ? ' wide' : '') + '"><label for="' + id + '">' + label + (opt.req ? '<sup class="rb-req" aria-label="required">*</sup>' : '') + '</label>' + (opt.area ? '<textarea class="in" id="' + id + '" rows="' + (opt.rows || 3) + '" placeholder="' + esc(ph || '') + '">' + esc(get(id)) + '</textarea>' : '<input class="in" id="' + id + '" type="' + (opt.type || 'text') + '" placeholder="' + esc(ph || '') + '" value="' + esc(get(id)) + '">') + (opt.hint ? '<small>' + opt.hint + '</small>' : '') + '</div>'; }
   function get(id) { var p = id.split('.'); var o = d; for (var i = 0; i < p.length; i++) { if (o == null) return ''; o = o[p[i]]; } return o == null ? '' : o; }
   function set(id, v) { var p = id.split('.'); var o = d; for (var i = 0; i < p.length - 1; i++) o = o[p[i]]; o[p[p.length - 1]] = v; }
   function note(type, html) { return '<div class="rb-note ' + type + '">' + html + '</div>'; }
@@ -177,7 +247,7 @@
       '<div class="rb-goals">' + GOALS.map(function (g) { return '<label class="rb-goal"><input type="checkbox" value="' + g.id + '"' + (d.goals.indexOf(g.id) >= 0 ? ' checked' : '') + '><span><b>' + g.t + '</b><small>' + g.s + '</small></span></label>'; }).join('') + '</div>' +
       '<div id="rb-ginfo">' + goalInfo() + '</div>' +
       '<div class="rb-grid">' +
-      '<div class="rb-f"><label for="role">Target role <span class="req">*</span></label><select class="in" id="role"><option value="">Choose the closest role…</option>' + (V.__roles || []).map(function (r) { return '<option value="' + esc(r.id) + '"' + (d.role === r.id ? ' selected' : '') + '>' + esc(r.family + ' · ' + r.name) + '</option>'; }).join('') + '</select><small>Decides the keywords we check.</small></div>' +
+      '<div class="rb-f"><label for="role">Target role<sup class="rb-req" aria-label="required">*</sup></label><select class="in" id="role"><option value="">Choose the closest role…</option>' + (V.__roles || []).map(function (r) { return '<option value="' + esc(r.id) + '"' + (d.role === r.id ? ' selected' : '') + '>' + esc(r.family + ' · ' + r.name) + '</option>'; }).join('') + '</select><small>Decides the keywords we check.</small></div>' +
       inp('company', 'Target company (optional)', 'e.g. Tata Motors', { hint: 'Adds the software this company is asking for in its current job posts.' }) +
       inp('title', 'Name this resume', 'e.g. Core mechanical – 2027') + '</div>' +
       note('ok', '<b>Applying to a specific job?</b> In the last step you can paste its job description and see a % match with the exact keywords to add.');
@@ -208,6 +278,7 @@
   function stepSkills() {
     var ks = kwList();
     return '<h2>Skills</h2>' + (ks.length ? note('info', '<b>Keywords recruiters search for' + (d.jdKw ? ' (incl. the job post you pasted)' : '') + (kw && kw.company_name ? ' (incl. ' + esc(kw.company_name) + '’s current job posts)' : '') + ':</b> ' + ks.map(function (k) { return '<span class="rb-chip">' + esc(k.label) + '</span>'; }).join(' ') + '<br><small>Add only what you genuinely know. You will be asked about every skill you list.</small>') : note('warn', 'Choose a target role in Step 1 to see the keywords to aim for.')) +
+      note('ok', '⌨ <b>Type a few letters</b> in any box below and pick from suggestions (software names, subjects, skills, languages). Less typing, correct spellings.') +
       inp('skTech', 'Technical skills (subjects / methods)', 'Engineering Mechanics, GD&T, Lean Manufacturing, Kaizen, 5S, Thermodynamics', { area: 1, wide: 1, rows: 2 }) +
       inp('skSoft', 'Software & tools', 'SolidWorks, AutoCAD, ANSYS Workbench, MS Excel (Pivot, VLOOKUP), Python (basic)', { area: 1, wide: 1, rows: 2, hint: 'Write the exact product names (e.g. “ANSYS Workbench”, not “simulation software”).' }) +
       inp('skOther', 'Other skills (optional)', 'Technical drawing, team leadership, technical writing', { area: 1, wide: 1, rows: 2 }) + inp('langs', 'Languages', 'English, Hindi') +
@@ -269,7 +340,8 @@
     var edu = { h: 'Education', items: [{ a: d.degree + (has(d.branch) ? ' in ' + d.branch : ''), b: d.grad ? 'Expected ' + d.grad : '', c: d.college, dd: has(d.cgpa) ? 'CGPA: ' + d.cgpa : '' }] };
     if (has(d.x12)) edu.items.push({ a: 'Class 12 / Diploma', c: d.x12 }); if (has(d.x10)) edu.items.push({ a: 'Class 10', c: d.x10 });
     var tests = []; if (has(d.tests.gate)) tests.push('GATE score ' + d.tests.gate + (has(d.tests.gateAir) ? ' (AIR ' + d.tests.gateAir + ')' : '')); if (has(d.tests.cat)) tests.push('CAT ' + d.tests.cat + ' percentile'); if (has(d.tests.gre)) tests.push('GRE ' + d.tests.gre); if (has(d.tests.toefl)) tests.push('TOEFL ' + d.tests.toefl); if (has(d.tests.ielts)) tests.push('IELTS ' + d.tests.ielts);
-    var skills = { h: 'Technical Skills', rows: [['Core', d.skTech], ['Software', d.skSoft], ['Other', d.skOther], ['Languages', d.langs]].filter(function (r) { return has(r[1]); }) };
+    var tidy = function (v) { return String(v || '').replace(/[\s,;]+$/, '').replace(/,\s*,/g, ','); };
+    var skills = { h: 'Technical Skills', rows: [['Core', tidy(d.skTech)], ['Software', tidy(d.skSoft)], ['Other', tidy(d.skOther)], ['Languages', tidy(d.langs)]].filter(function (r) { return has(r[1]); }) };
     var exp = { h: 'Internships & Training', items: d.exp.filter(function (x) { return has(x.org) || has(x.role); }).map(function (x) { return { a: x.role, b: x.when, c: x.org, bl: lines(x.bullets) }; }) };
     var proj = { h: 'Projects', items: d.projects.filter(function (x) { return has(x.title); }).map(function (x) { return { a: x.title + (has(x.kind) ? ' (' + x.kind + ')' : ''), b: x.when, c: [x.tools ? 'Tools: ' + x.tools : '', x.link].filter(has).join(' | '), bl: lines(x.bullets) }; }) };
     var pubs = { h: 'Publications & Patents', items: d.pubs.filter(function (x) { return has(x.title); }).map(function (x) { return { a: x.title, b: x.year, c: x.venue }; }) };
@@ -415,6 +487,20 @@
     Array.prototype.forEach.call(f.querySelectorAll('.rb-add'), function (b) { b.onclick = function () { var k = b.dataset.k, t = { exp: { role: '', org: '', when: '', bullets: '' }, projects: { title: '', kind: '', tools: '', link: '', when: '', bullets: '' }, ach: { text: '' }, por: { role: '', org: '', when: '', text: '' }, certs: { name: '', org: '', year: '' }, pubs: { title: '', venue: '', year: '' } }[k]; d[k].push(t); persist(); render(true); }; });
     Array.prototype.forEach.call(f.querySelectorAll('.rb-del'), function (b) { b.onclick = function () { d[b.dataset.k].splice(+b.dataset.i, 1); persist(); render(true); }; });
     Array.prototype.forEach.call(f.querySelectorAll('textarea.in'), function (t) { t.addEventListener('focus', function () { lastArea = t; }); });
+    Array.prototype.forEach.call(f.querySelectorAll('input.in, textarea.in'), function (el) {
+      if (!sugFor(el.id)) return;
+      el.setAttribute('autocomplete', 'off');
+      el.addEventListener('focus', function () { showSug(el); });
+      el.addEventListener('input', function () { showSug(el); });
+      el.addEventListener('click', function () { showSug(el); });
+      el.addEventListener('blur', function () { setTimeout(hideSug, 120); });
+      el.addEventListener('keydown', function (e) {
+        if (!box || box.hidden || !items.length) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); hi = (hi + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; Array.prototype.forEach.call(box.querySelectorAll('.rb-sug-i'), function (n, i) { n.classList.toggle('on', i === hi); }); }
+        else if (e.key === 'Enter' && hi >= 0) { e.preventDefault(); pick(hi); }
+        else if (e.key === 'Escape') hideSug();
+      });
+    });
     Array.prototype.forEach.call(f.querySelectorAll('.rb-exb'), function (b) {
       b.onclick = function () {
         var r = (V.__roles || []).filter(function (x) { return x.id === d.role; })[0], fam = r && BULLETS[r.family] ? r.family : null;
@@ -435,7 +521,8 @@
     var tx = document.getElementById('rb-txt'); if (tx) tx.onclick = function () { var t = plainText(); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { V.toast('Copied as plain text.'); }).catch(function () { var a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove(); V.toast('Copied as plain text.'); }); };
   }
   function shell(list) {
-    V.h('<div class="rb" id="rb-top"><div class="rb-head"><div><p class="eyebrow">Free · No sign-up needed to download</p><h1>ATS Resume Builder</h1><p class="muted">One clean column, standard headings and a real-text PDF that applicant tracking systems can read, with keywords taken from real job posts.</p></div>' +
+    V.h('<div class="rb" id="rb-top"><div class="rb-head"><div><p class="eyebrow">Free · No sign-up needed to download</p><h1>ATS Resume Builder</h1><p class="muted">One clean column, standard headings and a real-text PDF that applicant tracking systems can read, with keywords taken from real job posts.</p>' +
+      '<details class="softinfo"><summary>Why this builder is different</summary><ul><li><b>Free and unlimited:</b> download PDF and Word as often as you like. No subscription, no watermark.</li><li><b>Readable by ATS:</b> real text, one column and standard headings. Designed templates with columns and icons are often misread.</li><li><b>Real keywords:</b> skills and software from current job posts, including your target company’s.</li><li><b>Job-post match:</b> paste any job description and see the exact keywords you are missing.</li><li><b>Guidance for every goal:</b> private jobs, internships, PSUs, government exams and higher studies.</li></ul><a href="/why#resume" data-link>See all features</a></details></div>' +
       '<div class="rb-headr"><span class="rb-mini" id="rb-mini"></span><span class="small muted" id="rb-saved">' + (V.session ? 'Saves to your account automatically' : 'Saved on this device · <a href="/login?next=/resume" data-link>Sign in</a> to keep it in your account') + '</span>' +
       (list && list.length ? '<select class="in" id="rb-pick">' + list.map(function (r) { return '<option value="' + r.id + '"' + (r.id === rid ? ' selected' : '') + '>' + esc(r.title || 'My resume') + (r.score != null ? ' · ' + r.score + '/100' : '') + '</option>'; }).join('') + '</select>' : '') +
       '<button class="btn ghost small" id="rb-new" type="button">+ New resume</button></div></div>' +
@@ -450,6 +537,8 @@
       V = api; V.setNav('career'); step = 0; rid = null;
       try { d = Object.assign(blank(), JSON.parse(localStorage.getItem(LS) || 'null') || {}); } catch (e) { d = blank(); }
       var roles = V.__roles ? Promise.resolve(V.__roles) : V.rpc('rb_roles').then(function (r) { V.__roles = r; return r; });
+      if (!SUG) V.rpc('rb_suggest').then(function (x) { SUG = x; }).catch(function () {});
+      window.addEventListener('scroll', function () { if (box && !box.hidden && cur) showSug(cur.el); }, { passive: true });
       var mine = V.session ? V.sb.from('resumes').select('id,title,score,data,updated_at').order('updated_at', { ascending: false }).then(function (r) { return r.data || []; }) : Promise.resolve([]);
       Promise.all([roles, mine]).then(function (rr) {
         var list = rr[1];

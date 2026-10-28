@@ -92,6 +92,7 @@
     if (p === '/admin/about') return viewAboutAdmin();
     if (p === '/admin/companies') return viewCompaniesAdmin();
     if (p === '/disclaimer') return viewDisclaimer();
+    if (p === '/why' || p === '/features') return viewWhy();
     if ((m = p.match(/^\/p\/([a-z0-9]+)(?:\/(\d+))?(?:\/([a-z0-9-]+))?$/i))) return viewFocus(m[1], m[2], m[3]);
     if ((m = p.match(/^\/t\/([a-z0-9-]+)$/))) return viewTest(m[1]);
     if ((m = p.match(/^\/exam\/([0-9a-f-]{36})$/))) return viewExam(m[1]);
@@ -200,6 +201,9 @@
           [['📚', 'Thousands', 'of practice questions'], ['🧭', '3 tracks', 'Semester · Competitive · Career'], ['🖼️', 'Image questions', 'Diagrams, figures & charts'], ['⚡', 'Fresh paper', 'Balanced mix every time']].map(function (s) { return '<div class="hxp"><span class="hxp-i">' + s[0] + '</span><b>' + s[1] + '</b><small>' + s[2] + '</small></div>'; }).join('') +
           '</div><div class="hxp-by"><img src="/favicon.svg" alt=""><span>Questions prepared and reviewed by <b>Dr. Vinod Kumar Verma</b></span></div></div></div>' +
         '</section><section class="hqs">' + heroSamples() + '</section>' +
+        '<section class="whystrip"><div class="whystrip-h"><b>Why students choose VKV Sir Test Lab</b><a href="/why" data-link>See all features →</a></div><div class="whystrip-g">' +
+          [['🎯', 'Fresh, balanced papers', 'A new mix of easy, moderate and hard every time'], ['🖼️', 'Image-based questions', 'Diagrams, 3D parts, charts and figures, with zoom'], ['🏢', 'Company-wise preparation', 'Software and interview questions from real job posts'], ['📄', 'Free ATS resume builder', 'Unlimited PDF & Word downloads, keyword score'], ['🧑‍🏫', 'Expert-checked', 'Every question reviewed; report anything doubtful'], ['💯', 'Free forever', 'No paywalls and no download limits']]
+            .map(function (x) { return '<div class="whyi"><span>' + x[0] + '</span><div><b>' + x[1] + '</b><small>' + x[2] + '</small></div></div>'; }).join('') + '</div></section>' +
         '<section class="how" id="how"><h2 class="sh2">How it works</h2><div class="steps3"><div><span>1</span><b>Choose</b><p>Open a track and tick a whole subject, some units or single topics.</p></div><div><span>2</span><b>Practise</b><p>Pick your time and mode. Every paper is freshly mixed from easy to hard.</p></div><div><span>3</span><b>Improve</b><p>See your score, correct answers and explanations. Report any doubtful question.</p></div></div></section>' +
         '<div class="stats reveal">' + [['20', '+', 'Subjects & skills'], ['40', '+', 'Job roles mapped'], ['200', '+', 'Recruiters covered'], ['100', '%', 'Free practice']].map(function (s) { return '<div class="st"><b class="cnt" data-to="' + s[0] + '">0</b><i>' + s[1] + '</i><span>' + s[2] + '</span></div>'; }).join('') + '</div>' +
         '<div class="marq" aria-hidden="true"><div class="marq-in">' + (function () { var c = ['TCS', 'Infosys', 'L&amp;T', 'Tata Motors', 'Shri Bhagwati Machines', 'NTPC', 'BHEL', 'JK Tyre', 'Maruti Suzuki', 'Wipro', 'Bosch', 'Siemens', 'UltraTech', 'Tata Steel', 'Accenture', 'Mahindra', 'IOCL', 'ABB']; var s = c.map(function (x) { return '<span>' + x + '</span>'; }).join(''); return s + s; })() + '</div></div>' +
@@ -626,13 +630,67 @@
     }
   }
 
+  /* ---------- why this platform (features & how-to) ---------- */
+  function viewWhy() {
+    setNav('');
+    function sec(id, icon, title, lead, pts, how) {
+      return '<section class="why-sec" id="' + id + '"><h2><span>' + icon + '</span>' + title + '</h2><p class="muted">' + lead + '</p><ul class="why-pts">' + pts.map(function (p) { return '<li><b>' + p[0] + '</b> ' + p[1] + '</li>'; }).join('') + '</ul>' +
+        (how ? '<details class="why-how"><summary>How to use it</summary><ol>' + how.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol></details>' : '') + '</section>';
+    }
+    h('<div class="why narrow-wide"><div class="why-hero"><p class="eyebrow">About the platform</p><h1>World-class preparation, <em>completely free</em>.</h1>' +
+      '<p class="muted">VKV Sir Test Lab brings practice tests, company-wise job preparation and a professional resume builder together in one place, built and reviewed by Dr. Vinod Kumar Verma for semester exams, competitive exams and campus placements.</p>' +
+      '<nav class="why-toc">' + [['tests', 'Practice tests'], ['images', 'Image questions'], ['jobprep', 'Job Prep'], ['resume', 'Resume builder'], ['trust', 'Quality & fairness']].map(function (t) { return '<a href="#' + t[0] + '">' + t[1] + '</a>'; }).join('') + '</nav></div>' +
+      sec('tests', '🎯', 'Practice tests that adapt to you', 'Pick a subject, unit or single topic and get a freshly balanced paper in seconds.', [
+        ['Fresh paper every time:', 'questions are mixed from easy to hard, so repeated attempts stay useful.'],
+        ['Fair timing and instant results:', 'see your score, correct answers and clear explanations right away.'],
+        ['Unit-wise insight:', 'results show where you are strong and which units need more work.'],
+        ['Three learning tracks:', 'semester subjects, competitive exams (aptitude, reasoning and more) and career preparation.'],
+        ['Works everywhere:', 'designed for phones first, equally comfortable on laptops.']],
+        ['Tap <b>Start practising</b> on the home page.', 'Choose your track, then tick a whole subject, some units or single topics.', 'Pick the time and mode, attempt the paper, then study the explanations of what you missed.']) +
+      sec('images', '🖼️', 'Image-based questions', 'Many real exams test whether you can read a diagram, not just recall a definition. We redraw every figure cleanly.', [
+        ['Clean, redrawn diagrams:', 'line drawings for machines, shaded 3D models for tools such as milling cutters, clear charts and figure series.'],
+        ['Labelled-part questions:', 'one diagram with parts marked A–F; each student gets a different part to identify, and confusing neighbouring parts are never put side by side in the options.'],
+        ['Four-figure questions:', 'compare four tools, layouts or charts numbered 1–4 at a glance.'],
+        ['Zoom built in:', 'hover over an image on a laptop or pinch on a phone to see every detail.'],
+        ['Fits one screen:', 'figure, question and all options stay visible without scrolling.']]) +
+      sec('jobprep', '🏢', 'Job Prep: prepare for the exact company', 'Enter a role, company or job post and get a personal preparation plan.', [
+        ['Software footprint from real job posts:', 'we track which software each company asks for in its current openings and label it <i>Asked now</i>, <i>Rising</i> or <i>Used earlier</i>. Small companies get suggestions from similar companies in the same field.'],
+        ['Updated automatically:', 'company career pages and hiring-system feeds are read every night, and refreshed live when you search.'],
+        ['Company interview questions:', 'common themes reported by candidates, with model answers written by us, plus HR and behavioural questions.'],
+        ['Shared by seniors:', 'students who were interviewed recently can share their questions; we review each one and add a model answer.'],
+        ['Take it with you:', 'download your plan as a neat PDF (or save it to Drive or WhatsApp on your phone).']],
+        ['Open <b>Job Prep</b> from the top menu.', 'Choose your branch and role, add the company (or paste a job post) and tap <b>Build my preparation plan</b>.', 'Learn the 🔥 software first, practise the linked topics, then rehearse the interview questions aloud.']) +
+      sec('resume', '📄', 'Free ATS resume builder', 'Most companies screen resumes with Applicant Tracking Systems (ATS) before a person reads them. Our builder is designed to pass that step.', [
+        ['Unlimited downloads, free:', 'PDF and Word (.docx), as many versions as you need. No subscription, no watermark.'],
+        ['Real-text PDF:', 'the text inside the file can be read by ATS software. Image-based or heavily designed PDFs often lose information when scanned.'],
+        ['ATS-safe layout:', 'one column, standard headings, a plain professional font, dates aligned right. Multi-column templates with icons and graphics, common in design tools, can be misread by ATS.'],
+        ['Keywords from real job posts:', 'see the skills and software recruiters search for, including your target company’s current requirements.'],
+        ['Match a job post:', 'paste any job description to get a % match and the exact keywords you are missing.'],
+        ['Explained ATS score:', 'a score out of 100 in nine clear parts, with quick fixes.'],
+        ['Profile booster:', 'personal next steps: internships, NPTEL certificates, hackathons, papers, leadership roles, GATE / GRE timing.'],
+        ['Goal-aware:', 'guidance for private jobs, internships, PSUs, government exams, defence and higher studies in India or abroad.'],
+        ['Less typing:', 'type a few letters to pick from hundreds of software names, skills and example lines.']],
+        ['Open <b>test.vkvsir.com/resume</b> (or the card on the Job Prep page).', 'Tick your goals, choose a target role and company, and fill the seven short steps. The preview updates as you type.', 'On the last step, check your score, paste the job post you are applying to, and download PDF or Word.']) +
+      '<section class="why-sec"><h2><span>⚖️</span>How our resume builder compares</h2><div class="why-tbl"><table class="table"><thead><tr><th></th><th>VKV Sir Test Lab</th><th>Typical paid builders</th><th>Design-template tools</th></tr></thead><tbody>' +
+        [['Price to download', '✓ Free, unlimited', 'Often needs a subscription', 'Usually free'], ['Word (.docx) download', '✓ Yes', 'Often paid', 'Limited'], ['ATS-safe single-column layout', '✓ Always', 'Depends on template', 'Often multi-column with graphics'], ['Keywords from real Indian job posts', '✓ Yes, company-wise', 'Generic', 'No'], ['Job-post match %', '✓ Free', 'Often paid', 'No'], ['Guidance for GATE, PSU, govt. and higher studies', '✓ Built in', 'No', 'No']]
+          .map(function (r) { return '<tr><td>' + r[0] + '</td><td><b>' + r[1] + '</b></td><td>' + r[2] + '</td><td>' + r[3] + '</td></tr>'; }).join('') +
+      '</tbody></table></div><p class="small muted">General comparison of common approaches, not of any specific product. Features of other services vary and change over time.</p></section>' +
+      sec('trust', '🧑‍🏫', 'Quality and fairness', 'Good practice is only useful if the questions are right and the tests are fair.', [
+        ['Expert-prepared:', 'questions are written and double-checked before publishing.'],
+        ['Report anything doubtful:', 'tap 🚩 Report on any question; our team reviews it promptly.'],
+        ['Fair tests:', 'timed papers with protections against switching away during an attempt.'],
+        ['Private drafts:', 'resumes you save are visible only to you, in your own account.'],
+        ['Free forever:', 'our aim is world-class preparation available to every student, without paywalls.']]) +
+      '<div class="why-cta"><a class="btn" href="/" data-link>▶ Start practising</a><a class="btn ghost" href="/career" data-link>🏢 Job Prep</a><a class="btn ghost" href="/resume" data-link>📄 Build my resume</a></div></div>');
+  }
+
   /* ---------- resume builder (loaded on demand) ---------- */
   function viewResume() {
     setNav('career'); loading();
     var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, get session() { return session; }, get profile() { return profile; } };
     function run() { window.RB.render(api); }
     if (window.RB) return run();
-    var s = document.createElement('script'); s.src = '/resume.js?v=2'; s.onload = run;
+    var s = document.createElement('script'); s.src = '/resume.js?v=3'; s.onload = run;
     s.onerror = function () { h('<div class="card narrow center"><p>Could not load the resume builder. Please refresh.</p></div>'); };
     document.head.appendChild(s);
   }
@@ -652,6 +710,7 @@
       var levels = [['student', 'Student', 'Still studying'], ['fresher', 'Fresher', '0 to 1 year'], ['junior', 'Experienced', '2 to 4 years'], ['senior', 'Senior', '5+ years']];
       h('<section class="hero jp-hero"><p class="eyebrow">Career &amp; interview preparation</p><h1>Know exactly what to prepare for <em>your</em> target job.</h1>' +
         '<a class="rb-promo" href="/resume" data-link><span>📄</span><span><b>Free ATS Resume Builder</b><small>Build a recruiter-ready resume with keywords from real job posts, an instant ATS score and a plan to strengthen your profile.</small></span><em>Build my resume →</em></a>' +
+        '<details class="softinfo"><summary>How your plan is built</summary><p>We match your role and branch to the topics, software and interview questions that matter. For the company, we use its <b>current job posts</b> (read nightly from career pages and hiring systems, and refreshed when you search) to show which software it is asking for now. If we have little data for a company, we show what similar companies in the same field ask for. <a href="/why#jobprep" data-link>Learn more</a></p></details>' +
         '<p class="muted" style="max-width:680px">Tell us the company, role and branch, or paste the job post. You get a clear plan: the most important subjects and topics, what to refresh, software to learn, likely interview questions, and one-click practice for each topic.</p></section>' +
         '<div class="card stack jp-form">' +
         '<div class="two"><div><label class="f" for="jc">Company (optional)</label><input class="in" id="jc" list="jcl" placeholder="e.g. Tata Motors, Infosys, L&amp;T" autocomplete="off"><datalist id="jcl">' + (o.companies || []).map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist><input class="in" id="ju" placeholder="Company website (optional), e.g. www.tatamotors.com" style="margin-top:6px"></div>' +
