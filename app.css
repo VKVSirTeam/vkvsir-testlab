@@ -501,3 +501,9 @@ table{max-width:100%}
 @media (min-width:900px) and (min-height:801px){.exam.has-img .qimg{max-height:min(32vh,300px)}}
 .qimg.athumb{margin:10px 0 4px;max-height:170px}
 .qimg.rimg{margin:10px 0 0;max-height:180px}
+
+/* short options beside an image: 2 x 2 grid, image gets the saved space */
+.exam.has-img .opts.opts-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.exam.has-img .opts.opts-grid .opt{min-height:44px}
+.exam.has-img:has(.opts-grid) .qimg{max-height:min(32vh,300px)}
+@media (max-height:800px){.exam.has-img:has(.opts-grid) .qimg{max-height:30vh}}

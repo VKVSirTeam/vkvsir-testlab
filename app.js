@@ -1186,7 +1186,7 @@
       h('<div class="wm-layer" style="background-image:' + watermark() + '"></div><div class="exam' + (v.image ? ' has-img' : '') + '"><div class="exam-top"><div class="spread"><span class="qcount">Question ' + (v.idx + 1) + ' of ' + v.n + '</span><span class="tleft" id="tl"></span></div>' +
         '<div class="track"><div class="fill" id="fl"></div></div><div class="qtime" id="qt"></div></div>' +
         (v.image ? '<img class="qimg" alt="Figure for this question" src="' + esc(v.image) + '">' : '') +
-        '<div class="qbody" id="qb">' + esc(v.body) + '</div><div class="opts" role="radiogroup" aria-labelledby="qb" id="opts">' +
+        '<div class="qbody" id="qb">' + esc(v.body) + '</div><div class="opts' + (v.image && v.options.every(function (o) { return String(o).length <= 14; }) ? ' opts-grid' : '') + '" role="radiogroup" aria-labelledby="qb" id="opts">' +
         v.options.map(function (o, k) { return '<button type="button" class="opt" role="radio" aria-checked="false" data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') +
         '</div><div class="fb"><div class="row"><span class="small muted">Rate this question (optional):</span>' +
         '<button type="button" class="icon-btn" id="up" aria-pressed="false" aria-label="Good question">' + THUMB_UP + '</button>' +
