@@ -586,8 +586,19 @@
         '<div class="pdfx-f">Prepared on VKV Sir Test Lab (test.vkvsir.com) · www.vkvsir.com · Practise every topic free online</div>';
       Array.prototype.forEach.call(wrap.querySelectorAll('button,.btn'), function (b) { b.remove(); });
       Array.prototype.forEach.call(wrap.querySelectorAll('.rv,.in'), function (el) { el.classList.remove('rv', 'in'); });
+      // <details> is drawn badly by the PDF renderer (text overlaps): turn each one into plain, always-open blocks
+      Array.prototype.forEach.call(wrap.querySelectorAll('details'), function (d) {
+        var box = document.createElement('div'); box.className = 'pdq ' + (d.className || '');
+        Array.prototype.forEach.call(d.childNodes, function (n) {
+          if (n.nodeType === 1 && n.tagName === 'SUMMARY') { var s = document.createElement('div'); s.className = 'pdq-q'; s.innerHTML = n.innerHTML; box.appendChild(s); }
+          else box.appendChild(n.cloneNode(true));
+        });
+        d.parentNode.replaceChild(box, d);
+      });
+      Array.prototype.forEach.call(wrap.querySelectorAll('.caret,.print-only,.no-pdf'), function (el) { el.remove(); });
+      Array.prototype.forEach.call(wrap.querySelectorAll('p.small.muted'), function (el) { if (/tap to see/i.test(el.textContent)) el.remove(); });
       var sx = window.scrollX, sy = window.scrollY; window.scrollTo(0, 0);
-      return window.html2pdf().set({ margin: [10, 10, 12, 10], filename: name, image: { type: 'jpeg', quality: 0.92 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 }, jsPDF: { unit: 'mm', format: 'a4' }, pagebreak: { mode: ['css', 'legacy'], avoid: ['.card', '.jp-skill', 'li'] } })
+      return window.html2pdf().set({ margin: [10, 10, 12, 10], filename: name, image: { type: 'jpeg', quality: 0.92 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 }, jsPDF: { unit: 'mm', format: 'a4' }, pagebreak: { mode: ['css', 'legacy'], avoid: ['.pdq', '.jp-skill', 'li', 'h2', '.cp-r'] } })
         .from(wrap).outputPdf('blob').then(function (blob) { window.scrollTo(sx, sy); return { blob: blob, name: name }; }, function (e) { window.scrollTo(sx, sy); throw e; });
     });
   }

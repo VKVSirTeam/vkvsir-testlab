@@ -602,3 +602,26 @@ body.veil .exam .qzoom{display:none!important}
 
 .pdfx,.pdfx *{animation:none!important;transition:none!important}
 .pdfx *{opacity:1!important;transform:none!important}
+
+/* ---- compact, overlap-free PDF layout ---- */
+.pdfx{font-family:Arial,Helvetica,sans-serif;font-size:10.5px;line-height:1.4}
+.pdfx *{position:static!important;max-height:none!important;overflow:visible!important;box-shadow:none!important;letter-spacing:normal!important}
+.pdfx h1,.pdfx h2{font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.25;margin:0 0 4px}
+.pdfx h3{font-size:12px;margin:0 0 3px}
+.pdfx .stack{display:block;margin:0!important}
+.pdfx .card,.pdfx .jp-tier{padding:8px 10px!important;margin:0 0 7px!important;border:1px solid #ddd;border-radius:6px;break-inside:auto}
+.pdfx .jp-tier>.card{border:0;padding:0!important}
+.pdfx p{margin:3px 0!important}
+.pdfx .small{font-size:9.5px}
+.pdfx .eyebrow{font-size:9px;margin:0 0 2px}
+.pdfx .grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important}
+.pdfx .jp-skill,.pdfx .grid>*{padding:6px 8px!important;border:1px solid #e3e3e3;border-radius:6px;margin:0!important}
+.pdfx .chips{display:flex;flex-wrap:wrap;gap:3px!important;margin:3px 0 0}
+.pdfx .chip,.pdfx .pill{font-size:9px!important;padding:1px 6px!important;line-height:1.4;border:1px solid #ccc;border-radius:999px;display:inline-block}
+.pdfx ol,.pdfx ul{margin:3px 0;padding-left:18px}.pdfx li{margin:1px 0}
+.pdfx .pdq{border-top:1px solid #e5e5e5;padding:5px 0;display:block}
+.pdfx .pdq-q{font-weight:600;margin:0 0 2px;display:block}
+.pdfx .pdq p{margin:2px 0!important}
+.pdfx .jp-badge{display:inline-block;width:16px;height:16px;line-height:16px;font-size:10px;text-align:center;border-radius:50%;margin-right:5px}
+.pdfx .cp-r{display:grid;grid-template-columns:120px 1fr;gap:6px;padding:3px 0;border-top:1px solid #eee}
+.pdfx img{max-width:100%;height:auto}
