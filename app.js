@@ -1569,7 +1569,7 @@
     var box = m.querySelector('.modal-box');
     Promise.all([id ? rpc('admin_question', { p_id: id }) : Promise.resolve(null), rpc('admin_subjects')]).then(function (r) {
       var x = r[0] || { subject_id: 'MP', unit: 4, unit_name: '', subtopic: '', level: 'E', body: '', options: ['', '', '', ''], correct: 0, explanation: '', status: 'draft', pool: 'both' };
-      var subs = r[1], img = x.image_data || null;
+      var subs = r[1], img = x.image_data || x.image_path || null;
       function f(idv, label, val, extra) { return '<div class="fld"><label class="fl" for="' + idv + '">' + label + '</label><input class="in" id="' + idv + '" value="' + esc(val == null ? '' : val) + '" ' + (extra || '') + '></div>'; }
       box.innerHTML = '<div class="spread"><h2 style="margin:0">' + (id ? 'Edit ' + esc(id) : 'New question') + '</h2><button class="link-btn" data-close>Close</button></div>' +
         '<div class="ed"><div>' +
