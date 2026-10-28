@@ -735,3 +735,6 @@ body.veil .exam .qzoom{display:none!important}
 #adm td .pill{white-space:nowrap;min-width:34px;text-align:center;display:inline-block}
 
 .rb-delb{color:#b23a3a}.rb-delb:hover{border-color:#b23a3a}
+
+.nav .ns{display:none}
+@media(max-width:560px){.nav .nl{display:none}.nav .ns{display:inline}}

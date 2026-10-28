@@ -457,9 +457,10 @@
     return new Promise(function (ok, bad) { var s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js'; s.onload = ok; s.onerror = bad; document.head.appendChild(s); });
   }
   function downloadDocx() {
-    var b = document.getElementById('rb-docx'); b.disabled = true; b.textContent = 'Preparing…';
-    loadDocx().then(function () {
-      var X = window.docx, m = model(), P = [], FONT = 'Calibri', RIGHT = 10466; // twips across A4 text width (margins 0.6")
+    var b = document.getElementById('rb-docx') || document.createElement('button'); b.disabled = true; b.textContent = 'Preparing…';
+    var m0 = model(), fn0 = fileName().replace(/\.pdf$/, '.docx'), toast = V.toast;
+    return loadDocx().then(function () {
+      var X = window.docx, m = m0, P = [], FONT = 'Calibri', RIGHT = 10466; // twips across A4 text width (margins 0.6")
       function run(t, o) { o = o || {}; return new X.TextRun({ text: asc(t), font: FONT, size: o.size || 21, bold: !!o.bold, italics: !!o.italic }); }
       function line(left, right, o) { o = o || {}; var ch = [run(left, o)]; if (right) { ch.push(new X.TextRun({ text: '\t' + asc(right), font: FONT, size: 21 })); } return new X.Paragraph({ children: ch, tabStops: right ? [{ type: X.TabStopType.RIGHT, position: RIGHT }] : [], spacing: { after: o.after == null ? 20 : o.after } }); }
       P.push(new X.Paragraph({ alignment: X.AlignmentType.CENTER, spacing: { after: 40 }, children: [run(m.name, { size: 36, bold: true })] }));
@@ -479,10 +480,10 @@
       var doc = new X.Document({ creator: 'VKV Sir Test Lab', title: asc(m.name) + ' - Resume', styles: { default: { document: { run: { font: FONT, size: 21 } } } },
         sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 720, bottom: 720, left: 720, right: 720 } } }, children: P }] });
       return X.Packer.toBlob(doc).then(function (blob) {
-        var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName().replace(/\.pdf$/, '.docx'); document.body.appendChild(a); a.click();
-        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000); V.toast('Word file downloaded.'); countDl();
+        var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fn0; document.body.appendChild(a); a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000); toast('Word file downloaded.'); if (b.id) countDl();
       });
-    }).catch(function () { V.toast('Could not create the Word file. Please try again.'); })
+    }).catch(function () { toast('Could not create the Word file. Please try again.'); })
       .finally(function () { b.disabled = false; b.textContent = '⬇ Download Word (.docx)'; });
   }
 
@@ -608,9 +609,16 @@
   }
   function countDl() { if (rid && V.session) V.rpc('rb_count_download', { p_id: rid }).catch(function () {}); }
   window.RB = {
+    download: function (api, data, title, kind) {
+      var keepV = V, keepD = d; V = Object.assign({ toast: function () {} }, keepV || {}, api); d = Object.assign(blank(), data); if (title) { d.title = title; d.autoT = false; }
+      function restore() { V = keepV || V; d = keepD; }
+      if (kind === 'docx') { var p = downloadDocx(); restore(); return p; }
+      var m1 = model(), fn1 = fileName(); restore();
+      return loadPdf().then(function () { makePdf(m1, false).save(fn1); api.toast && api.toast('PDF downloaded.'); }).catch(function () { api.toast && api.toast('Could not create the PDF.'); });
+    },
     preview: function (api, data) { var keepV = V, keepD = d; V = api; d = Object.assign(blank(), data); var html = previewHtml(); V = keepV || api; d = keepD; return html; },
     render: function (api) {
-      V = api; V.setNav('career'); step = 0; rid = null;
+      V = api; V.setNav('resume'); step = 0; rid = null;
       try { d = Object.assign(blank(), JSON.parse(localStorage.getItem(LS) || 'null') || {}); } catch (e) { d = blank(); }
       var roles = V.__roles ? Promise.resolve(V.__roles) : V.rpc('rb_roles').then(function (r) { V.__roles = r; return r; });
       if (!SUG) V.rpc('rb_suggest').then(function (x) { SUG = x; }).catch(function () {});

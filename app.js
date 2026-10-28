@@ -50,7 +50,7 @@
   function setNav(active) {
     if (active !== undefined) navActive = active;
     active = navActive;
-    var html = '<a href="https://www.vkvsir.com" class="site-link" title="Go to vkvsir.com">&larr; vkvsir.com</a><a href="/" data-link class="' + (active === 'home' ? 'on' : '') + '">Tests</a><a href="/career" data-link class="' + (active === 'career' ? 'on' : '') + '">Job Prep</a>';
+    var html = '<a href="https://www.vkvsir.com" class="site-link" title="Go to vkvsir.com">&larr; vkvsir.com</a><a href="/" data-link class="' + (active === 'home' ? 'on' : '') + '">Tests</a><a href="/career" data-link class="' + (active === 'career' ? 'on' : '') + '">Job Prep</a><a href="/resume" data-link class="' + (active === 'resume' ? 'on' : '') + '"><span class="nl">Resume Builder</span><span class="ns">Resume</span></a>';
     if (session) {
       html += '<a href="/me" data-link class="' + (active === 'me' ? 'on' : '') + '">Dashboard</a>';
       if (profile && profile.is_admin) html += '<a href="/admin" data-link class="' + (active === 'admin' ? 'on' : '') + '">Admin</a>';
@@ -686,11 +686,11 @@
 
   /* ---------- resume builder (loaded on demand) ---------- */
   function viewResume() {
-    setNav('career'); loading();
+    setNav('resume'); loading();
     var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, get session() { return session; }, get profile() { return profile; } };
     function run() { window.RB.render(api); }
     if (window.RB) return run();
-    var s = document.createElement('script'); s.src = '/resume.js?v=5'; s.onload = run;
+    var s = document.createElement('script'); s.src = '/resume.js?v=6'; s.onload = run;
     s.onerror = function () { h('<div class="card narrow center"><p>Could not load the resume builder. Please refresh.</p></div>'); };
     document.head.appendChild(s);
   }
@@ -709,7 +709,7 @@
       var brOpts = '<option value="">Select your branch</option>' + (o.branches || []).map(function (b) { return '<option value="' + esc(b.id) + '">' + esc(b.name) + '</option>'; }).join('');
       var levels = [['student', 'Student', 'Still studying'], ['fresher', 'Fresher', '0 to 1 year'], ['junior', 'Experienced', '2 to 4 years'], ['senior', 'Senior', '5+ years']];
       h('<section class="hero jp-hero"><p class="eyebrow">Career &amp; interview preparation</p><h1>Know exactly what to prepare for <em>your</em> target job.</h1>' +
-        '<a class="rb-promo" href="/resume" data-link><span>📄</span><span><b>Free ATS Resume Builder</b><small>Build a recruiter-ready resume with keywords from real job posts, an instant ATS score and a plan to strengthen your profile.</small></span><em>Build my resume →</em></a>' +
+
         '<details class="softinfo"><summary>How your plan is built</summary><p>We match your role and branch to the topics, software and interview questions that matter. For the company, we use its <b>current job posts</b> (read nightly from career pages and hiring systems, and refreshed when you search) to show which software it is asking for now. If we have little data for a company, we show what similar companies in the same field ask for. <a href="/why#jobprep" data-link>Learn more</a></p></details>' +
         '<p class="muted" style="max-width:680px">Tell us the company, role and branch, or paste the job post. You get a clear plan: the most important subjects and topics, what to refresh, software to learn, likely interview questions, and one-click practice for each topic.</p></section>' +
         '<div class="card stack jp-form">' +
@@ -1737,12 +1737,16 @@
             function show() {
               rpc('rb_admin_get', { p_id: id }).then(function (r) {
                 var m = document.createElement('div'); m.className = "modal"; m.style.zIndex = 200; m.setAttribute('role', 'dialog');
-                m.innerHTML = '<div class="modal-box rs-view"><div class="spread"><b>' + esc(r.title || 'Resume') + ' · ATS ' + (r.score == null ? '–' : r.score) + '/100</b><button class="btn ghost small" type="button">Close</button></div><div class="rs-paper">' + window.RB.preview({ esc: esc }, r.data || {}) + '</div></div>';
-                m.onclick = function (e) { if (e.target === m || e.target.closest('button')) m.remove(); };
+                m.innerHTML = '<div class="modal-box rs-view"><div class="spread"><b>' + esc(r.title || 'Resume') + ' · ATS ' + (r.score == null ? '–' : r.score) + '/100</b><span class="row" style="gap:6px"><button class="btn small" type="button" data-dl="pdf">⬇ PDF</button><button class="btn ghost small" type="button" data-dl="docx">⬇ Word</button><button class="btn ghost small" type="button" data-x="1">Close</button></span></div><div class="rs-paper">' + window.RB.preview({ esc: esc }, r.data || {}) + '</div></div>';
+                m.onclick = function (e) {
+                  var dl = e.target.closest('[data-dl]');
+                  if (dl) { dl.disabled = true; window.RB.download({ esc: esc, toast: toast }, r.data || {}, r.title, dl.getAttribute('data-dl')).finally(function () { dl.disabled = false; }); return; }
+                  if (e.target === m || e.target.closest('[data-x]')) m.remove();
+                };
                 document.body.appendChild(m);
               }).catch(function (e) { toast(errMsg(e)); });
             }
-            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=5'; s.onload = show; document.head.appendChild(s); }
+            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=6'; s.onload = show; document.head.appendChild(s); }
           };
         });
       }).catch(function (e) { box.innerHTML = '<div class="card"><p>' + esc(errMsg(e)) + '</p></div>'; });
