@@ -1185,7 +1185,7 @@
       var last = v.idx + 1 === v.n;
       h('<div class="wm-layer" style="background-image:' + watermark() + '"></div><div class="exam' + (v.image ? ' has-img' : '') + '"><div class="exam-top"><div class="spread"><span class="qcount">Question ' + (v.idx + 1) + ' of ' + v.n + '</span><span class="tleft" id="tl"></span></div>' +
         '<div class="track"><div class="fill" id="fl"></div></div><div class="qtime" id="qt"></div></div>' +
-        (v.image ? '<img class="qimg" alt="Figure for this question" src="' + esc(v.image) + '">' : '') +
+        (v.image ? zimg(v.image, '', 'Figure for this question') : '') +
         '<div class="qbody" id="qb">' + esc(v.body) + '</div><div class="opts' + (v.image && v.options.every(function (o) { return String(o).length <= 14; }) ? ' opts-grid' : '') + '" role="radiogroup" aria-labelledby="qb" id="opts">' +
         v.options.map(function (o, k) { return '<button type="button" class="opt" role="radio" aria-checked="false" data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') +
         '</div><div class="fb"><div class="row"><span class="small muted">Rate this question (optional):</span>' +
@@ -1279,7 +1279,7 @@
       var wrong = r.attempted - r.score, skip = r.n - r.attempted;
       var rev = (r.review || []).map(function (x) {
         return '<div class="review ' + (x.skipped ? 'skip' : 'no') + '"><div class="spread small"><span><b>Q' + x.no + '</b> &middot; ' + esc(x.topic) + '</span><span class="pill ' + (x.skipped ? '' : 'bad') + '">' + (x.skipped ? 'Not answered' : 'Wrong') + '</span></div>' +
-          (x.image ? '<img class="qimg rimg" alt="Figure" loading="lazy" src="' + esc(x.image) + '">' : '') + '<div class="muted" style="margin-top:6px">' + esc(x.image ? (x.body || x.teaser) : x.teaser) + '</div><div style="margin-top:4px"><span class="small muted">Correct answer:</span> <b style="color:var(--good)">' + esc(x.answer) + '</b></div>' +
+          (x.image ? zimg(x.image, 'rimg', 'Figure') : '') + '<div class="muted" style="margin-top:6px">' + esc(x.image ? (x.body || x.teaser) : x.teaser) + '</div><div style="margin-top:4px"><span class="small muted">Correct answer:</span> <b style="color:var(--good)">' + esc(x.answer) + '</b></div>' +
           (x.explanation ? '<p class="small" style="margin:8px 0 0">' + esc(x.explanation) + '</p>' : '') +
           '<div class="rfb" data-no="' + x.no + '"><span class="small muted">Is this answer right?</span><button type="button" class="icon-btn" data-r="1" aria-pressed="false" aria-label="Looks right">' + THUMB_UP + '</button><button type="button" class="icon-btn" data-r="-1" aria-pressed="false" aria-label="I have a concern">' + THUMB_DN + '</button>' +
           '<div class="chips" hidden>' + RFLAGS.map(function (f) { return '<button type="button" class="chip" aria-pressed="false" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div></div>';
@@ -1357,6 +1357,14 @@
     try {
       window.renderMathInElement(el, { delimiters: [{ left: '$$', right: '$$', display: true }, { left: '\\[', right: '\\]', display: true }, { left: '$', right: '$', display: false }, { left: '\\(', right: '\\)', display: false }], throwOnError: false });
     } catch (e) {}
+  }
+
+  /* ---------- question image with hover-zoom (laptop) and hint ---------- */
+  function zimg(src, cls, alt) {
+    var s = esc(src);
+    return '<figure class="qzw"><img class="qimg ' + (cls || '') + '" alt="' + (alt || 'Figure') + '" src="' + s + '">' +
+      '<img class="qzoom" alt="" aria-hidden="true" src="' + s + '">' +
+      '<figcaption class="qhint"><span class="hz-mouse">(Hover over the image to see it bigger)</span><span class="hz-touch">(Pinch with two fingers to zoom the image)</span></figcaption></figure>';
   }
 
   /* ---------- image processing (teacher upload) ---------- */
