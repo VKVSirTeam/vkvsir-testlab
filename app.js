@@ -1183,7 +1183,7 @@
       inQ = true; sel = null; rating = null; flags = [];
       var t = now(); qEnd = t + v.q_left_ms; tEnd = t + v.total_left_ms;
       var last = v.idx + 1 === v.n;
-      h('<div class="wm-layer" style="background-image:' + watermark() + '"></div><div class="exam"><div class="exam-top"><div class="spread"><span class="qcount">Question ' + (v.idx + 1) + ' of ' + v.n + '</span><span class="tleft" id="tl"></span></div>' +
+      h('<div class="wm-layer" style="background-image:' + watermark() + '"></div><div class="exam' + (v.image ? ' has-img' : '') + '"><div class="exam-top"><div class="spread"><span class="qcount">Question ' + (v.idx + 1) + ' of ' + v.n + '</span><span class="tleft" id="tl"></span></div>' +
         '<div class="track"><div class="fill" id="fl"></div></div><div class="qtime" id="qt"></div></div>' +
         (v.image ? '<img class="qimg" alt="Figure for this question" src="' + esc(v.image) + '">' : '') +
         '<div class="qbody" id="qb">' + esc(v.body) + '</div><div class="opts" role="radiogroup" aria-labelledby="qb" id="opts">' +
@@ -1279,7 +1279,7 @@
       var wrong = r.attempted - r.score, skip = r.n - r.attempted;
       var rev = (r.review || []).map(function (x) {
         return '<div class="review ' + (x.skipped ? 'skip' : 'no') + '"><div class="spread small"><span><b>Q' + x.no + '</b> &middot; ' + esc(x.topic) + '</span><span class="pill ' + (x.skipped ? '' : 'bad') + '">' + (x.skipped ? 'Not answered' : 'Wrong') + '</span></div>' +
-          '<div class="muted" style="margin-top:6px">' + esc(x.teaser) + '</div><div style="margin-top:4px"><span class="small muted">Correct answer:</span> <b style="color:var(--good)">' + esc(x.answer) + '</b></div>' +
+          (x.image ? '<img class="qimg rimg" alt="Figure" loading="lazy" src="' + esc(x.image) + '">' : '') + '<div class="muted" style="margin-top:6px">' + esc(x.image ? (x.body || x.teaser) : x.teaser) + '</div><div style="margin-top:4px"><span class="small muted">Correct answer:</span> <b style="color:var(--good)">' + esc(x.answer) + '</b></div>' +
           (x.explanation ? '<p class="small" style="margin:8px 0 0">' + esc(x.explanation) + '</p>' : '') +
           '<div class="rfb" data-no="' + x.no + '"><span class="small muted">Is this answer right?</span><button type="button" class="icon-btn" data-r="1" aria-pressed="false" aria-label="Looks right">' + THUMB_UP + '</button><button type="button" class="icon-btn" data-r="-1" aria-pressed="false" aria-label="I have a concern">' + THUMB_DN + '</button>' +
           '<div class="chips" hidden>' + RFLAGS.map(function (f) { return '<button type="button" class="chip" aria-pressed="false" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div></div>';
@@ -1466,7 +1466,7 @@
           var fl = Object.keys(x.flags || {}).map(function (k) { return '<span class="pill bad">' + (FLAGNAME[k] || k) + ': ' + x.flags[k] + '</span>'; }).join(' ');
           return '<article class="card qcard"><div class="spread"><label class="row small"><input type="checkbox" data-id="' + esc(x.id) + '"> <b class="mono">' + esc(x.id) + '</b></label>' +
             '<span class="small muted">Unit ' + x.unit + ' &middot; ' + esc(x.subtopic.replace(/-/g, ' ')) + ' &middot; ' + ({ E: 'Easy', M: 'Moderate', H: 'Hard' }[x.level] || x.level) + (x.has_image ? ' &middot; &#128247;' : '') + '</span></div>' +
-            '<div class="qtext" style="margin:8px 0;font-weight:600">' + esc(x.body) + '</div><ol type="A" class="small">' + x.options.map(function (o, k) { return '<li class="qtext' + (k === x.correct ? ' c' : '') + '">' + esc(o) + (k === x.correct ? ' &#10003;' : '') + '</li>'; }).join('') + '</ol>' +
+            (x.image ? '<img class="qimg athumb" alt="Figure" loading="lazy" src="' + esc(x.image) + '">' : '') + '<div class="qtext" style="margin:8px 0;font-weight:600">' + esc(x.body) + '</div><ol type="A" class="small">' + x.options.map(function (o, k) { return '<li class="qtext' + (k === x.correct ? ' c' : '') + '">' + esc(o) + (k === x.correct ? ' &#10003;' : '') + '</li>'; }).join('') + '</ol>' +
             (x.explanation ? '<p class="small muted qtext">' + esc(x.explanation) + '</p>' : '<p class="small" style="color:var(--warn)">No explanation yet</p>') +
             '<div class="row small">' + (x.served ? '<span class="pill">' + x.served + ' answered, ' + x.pct + '% correct</span>' : '<span class="pill">Not answered yet</span>') +
             (x.complaints && x.complaints.score ? '<span class="pill bad"><b>Complaint score ' + x.complaints.score + '</b> &middot; ' + x.complaints.reporters + ' student' + (x.complaints.reporters === 1 ? '' : 's') + '</span>' : '') +

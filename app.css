@@ -487,3 +487,17 @@ table{max-width:100%}
 @media print{.rv{opacity:1!important;transform:none!important;transition:none!important}}
 
 .cp-ov{font-size:14.5px;line-height:1.6;margin:0 0 8px;color:var(--ink)}
+
+/* ---- standard question images ---- */
+.qimg{display:block;margin:0 auto 12px;max-width:100%;width:auto;height:auto;max-height:min(30vh,240px);object-fit:contain;background:#fff;padding:4px;box-sizing:border-box}
+.exam.has-img .exam-top{padding:6px 0 8px}
+.exam.has-img .qbody{font-size:17px;line-height:1.4;margin:6px 0 10px}
+.exam.has-img .opts{gap:8px}
+.exam.has-img .opt{min-height:46px;padding:8px 14px;font-size:16px}
+.exam.has-img .opt .k{width:28px;height:28px}
+.exam.has-img .fb{margin-top:10px;padding-top:8px}
+.exam.has-img .exam-foot{margin-top:10px;padding-top:8px}
+@media (max-height:800px){.exam.has-img .qimg{max-height:23vh;margin-bottom:8px}.exam.has-img .fb{margin-top:6px;padding-top:6px}}
+@media (min-width:900px) and (min-height:801px){.exam.has-img .qimg{max-height:min(32vh,300px)}}
+.qimg.athumb{margin:10px 0 4px;max-height:170px}
+.qimg.rimg{margin:10px 0 0;max-height:180px}
