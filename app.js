@@ -586,8 +586,9 @@
         '<div class="pdfx-f">Prepared on VKV Sir Test Lab (test.vkvsir.com) · www.vkvsir.com · Practise every topic free online</div>';
       Array.prototype.forEach.call(wrap.querySelectorAll('button,.btn'), function (b) { b.remove(); });
       Array.prototype.forEach.call(wrap.querySelectorAll('.rv,.in'), function (el) { el.classList.remove('rv', 'in'); });
-      return window.html2pdf().set({ margin: [10, 10, 12, 10], filename: name, image: { type: 'jpeg', quality: 0.92 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' }, jsPDF: { unit: 'mm', format: 'a4' }, pagebreak: { mode: ['css', 'legacy'], avoid: ['.card', '.jp-skill', 'li'] } })
-        .from(wrap).outputPdf('blob').then(function (blob) { return { blob: blob, name: name }; });
+      var sx = window.scrollX, sy = window.scrollY; window.scrollTo(0, 0);
+      return window.html2pdf().set({ margin: [10, 10, 12, 10], filename: name, image: { type: 'jpeg', quality: 0.92 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 }, jsPDF: { unit: 'mm', format: 'a4' }, pagebreak: { mode: ['css', 'legacy'], avoid: ['.card', '.jp-skill', 'li'] } })
+        .from(wrap).outputPdf('blob').then(function (blob) { window.scrollTo(sx, sy); return { blob: blob, name: name }; }, function (e) { window.scrollTo(sx, sy); throw e; });
     });
   }
   function planSaveButtons(p) {
@@ -707,7 +708,7 @@
     if (sw.length) html += '<div class="jp-tier jp-swt"><h2><span class="jp-badge">⚙</span>Software &amp; practical skills</h2><p class="muted small" style="margin-top:-6px">Learn to the target level and be ready to explain one thing you built with it.</p><div class="grid">' + sw.map(swCard).join('') + '</div></div>';
     var tr = (p.role && p.role.traits) || [];
     if (tr.length) html += '<div class="card"><h2>Qualities they look for</h2><div class="chips">' + tr.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div><p class="small muted" style="margin:10px 0 0">Prepare one short real example for each quality. Interviewers remember stories, not adjectives.</p></div>';
-    html += '<div class="row" style="gap:10px;flex-wrap:wrap"><button class="btn" type="button" id="jp-pdf">⬇ Download PDF</button><button class="btn ghost" type="button" id="jp-share" hidden>📤 Save to Drive / Email / WhatsApp</button><button class="btn ghost" type="button" onclick="window.print()">🖨 Print</button><a class="btn" href="/me" data-link>Track my progress</a></div>' +
+    html += '<div class="row" style="gap:10px;flex-wrap:wrap"><button class="btn" type="button" id="jp-pdf">⬇ Download PDF</button><button class="btn ghost" type="button" id="jp-share" hidden>📤 Save to Drive / Email / WhatsApp</button><button class="btn" type="button" onclick="window.print()">🖨 Print</button><a class="btn" href="/me" data-link>Track my progress</a></div>' +
       '<p class="small muted">This plan is prepared from VKV Sir\'s research on companies, roles and skills to guide your preparation. Actual interview questions can vary by panel and position.</p></section>';
     html = '<div class="print-only pr-wm"><img src="/favicon.svg" alt=""><span>www.vkvsir.com</span></div>' +
       '<table class="prt"><thead><tr><td><div class="pr-head"><img src="/favicon.svg" alt=""><span><b>VKV Sir Test Lab</b> · Interview Preparation Plan</span><span>test.vkvsir.com · www.vkvsir.com</span></div></td></tr></thead>' +
