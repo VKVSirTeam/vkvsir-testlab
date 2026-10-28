@@ -2,7 +2,7 @@
    Text-based PDF (real, selectable text that ATS software can read), one column, standard headings. */
 (function () {
   'use strict';
-  var V, d, kw = null, step = 0, saveT = null, rid = null;
+  var V, d, kw = null, step = 0, saveT = null, rid = null, LIST = [];
   var LS = 'vkv-resume-draft';
 
   /* ---------------- goals and guidance ---------------- */
@@ -112,7 +112,7 @@
   }
 
   function blank() {
-    return { v: 1, title: 'My resume', goals: ['private'], role: '', company: '', name: '', email: '', phone: '', city: '', linkedin: '', github: '', portfolio: '',
+    return { v: 1, title: '', autoT: true, goals: ['private'], role: '', company: '', name: '', email: '', phone: '', city: '', linkedin: '', github: '', portfolio: '',
       degree: 'B.Tech', branch: '', college: '', grad: '', cgpa: '', yearNow: '4', x12: '', x10: '', summary: '',
       skTech: '', skSoft: '', skOther: '', langs: 'English, Hindi',
       projects: [{ title: '', kind: 'Major project', tools: '', link: '', when: '', bullets: '' }], exp: [], certs: [], ach: [], por: [], pubs: [],
@@ -133,14 +133,33 @@
     if (d.goals.indexOf('psu') >= 0 && d.goals.indexOf('private') < 0) return 'psu';
     return 'private';
   }
+  function shortCo(c) { return String(c || '').replace(/\b(india|limited|ltd\.?|pvt\.?|private|corporation|company|co\.)\b/gi, '').replace(/\s+/g, ' ').trim(); }
+  function autoTitle() {
+    var who = (d.name || '').trim() ? d.name.trim().split(/\s+/).slice(0, 2).join(' ') : 'My';
+    var tgt = shortCo(d.company) || (kw && kw.role ? kw.role.split(/[(/]/)[0].trim() : '');
+    var base = who + ' – CV' + (tgt ? ' – ' + tgt : ''), t = base, n = 2;
+    var taken = LIST.filter(function (r) { return r.id !== rid; }).map(function (r) { return (r.title || '').toLowerCase(); });
+    while (taken.indexOf(t.toLowerCase()) >= 0) t = base + ' ' + (n++);
+    return t;
+  }
+  function titleNow() { if (d.autoT !== false || !has(d.title)) d.title = autoTitle(); return d.title; }
   function persist() {
+    titleNow();
+    var tb = document.getElementById('rb-tname'); if (tb && document.activeElement !== tb) tb.textContent = d.title;
     try { localStorage.setItem(LS, JSON.stringify(d)); } catch (e) {}
     if (!V.session) return;
     clearTimeout(saveT);
     saveT = setTimeout(function () {
       var row = { title: d.title || 'My resume', track: d.goals.join(','), data: d, score: score().total, updated_at: new Date().toISOString() };
       var p = rid ? V.sb.from('resumes').update(row).eq('id', rid).select('id').single() : V.sb.from('resumes').insert(row).select('id').single();
-      p.then(function (r) { if (r.data && r.data.id) { rid = r.data.id; var s = document.getElementById('rb-saved'); if (s) s.textContent = '✓ Saved to your account'; } });
+      p.then(function (r) {
+        if (!(r.data && r.data.id)) return;
+        var isNew = !rid; rid = r.data.id;
+        var e = LIST.filter(function (x) { return x.id === rid; })[0];
+        if (e) { e.title = d.title; e.score = row.score; e.data = d; } else LIST.unshift({ id: rid, title: d.title, score: row.score, data: d });
+        if (isNew || e) pickerHtml();
+        var s = document.getElementById('rb-saved'); if (s) s.textContent = '✓ Saved to your account';
+      });
     }, 1200);
   }
 
@@ -249,7 +268,7 @@
       '<div class="rb-grid">' +
       '<div class="rb-f"><label for="role">Target role<sup class="rb-req" aria-label="required">*</sup></label><select class="in" id="role"><option value="">Choose the closest role…</option>' + (V.__roles || []).map(function (r) { return '<option value="' + esc(r.id) + '"' + (d.role === r.id ? ' selected' : '') + '>' + esc(r.family + ' · ' + r.name) + '</option>'; }).join('') + '</select><small>Decides the keywords we check.</small></div>' +
       inp('company', 'Target company (optional)', 'e.g. Tata Motors', { hint: 'Adds the software this company is asking for in its current job posts.' }) +
-      inp('title', 'Name this resume', 'e.g. Core mechanical – 2027') + '</div>' +
+      inp('title', 'Resume name', 'Named automatically', { hint: 'Auto-named from your name and target company until you change it.' }) + '</div>' +
       note('ok', '<b>Applying to a specific job?</b> In the last step you can paste its job description and see a % match with the exact keywords to add.');
   }
   function goalInfo() {
@@ -377,7 +396,8 @@
     });
     return o.join('\n');
   }
-  function fileName() { return (asc(d.name || 'Resume').replace(/[^A-Za-z0-9]+/g, '_') + '_Resume' + (d.role && kw ? '_' + asc(kw.role || '').split(/[ /(]/)[0] : '') + '.pdf').replace(/_+/g, '_'); }
+  function fileName() {
+    if (has(d.title)) return asc(d.title).replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') + '.pdf'; return (asc(d.name || 'Resume').replace(/[^A-Za-z0-9]+/g, '_') + '_Resume' + (d.role && kw ? '_' + asc(kw.role || '').split(/[ /(]/)[0] : '') + '.pdf').replace(/_+/g, '_'); }
 
   /* ---------------- PDF: real text, Helvetica, one column ---------------- */
   function loadPdf() {
@@ -417,7 +437,7 @@
     loadPdf().then(function () {
       var m = model(), doc = makePdf(m, false);
       if (doc.getNumberOfPages() === 2 && ['1', '2', '3', '4'].indexOf(String(d.yearNow)) >= 0 && track() !== 'academic') { var c = makePdf(m, true); if (c.getNumberOfPages() === 1) doc = c; }
-      doc.save(fileName());
+      doc.save(fileName()); countDl();
       V.toast(doc.getNumberOfPages() > 1 && track() !== 'academic' ? 'Downloaded (' + doc.getNumberOfPages() + ' pages). Freshers: try trimming to one page.' : 'Downloaded. Real-text PDF, ready for ATS.');
     }).catch(function () { V.toast('Could not load the PDF tool. Check your connection.'); })
       .finally(function () { b.disabled = false; b.textContent = '⬇ Download PDF (ATS-friendly)'; });
@@ -452,7 +472,7 @@
         sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 720, bottom: 720, left: 720, right: 720 } } }, children: P }] });
       return X.Packer.toBlob(doc).then(function (blob) {
         var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName().replace(/\.pdf$/, '.docx'); document.body.appendChild(a); a.click();
-        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000); V.toast('Word file downloaded.');
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000); V.toast('Word file downloaded.'); countDl();
       });
     }).catch(function () { V.toast('Could not create the Word file. Please try again.'); })
       .finally(function () { b.disabled = false; b.textContent = '⬇ Download Word (.docx)'; });
@@ -477,7 +497,7 @@
   function wire() {
     var f = document.getElementById('rb-form');
     Array.prototype.forEach.call(f.querySelectorAll('input.in, textarea.in, select.in'), function (el) {
-      el.addEventListener('input', function () { set(el.id, el.value); if (el.id === 'company') { clearTimeout(el._t); el._t = setTimeout(loadKw, 600); } persist(); drawSide(); });
+      el.addEventListener('input', function () { set(el.id, el.value); if (el.id === 'title') d.autoT = !has(el.value); if (el.id === 'company') { clearTimeout(el._t); el._t = setTimeout(loadKw, 600); } persist(); drawSide(); });
       if (el.id === 'role') el.addEventListener('change', function () { set('role', el.value); persist(); loadKw(); });
       if (el.id === 'yearNow') el.addEventListener('change', function () { set('yearNow', el.value); persist(); });
     });
@@ -524,25 +544,51 @@
     V.h('<div class="rb" id="rb-top"><div class="rb-head"><div><p class="eyebrow">Free · No sign-up needed to download</p><h1>ATS Resume Builder</h1><p class="muted">One clean column, standard headings and a real-text PDF that applicant tracking systems can read, with keywords taken from real job posts.</p>' +
       '<details class="softinfo"><summary>Why this builder is different</summary><ul><li><b>Free and unlimited:</b> download PDF and Word as often as you like. No subscription, no watermark.</li><li><b>Readable by ATS:</b> real text, one column and standard headings. Designed templates with columns and icons are often misread.</li><li><b>Real keywords:</b> skills and software from current job posts, including your target company’s.</li><li><b>Job-post match:</b> paste any job description and see the exact keywords you are missing.</li><li><b>Guidance for every goal:</b> private jobs, internships, PSUs, government exams and higher studies.</li></ul><a href="/why#resume" data-link>See all features</a></details></div>' +
       '<div class="rb-headr"><span class="rb-mini" id="rb-mini"></span><span class="small muted" id="rb-saved">' + (V.session ? 'Saves to your account automatically' : 'Saved on this device · <a href="/login?next=/resume" data-link>Sign in</a> to keep it in your account') + '</span>' +
-      (list && list.length ? '<select class="in" id="rb-pick">' + list.map(function (r) { return '<option value="' + r.id + '"' + (r.id === rid ? ' selected' : '') + '>' + esc(r.title || 'My resume') + (r.score != null ? ' · ' + r.score + '/100' : '') + '</option>'; }).join('') + '</select>' : '') +
-      '<button class="btn ghost small" id="rb-new" type="button">+ New resume</button></div></div>' +
+      '</div></div>' +
+      '<div class="rb-tbar"><div class="rb-tname-w"><span>📄</span><b id="rb-tname" title="Resume name">' + esc(titleNow()) + '</b><button class="btn ghost small" type="button" id="rb-ren">✏ Rename</button></div>' +
+      '<div class="rb-tact"><span id="rb-pickw"></span><button class="btn ghost small" id="rb-new" type="button">+ New</button><button class="btn ghost small" id="rb-dup" type="button">⧉ Duplicate</button></div></div>' +
       '<nav class="rb-steps" id="rb-steps" aria-label="Steps"></nav><div class="rb-body"><div class="card rb-form" id="rb-form"></div><aside class="rb-side"><div class="rb-ptitle"><b>Live preview</b><span class="small muted">A4 · Helvetica · one column</span></div><div id="rb-prev"></div></aside></div></div>');
     document.getElementById('rb-steps').onclick = function (e) { var b = e.target.closest('button'); if (b) { step = +b.dataset.s; render(); } };
-    document.getElementById('rb-new').onclick = function () { if (!confirm('Start a new resume? Your current one stays saved.')) return; d = blank(); rid = null; kw = null; step = 0; try { localStorage.setItem(LS, JSON.stringify(d)); } catch (e) {} render(); };
-    var pk = document.getElementById('rb-pick'); if (pk) pk.onchange = function () { var r = list.filter(function (x) { return x.id === pk.value; })[0]; if (r) { rid = r.id; d = Object.assign(blank(), r.data); step = 0; loadKw(); render(); } };
+    document.getElementById('rb-new').onclick = function () {
+      // new resume keeps personal details and education, clears the target-specific parts
+      var keep = ['name', 'email', 'phone', 'city', 'linkedin', 'github', 'portfolio', 'degree', 'branch', 'college', 'grad', 'cgpa', 'yearNow', 'x12', 'x10', 'tests', 'langs'];
+      var nd = blank(); keep.forEach(function (k) { nd[k] = JSON.parse(JSON.stringify(d[k])); });
+      d = nd; rid = null; kw = null; step = 0; titleNow(); persist(); render(); V.toast('New resume started with your personal details and education.');
+    };
+    document.getElementById('rb-dup').onclick = function () {
+      d = JSON.parse(JSON.stringify(d)); rid = null; d.autoT = true; d.title = ''; titleNow(); persist(); pickerHtml(); V.toast('Copy created: “' + d.title + '”. Edit it for another job.');
+    };
+    document.getElementById('rb-ren').onclick = function () {
+      var n = prompt('Resume name', d.title || ''); if (n == null) return; n = n.trim().slice(0, 80);
+      if (!n) { d.autoT = true; d.title = ''; } else { d.autoT = false; d.title = n; }
+      titleNow(); document.getElementById('rb-tname').textContent = d.title;
+      var ti = document.getElementById('title'); if (ti) ti.value = d.autoT ? '' : d.title;
+      persist(); V.toast('Renamed.');
+    };
+    pickerHtml();
     render(true); loadKw();
   }
+  function pickerHtml() {
+    var w = document.getElementById('rb-pickw'); if (!w) return;
+    if (LIST.length < 2) { w.innerHTML = LIST.length ? '<span class="small muted">1 saved resume</span>' : ''; return; }
+    w.innerHTML = '<select class="in" id="rb-pick" aria-label="Open a saved resume">' + LIST.map(function (r) { return '<option value="' + r.id + '"' + (r.id === rid ? ' selected' : '') + '>' + esc(r.title || 'Resume') + (r.score != null ? ' · ' + r.score + '/100' : '') + '</option>'; }).join('') + '</select>';
+    document.getElementById('rb-pick').onchange = function () { var v = this.value, r = LIST.filter(function (x) { return x.id === v; })[0]; if (r) { rid = r.id; d = Object.assign(blank(), r.data); if (d.autoT == null) d.autoT = false; step = 0; document.getElementById('rb-tname').textContent = titleNow(); loadKw(); render(); } };
+  }
+  function countDl() { if (rid && V.session) V.rpc('rb_count_download', { p_id: rid }).catch(function () {}); }
   window.RB = {
+    preview: function (api, data) { var keepV = V, keepD = d; V = api; d = Object.assign(blank(), data); var html = previewHtml(); V = keepV || api; d = keepD; return html; },
     render: function (api) {
       V = api; V.setNav('career'); step = 0; rid = null;
       try { d = Object.assign(blank(), JSON.parse(localStorage.getItem(LS) || 'null') || {}); } catch (e) { d = blank(); }
       var roles = V.__roles ? Promise.resolve(V.__roles) : V.rpc('rb_roles').then(function (r) { V.__roles = r; return r; });
       if (!SUG) V.rpc('rb_suggest').then(function (x) { SUG = x; }).catch(function () {});
       window.addEventListener('scroll', function () { if (box && !box.hidden && cur) showSug(cur.el); }, { passive: true });
+      LIST = [];
       var mine = V.session ? V.sb.from('resumes').select('id,title,score,data,updated_at').order('updated_at', { ascending: false }).then(function (r) { return r.data || []; }) : Promise.resolve([]);
       Promise.all([roles, mine]).then(function (rr) {
         var list = rr[1];
-        if (list.length) { rid = list[0].id; d = Object.assign(blank(), list[0].data); }
+        LIST = list.slice();
+        if (list.length) { rid = list[0].id; d = Object.assign(blank(), list[0].data); if (d.autoT == null) d.autoT = !has(d.title) || d.title === 'My resume'; }
         shell(list);
       }).catch(function () { shell([]); });
     }

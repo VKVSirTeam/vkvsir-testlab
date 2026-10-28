@@ -690,7 +690,7 @@
     var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, get session() { return session; }, get profile() { return profile; } };
     function run() { window.RB.render(api); }
     if (window.RB) return run();
-    var s = document.createElement('script'); s.src = '/resume.js?v=3'; s.onload = run;
+    var s = document.createElement('script'); s.src = '/resume.js?v=4'; s.onload = run;
     s.onerror = function () { h('<div class="card narrow center"><p>Could not load the resume builder. Please refresh.</p></div>'); };
     document.head.appendChild(s);
   }
@@ -1703,16 +1703,64 @@
     document.body.appendChild(m); document.body.classList.add('modal-open'); return m;
   }
 
+  /* ---------- admin: resumes built by students ---------- */
+  function admResumes(box) {
+    var term = '';
+    function scoreCls(s) { return s >= 85 ? 'good' : s >= 70 ? 'accent' : s >= 50 ? '' : 'bad'; }
+    function load() {
+      box.innerHTML = '<div class="spinner"></div>';
+      rpc('rb_admin_list', { p_search: term || null }).then(function (r) {
+        var st = r.stats || {}, rows = r.rows || [];
+        box.innerHTML = '<div class="adm-stats">' + [['Resumes', st.resumes], ['Students', st.students], ['Average ATS score', st.avg == null ? '–' : st.avg], ['Score 85+', st.high], ['Downloads', st.downloads], ['New this week', st.week]]
+            .map(function (x) { return '<div class="card"><b>' + (x[1] == null ? 0 : x[1]) + '</b><span class="small muted">' + x[0] + '</span></div>'; }).join('') + '</div>' +
+          '<div class="row" style="gap:8px;flex-wrap:wrap;margin:12px 0"><input class="in" id="rs-q" placeholder="Search name, email, college, company, branch" value="' + esc(term) + '" style="flex:1;min-width:220px"><button class="btn" id="rs-go">Search</button><button class="btn ghost" id="rs-csv">⬇ CSV</button></div>' +
+          (rows.length ? '<div style="overflow-x:auto"><table class="table"><thead><tr><th>Updated</th><th>Student</th><th>College / branch</th><th>Resume</th><th>Target</th><th>ATS</th><th>Downloads</th><th></th></tr></thead><tbody>' +
+            rows.map(function (x) {
+              return '<tr><td class="small">' + esc(fmtDate(x.updated_at)) + '<br><span class="muted">created ' + esc(new Date(x.created_at).toLocaleDateString('en-IN')) + '</span></td>' +
+                '<td><b>' + esc(x.student || '–') + '</b><br><span class="small muted">' + esc(x.email || '') + (x.mobile ? ' · ' + esc(x.mobile) : '') + '</span>' + (x.n_user > 1 ? '<br><span class="pill">' + x.n_user + ' resumes</span>' : '') + '</td>' +
+                '<td class="small">' + esc(x.college || '–') + (x.branch ? '<br><span class="muted">' + esc(x.branch) + (x.grad ? ' · ' + esc(x.grad) : '') + '</span>' : '') + '</td>' +
+                '<td class="small">' + esc(x.title || '') + '</td><td class="small">' + esc(x.role || '–') + (x.company ? '<br><b>' + esc(x.company) + '</b>' : '') + '</td>' +
+                '<td><span class="pill ' + scoreCls(x.score || 0) + '">' + (x.score == null ? '–' : x.score) + '</span></td><td>' + (x.downloads || 0) + '</td>' +
+                '<td><button class="btn ghost small" data-v="' + x.id + '">View</button></td></tr>';
+            }).join('') + '</tbody></table></div>' : '<div class="card"><p class="muted">No resumes yet' + (term ? ' for this search' : '') + '.</p></div>');
+        box.querySelector('#rs-go').onclick = function () { term = box.querySelector('#rs-q').value.trim(); load(); };
+        box.querySelector('#rs-q').onkeydown = function (e) { if (e.key === 'Enter') { term = this.value.trim(); load(); } };
+        box.querySelector('#rs-csv').onclick = function () {
+          var head = ['Updated', 'Created', 'Student', 'Email', 'Mobile', 'College', 'Branch', 'Graduation', 'Resume', 'Role', 'Company', 'ATS score', 'Downloads', 'Resumes by student'];
+          var lines = [head].concat(rows.map(function (x) { return [x.updated_at, x.created_at, x.student, x.email, x.mobile, x.college, x.branch, x.grad, x.title, x.role, x.company, x.score, x.downloads, x.n_user]; }))
+            .map(function (r) { return r.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+          var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + lines], { type: 'text/csv' })); a.download = 'resumes.csv'; a.click();
+        };
+        Array.prototype.forEach.call(box.querySelectorAll('[data-v]'), function (b) {
+          b.onclick = function () {
+            var id = b.getAttribute('data-v');
+            function show() {
+              rpc('rb_admin_get', { p_id: id }).then(function (r) {
+                var m = document.createElement('div'); m.className = "modal"; m.style.zIndex = 200; m.setAttribute('role', 'dialog');
+                m.innerHTML = '<div class="modal-box rs-view"><div class="spread"><b>' + esc(r.title || 'Resume') + ' · ATS ' + (r.score == null ? '–' : r.score) + '/100</b><button class="btn ghost small" type="button">Close</button></div><div class="rs-paper">' + window.RB.preview({ esc: esc }, r.data || {}) + '</div></div>';
+                m.onclick = function (e) { if (e.target === m || e.target.closest('button')) m.remove(); };
+                document.body.appendChild(m);
+              }).catch(function (e) { toast(errMsg(e)); });
+            }
+            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=4'; s.onload = show; document.head.appendChild(s); }
+          };
+        });
+      }).catch(function (e) { box.innerHTML = '<div class="card"><p>' + esc(errMsg(e)) + '</p></div>'; });
+    }
+    load();
+  }
+
   function viewAdmin() {
     setNav('admin');
     if (!session) return go('/login?next=/admin', true);
     if (!profile || !profile.is_admin) { h('<div class="narrow card center"><h2>Admins only</h2><p class="muted">This area is for teachers and admins.</p></div>'); return; }
     var tab = new URLSearchParams(location.search).get('tab') || 'overview';
-    var tabs = [['overview', 'Live'], ['questions', 'Questions'], ['students', 'Students'], ['tests', 'Tests'], ['results', 'Results'], ['groups', 'Groups'], ['suggest', 'Suggestions'], ['links', 'Share links']];
+    var tabsJp = '<a href="/admin/jobprep" data-link>Job Prep ↗</a>';
+    var tabs = [['overview', 'Live'], ['questions', 'Questions'], ['students', 'Students'], ['tests', 'Tests'], ['results', 'Results'], ['groups', 'Groups'], ['suggest', 'Suggestions'], ['links', 'Share links'], ['resumes', 'Resumes']];
     h('<div class="stack"><div class="spread"><div><p class="eyebrow">Admin</p><h1>Control room</h1></div></div>' +
-      '<div class="tabs">' + tabs.map(function (t) { return '<a href="/admin?tab=' + t[0] + '" data-link class="' + (t[0] === tab ? 'on' : '') + '">' + t[1] + '</a>'; }).join('') + '</div><div id="adm"></div></div>');
+      '<div class="tabs">' + tabs.map(function (t) { return '<a href="/admin?tab=' + t[0] + '" data-link class="' + (t[0] === tab ? 'on' : '') + '">' + t[1] + '</a>'; }).join('') + tabsJp + '</div><div id="adm"></div></div>');
     var box = q('#adm');
-    ({ overview: admOverview, questions: admQuestions, students: admStudents, tests: admTests, results: admResults, links: admLinks, groups: admGroups, suggest: admSuggest }[tab] || admOverview)(box);
+    ({ overview: admOverview, questions: admQuestions, students: admStudents, tests: admTests, results: admResults, links: admLinks, groups: admGroups, suggest: admSuggest, resumes: admResumes }[tab] || admOverview)(box);
   }
 
   function admSuggest(box) {
