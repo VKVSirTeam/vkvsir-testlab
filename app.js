@@ -193,7 +193,7 @@
         '<ul class="hx-pts"><li><i>✓</i>Free forever</li><li><i>✓</i>Instant results &amp; explanations</li><li><i>✓</i>Built by Dr. Vinod Kumar Verma</li></ul>' +
         '<div class="hx-cta"><button class="btn" id="go-start">▶ Start practising</button><a class="btn ghost" href="#how">How it works</a></div>' +
         '<div class="hx-stats"><span><b>Thousands</b> of questions</span><span><b>3</b> learning tracks</span><span><b>Fresh</b> paper every time</span></div></div>' +
-        '<div class="hx-r">' + heroSamples() + '</div></section>' +
+        '</section><section class="hqs">' + heroSamples() + '</section>' +
         '<section class="how" id="how"><h2 class="sh2">How it works</h2><div class="steps3"><div><span>1</span><b>Choose</b><p>Open a track and tick a whole subject, some units or single topics.</p></div><div><span>2</span><b>Practise</b><p>Pick your time and mode. Every paper is freshly mixed from easy to hard.</p></div><div><span>3</span><b>Improve</b><p>See your score, correct answers and explanations. Report any doubtful question.</p></div></div></section>' +
         '<div class="stats reveal">' + [['20', '+', 'Subjects & skills'], ['40', '+', 'Job roles mapped'], ['200', '+', 'Recruiters covered'], ['100', '%', 'Free practice']].map(function (s) { return '<div class="st"><b class="cnt" data-to="' + s[0] + '">0</b><i>' + s[1] + '</i><span>' + s[2] + '</span></div>'; }).join('') + '</div>' +
         '<div class="marq" aria-hidden="true"><div class="marq-in">' + (function () { var c = ['TCS', 'Infosys', 'L&amp;T', 'Tata Motors', 'Shri Bhagwati Machines', 'NTPC', 'BHEL', 'JK Tyre', 'Maruti Suzuki', 'Wipro', 'Bosch', 'Siemens', 'UltraTech', 'Tata Steel', 'Accenture', 'Mahindra', 'IOCL', 'ABB']; var s = c.map(function (x) { return '<span>' + x + '</span>'; }).join(''); return s + s; })() + '</div></div>' +
@@ -1367,7 +1367,7 @@
     { dom: 'Reasoning', c: 'r', img: '/img/figure-series-arrow.webp', q: 'Which answer figure replaces the “?”', o: ['Figure 1', 'Figure 2', 'Figure 3', 'Figure 4'], a: 2, x: 'Arrow turns 45° clockwise and one dot is added each step: Figure 3.' }
   ];
   function heroSamples() {
-    return '<div class="hq-head"><b>Try a real question</b><span>Image-based questions from 4 domains · tap an answer<span class="hz-mouse"> · hover a picture to enlarge</span></span></div><div class="hq-grid">' +
+    return '<div class="hq-head"><div><b>Try a real question</b><span>Image-based questions from 4 domains · tap an answer<span class="hz-mouse"> · hover a picture to enlarge</span></span></div><span class="hq-swipe" aria-hidden="true">Swipe <i>→</i></span></div><div class="hq-grid">' +
       HERO_Q.map(function (s, n) {
         return '<div class="hq hq-' + s.c + '" data-n="' + n + '"><span class="hq-dom">' + s.dom + '</span>' +
           '<figure class="qzw hq-fig"><img class="qimg" alt="Question figure" loading="lazy" src="' + s.img + '"><img class="qzoom" alt="" aria-hidden="true" src="' + s.img + '"></figure>' +
