@@ -683,7 +683,7 @@
       var cpP = rpc('jp_company_profile', { p_company: inp0.company || null, p_url: inp0.url || null }).catch(function () { return null; });
       var live = cpP.then(function (cc) {
         if (cc && cc.auto && cc.auto_at && (Date.now() - new Date(cc.auto_at).getTime()) < 30 * 864e5) return cc.auto;
-        return sb.functions.invoke('jp-company', { body: { id: cc && cc.id ? cc.id : undefined, name: (cc && cc.name) || inp0.company || null, url: inp0.url || (cc && cc.website) || null } }).then(function (r) { return (r && r.data) || (cc && cc.auto) || {}; }).catch(function () { return (cc && cc.auto) || {}; });
+        return sb.functions.invoke('jp-company', { body: { id: cc && cc.id ? cc.id : undefined, name: (cc && cc.name) || inp0.company || null, url: inp0.url || (cc && cc.website) || null } }).then(function (r) { var d = (r && r.data) || {}; if (cc && cc.auto) { if (!d.wiki && cc.auto.wiki) d.wiki = cc.auto.wiki; if (!d.site && cc.auto.site) d.site = cc.auto.site; } return d; }).catch(function () { return (cc && cc.auto) || {}; });
       });
       Promise.all([cpP, live,
         rpc('jp_competitors', { p_company: inp0.company || null, p_url: inp0.url || null }).catch(function () { return null; })]).then(function (res) {
