@@ -87,6 +87,7 @@
     if (p === '/admin/jobprep') return viewJpAdmin();
     if (p === '/drill') return viewDrill();
     if (p === '/admin/about') return viewAboutAdmin();
+    if (p === '/admin/companies') return viewCompaniesAdmin();
     if (p === '/disclaimer') return viewDisclaimer();
     if ((m = p.match(/^\/p\/([a-z0-9]+)(?:\/(\d+))?(?:\/([a-z0-9-]+))?$/i))) return viewFocus(m[1], m[2], m[3]);
     if ((m = p.match(/^\/t\/([a-z0-9-]+)$/))) return viewTest(m[1]);
@@ -679,8 +680,12 @@
       var cpBox = document.createElement('div'); cpBox.className = 'card cp';
       cpBox.innerHTML = '<p class="eyebrow">Know your company</p><h2 style="margin:4px 0 10px">' + esc(inp0.company || inp0.url) + '</h2><p class="small muted">Collecting company information…</p>';
       if (secEl) secEl.insertBefore(cpBox, secEl.children[1]);
-      var live = sb.functions.invoke('jp-company', { body: { name: inp0.company || null, url: inp0.url || null } }).then(function (r) { return (r && r.data) || {}; }).catch(function () { return {}; });
-      Promise.all([rpc('jp_company_profile', { p_company: inp0.company || null, p_url: inp0.url || null }).catch(function () { return null; }), live,
+      var cpP = rpc('jp_company_profile', { p_company: inp0.company || null, p_url: inp0.url || null }).catch(function () { return null; });
+      var live = cpP.then(function (cc) {
+        if (cc && cc.auto && cc.auto_at && (Date.now() - new Date(cc.auto_at).getTime()) < 30 * 864e5) return cc.auto;
+        return sb.functions.invoke('jp-company', { body: { id: cc && cc.id ? cc.id : undefined, name: (cc && cc.name) || inp0.company || null, url: inp0.url || (cc && cc.website) || null } }).then(function (r) { return (r && r.data) || (cc && cc.auto) || {}; }).catch(function () { return (cc && cc.auto) || {}; });
+      });
+      Promise.all([cpP, live,
         rpc('jp_competitors', { p_company: inp0.company || null, p_url: inp0.url || null }).catch(function () { return null; })]).then(function (res) {
         var c = res[0] || {}, L = res[1] || {}, comp = res[2] || {}, pf = c.profile || {}, W = (L.wiki && L.wiki.fields) || {}, S = L.site || {};
         function sp(v) { return v ? String(v).split(/;\s*/).map(function (x) { return x.trim(); }).filter(Boolean) : null; }
@@ -731,6 +736,25 @@
         if ((S.clients || []).filter(function (x) { return x.length > 25; }).length) tips.push('Read one case study on their website and be ready to discuss it.');
         if (peers.length) tips.push('Know how it differs from ' + peers.slice(0, 2).join(' and ') + '.');
         if (!tips.length) tips.push('Say one line on what ' + title + ' makes or does and who its customers are.');
+        var qa = [];
+        function addQ(x) { if (x && qa.indexOf(x) < 0) qa.push(x); }
+        if (sv.length) addQ('growth plans in ' + sv[0]);
+        if (sv.length > 1) addQ('fresher exposure to ' + sv[1]);
+        if ((S.tech || []).length) addQ('in-house training on ' + S.tech[0]);
+        if ((S.tech || []).length > 1) addQ(S.tech[1] + ' certification support');
+        if ((S.industries || []).filter(function (x) { return x.length < 40; }).length > 1) addQ('new industry focus beyond ' + S.industries.filter(function (x) { return x.length < 40 && !/we offer/i.test(x); })[0]);
+        if (F.countries || (PL.countries || []).length > 1) addQ('chances of overseas client projects');
+        if (F.certifications) addQ('role of ' + sp(F.certifications)[0] + ' in daily work');
+        if ((S.clients || []).filter(function (x) { return x.length > 25; }).length) addQ('team behind a recent case study');
+        if (pf.products && pf.products.length) addQ('upcoming launches in ' + String(pf.products[0]).split(/[(,]/)[0].trim());
+        if (W.products) addQ('fastest-growing product line');
+        if (peers.length) addQ('edge over ' + peers[0]);
+        addQ('first 90 days for a new joiner');
+        addQ('training or mentoring period');
+        addQ('performance review cycle');
+        addQ('typical project or plant rotation');
+        addQ('skills to build before joining');
+        addQ('team size and reporting line');
         var overview = paras.join('\n\n');
         var src = [];
         if (c.website || S.url) src.push('<a href="' + esc(c.website || S.url) + '" target="_blank" rel="noopener">official website (' + ((S.pages || []).length || 1) + ' pages read)</a>');
@@ -739,6 +763,7 @@
         cpBox.innerHTML = '<p class="eyebrow">Know your company</p><h2 style="margin:4px 0 8px">' + esc(title) + '</h2>' +
           (overview ? overview.split('\n\n').map(function (p) { return '<p class="cp-ov">' + esc(p.slice(0, 650)) + '</p>'; }).join('') : '') + rows.join('') +
           '<p class="f" style="margin:12px 0 4px">💡 Impress the interviewer</p><ul class="list small">' + tips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' +
+          '<p class="f" style="margin:12px 0 4px">❓ Ideas for your own question to the interviewer</p><p class="small muted" style="margin:0 0 6px">Pick one or two themes and frame the question in your own words. Avoid reading a fixed sentence.</p><div class="chips">' + qa.slice(0, 10).map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' +
           '<p class="small muted" style="margin:10px 0 0">Compiled from VKV Sir research' + (src.length ? ', ' + src.join(' and ') : '') + (c.as_of ? ' (' + esc(c.as_of) + ')' : '') + '. Figures change every year; recheck before the interview.</p>';
         if (rows.length < 2 && !overview) cpBox.querySelector('.cp-ov') || (cpBox.innerHTML += '<p class="small">Add the company website in the form for a more detailed profile.</p>');
       });
@@ -771,12 +796,39 @@
     if (profile && profile.is_admin) { var a = document.createElement('p'); a.className = 'small'; a.innerHTML = '<a href="/admin/jobprep" data-link>Admin: see what students are asking for →</a>'; q('#jout').appendChild(a); }
   }
 
+
+  function viewCompaniesAdmin() {
+    setNav('admin');
+    if (!(profile && profile.is_admin)) { h('<div class="card narrow center"><p>Admins only.</p></div>'); return; }
+    loading();
+    Promise.all([rpc('jp_campus_list'), rpc('jp_options')]).then(function (r) {
+      var list = r[0] || [], inds = (r[1] && r[1].industries) || [];
+      function badge(x) { return x.auto_at ? '<span class="pill good">Profile ready · ' + esc(fmtDate(x.auto_at)) + '</span>' : '<span class="pill">Profile pending</span>'; }
+      h('<div class="narrow stack"><div><p class="eyebrow">Admin · Job Prep</p><h1>Company library</h1><p class="muted small">Add companies that visit or may visit your campus. The system reads their website and Wikipedia, stores a full profile, and refreshes it every 30 days. Students see it instantly in the Job Prep plan.</p></div>' +
+        '<div class="card stack"><label class="f" for="cn">Company name</label><input class="in" id="cn" placeholder="e.g. Shri Bhagwati Machines">' +
+        '<label class="f" for="cu">Website</label><input class="in" id="cu" placeholder="e.g. https://bhagwatimachines.com">' +
+        '<label class="f" for="ci">Industry (optional)</label><select class="in" id="ci"><option value="">Select</option>' + inds.map(function (i) { return '<option value="' + esc(i.id) + '">' + esc(i.name) + '</option>'; }).join('') + '</select>' +
+        '<div class="err" id="ce"></div><button class="btn" id="cgo">Add & build profile</button></div>' +
+        '<div class="card"><h2>Library (' + list.length + ')</h2>' + list.map(function (x) {
+          return '<div class="spread" style="padding:8px 0;border-top:1px solid var(--line);gap:8px;flex-wrap:wrap"><span><b>' + esc(x.name) + '</b> <span class="small muted">' + (x.campus ? '🎓 Campus' : '') + (x.tier && x.tier !== 'campus' ? ' · ' + esc(x.tier) : '') + '</span></span><span>' + badge(x) + ' <button class="linkbtn" data-ref="' + esc(x.id) + '">Refresh</button></span></div>';
+        }).join('') + '</div></div>');
+      function build(id, btn) { if (btn) { btn.disabled = true; btn.textContent = 'Building…'; } return sb.functions.invoke('jp-company', { body: { id: id, fresh: true } }); }
+      q('#cgo').onclick = function () {
+        var n = q('#cn').value.trim(), u = q('#cu').value.trim(), b = this; if (!n) { q('#ce').textContent = 'Enter the company name.'; return; }
+        b.disabled = true; b.textContent = 'Reading website…';
+        rpc('jp_admin_add_company', { p_name: n, p_url: u || null, p_industry: q('#ci').value || null }).then(function (id) { return build(id); })
+          .then(function () { viewCompaniesAdmin(); }).catch(function (e) { q('#ce').textContent = errMsg(e); b.disabled = false; b.textContent = 'Add & build profile'; });
+      };
+      Array.prototype.forEach.call(document.querySelectorAll('[data-ref]'), function (b) { b.onclick = function () { build(b.getAttribute('data-ref'), b).then(function () { viewCompaniesAdmin(); }); }; });
+    }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
+  }
+
   function viewJpAdmin() {
     setNav('admin'); loading();
     rpc('jp_admin_log', { p_days: 30 }).then(function (d) {
       function list(arr, empty) { return arr && arr.length ? '<ol class="board">' + arr.map(function (x) { return '<li><span>' + esc(x.name) + '</span><span class="mono">' + x.n + '</span></li>'; }).join('') + '</ol>' : '<p class="muted small">' + empty + '</p>'; }
       h('<div class="stack"><div><p class="eyebrow">Admin · Job Prep</p><h1>What students are asking for</h1><p class="muted">Last 30 days · ' + d.total + ' plans generated.</p></div>' +
-        '<div class="grid"><div class="card"><h2>Top roles</h2>' + list(d.roles, 'No data yet.') + '</div><div class="card"><h2>Top companies</h2>' + list(d.companies, 'No data yet.') + '</div>' +
+        '<p><a class="btn" href="/admin/companies" data-link>Open company library (campus companies) →</a></p><div class="grid"><div class="card"><h2>Top roles</h2>' + list(d.roles, 'No data yet.') + '</div><div class="card"><h2>Top companies</h2>' + list(d.companies, 'No data yet.') + '</div>' +
         '<div class="card"><h2>Companies not in the knowledge base</h2>' + list(d.unknown_companies, 'None so far.') + '<p class="small muted">Ask Claude to add these companies in the next "continue" session.</p></div></div>' +
         '<div class="card"><h2>Recent requests</h2><div class="table-wrap" style="overflow-x:auto"><table class="table"><thead><tr><th>When</th><th>Company</th><th>Matched role</th><th>Branch</th><th>Level</th><th>Job post (start)</th></tr></thead><tbody>' +
         (d.recent || []).map(function (r) { return '<tr><td class="small">' + esc(fmtDate(r.created_at)) + '</td><td>' + esc(r.company || '–') + '</td><td>' + esc(r.role || '–') + '</td><td>' + esc(r.branch || '–') + '</td><td>' + esc(r.level || '') + '</td><td class="small">' + esc(r.text || '') + '</td></tr>'; }).join('') +
