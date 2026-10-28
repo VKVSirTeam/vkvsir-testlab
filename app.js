@@ -684,34 +684,60 @@
         rpc('jp_competitors', { p_company: inp0.company || null, p_url: inp0.url || null }).catch(function () { return null; })]).then(function (res) {
         var c = res[0] || {}, L = res[1] || {}, comp = res[2] || {}, pf = c.profile || {}, W = (L.wiki && L.wiki.fields) || {}, S = L.site || {};
         function sp(v) { return v ? String(v).split(/;\s*/).map(function (x) { return x.trim(); }).filter(Boolean) : null; }
-        var rows = [];
+        var rows = [], F = S.facts || {}, PL = S.places || {};
         function row(k, v) { if (!v || (Array.isArray(v) && !v.length)) return; rows.push('<div class="cp-r"><span>' + k + '</span><div>' + (Array.isArray(v) ? (v.length === 1 && !Array.isArray(v[0]) ? esc(v[0]) : '<ul>' + v.map(function (x) { return '<li>' + (Array.isArray(x) ? '<b>' + esc(x[0]) + ':</b> ' + esc(x[1]) : esc(x)) + '</li>'; }).join('') + '</ul>') : esc(v)) + '</div></div>'); }
-        var title = pf.full_name || (L.wiki && L.wiki.title) || c.name || (S.title ? S.title.split(/[|\-–:]/)[0].trim() : '') || inp0.company || inp0.url;
-        var overview = (L.wiki && L.wiki.summary) || S.about || S.description;
-        row('Full name', pf.full_name || (L.wiki && L.wiki.title) || c.name);
+        function chips(k, arr) { if (!arr || !arr.length) return; rows.push('<div class="cp-r"><span>' + k + '</span><div class="chips">' + arr.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div></div>'); }
+        var title = pf.full_name || (L.wiki && L.wiki.title) || c.name || S.name || inp0.company || inp0.url;
+        var paras = [];
+        if (L.wiki && L.wiki.summary) paras.push(L.wiki.summary);
+        (S.about || []).forEach(function (p) { if (paras.length < 3 && p.length > 80) paras.push(p); });
+        if (!paras.length && S.description) paras.push(S.description);
+        var keyFacts = [];
+        if (F.founded) keyFacts.push('Founded ' + F.founded);
+        if (F.team) keyFacts.push(F.team); if (F.clients) keyFacts.push(F.clients); if (F.projects) keyFacts.push(F.projects);
+        if (F.countries) keyFacts.push('Serves ' + F.countries); if (F.experience) keyFacts.push(F.experience);
+        row('Full name', pf.full_name || (L.wiki && L.wiki.title) || c.name || S.name);
         row('Industry', c.industry || comp.industry || W.industry);
         row('Type', W.type);
-        row('Founded', pf.founded || W.founded); row('Founders', sp(W.founders));
-        row('Head office', pf.hq || W.hq); row('Presence', pf.presence || W.area_served);
-        row('Employees', pf.employees || W.employees);
-        row('Leadership', pf.leaders || sp(W.key_people)); row('Ownership / parent', pf.ownership || W.parent);
+        row('Founded', pf.founded || W.founded || F.founded); row('Founders', sp(W.founders) || (S.founder ? [S.founder] : null));
+        row('Head office', pf.hq || W.hq || S.address);
+        row('Offices / presence', pf.presence || W.area_served || ((PL.cities || []).length || (PL.countries || []).length ? [(PL.cities || []).concat(PL.countries || []).join(', ')] : null));
+        row('Employees', pf.employees || W.employees || F.team);
+        chips('Key facts', keyFacts);
+        row('Leadership', pf.leaders || sp(W.key_people) || (S.people && S.people.length ? S.people : null)); row('Ownership / parent', pf.ownership || W.parent);
+        row('Certifications & partnerships', F.certifications ? sp(F.certifications) : null);
         row('Business verticals', pf.verticals || sp(W.subsidiaries));
         row('Turnover', pf.revenue || (W.revenue ? [W.revenue + (W.net_income ? ' (net profit ' + W.net_income + ')' : '')] : null)); row('Growth trend', pf.trend);
-        row('Key products', pf.products || sp(W.products) || (c.products ? [c.products] : null));
-        row('From their website', S.highlights && S.highlights.length ? S.highlights.slice(0, 6) : null);
+        row('Key products', pf.products || sp(W.products) || (S.products && S.products.filter(function (x) { return x.length < 45 && !/^\d|we follow|our .*capabilities|transforming/i.test(x); }).length ? S.products.filter(function (x) { return x.length < 45 && !/^\d|we follow|our .*capabilities|transforming/i.test(x); }).slice(0, 8) : null) || (c.products ? [c.products] : null));
+        chips('Services', (S.services || []).filter(function (x) { return x.length < 45 && !/trusted|we offer|challenges|^ai services$/i.test(x); }).slice(0, 12));
+        chips('Industries served', (S.industries || []).filter(function (x) { return x.length < 40 && !/we offer|solutions$/i.test(x); }).slice(0, 10));
+        chips('Technologies used', S.tech);
+        row('Recent work / case studies', (S.clients || []).filter(function (x) { return x.length > 25; }).slice(0, 5));
+        row('Roles they hire for', (S.careers || []).filter(function (x) { return x.length < 45 && !/we are|synergize|opportunit|join|life|culture/i.test(x); }).slice(0, 8));
         row('Milestones & news', pf.milestones);
         var listed = comp.listed != null ? comp.listed : (pf.listing ? true : (W.type ? /public/i.test(W.type) : null));
-        if (listed != null) row('Stock market', listed ? 'Listed company' + (pf.listing ? ' (NSE: ' + pf.listing.nse + ', BSE: ' + pf.listing.bse + ')' : '') : 'Not listed (private / unlisted)');
+        if (listed == null && (S.name || W.type)) listed = /private/i.test(W.type || '') ? false : null;
+        row('Stock market', listed == null ? 'Not listed on NSE/BSE as per available information (likely private)' : listed ? 'Listed company' + (pf.listing ? ' (NSE: ' + pf.listing.nse + ', BSE: ' + pf.listing.bse + ')' : '') : 'Not listed (private / unlisted)');
         var peers = (comp.peers || []).filter(function (x) { return x !== c.name; }).slice(0, 8);
         row('Competitors / peers', peers.length ? [peers.join(', ')] : null);
+        var contact = [].concat(S.emails || [], S.phones || []);
+        row('Contact', contact.length ? [contact.join(' · ')] : null);
         var tips = (pf.tips || []).slice();
-        tips.push('Say one line on what ' + (title || 'the company') + ' makes and who its customers are.');
+        if (F.founded) tips.push('Mention its journey: founded in ' + F.founded + (F.team ? ', now ' + F.team : '') + '.');
+        if (F.certifications) tips.push('Bring up its ' + sp(F.certifications)[0] + ' status and what it means for clients.');
+        var sv = (S.services || []).filter(function (x) { return x.length < 40; });
+        if (sv.length) tips.push('Name two services you would like to work on, e.g. ' + sv.slice(0, 2).join(' and ') + '.');
+        if ((S.tech || []).length) tips.push('Learn the basics of ' + S.tech.slice(0, 3).join(', ') + ' before the interview.');
+        if ((S.clients || []).filter(function (x) { return x.length > 25; }).length) tips.push('Read one case study on their website and be ready to discuss it.');
         if (peers.length) tips.push('Know how it differs from ' + peers.slice(0, 2).join(' and ') + '.');
+        if (!tips.length) tips.push('Say one line on what ' + title + ' makes or does and who its customers are.');
+        var overview = paras.join('\n\n');
         var src = [];
-        if (c.website || S.url) src.push('<a href="' + esc(c.website || S.url) + '" target="_blank" rel="noopener">Official website</a>');
+        if (c.website || S.url) src.push('<a href="' + esc(c.website || S.url) + '" target="_blank" rel="noopener">official website (' + ((S.pages || []).length || 1) + ' pages read)</a>');
         if (L.wiki && L.wiki.url) src.push('<a href="' + esc(L.wiki.url) + '" target="_blank" rel="noopener">Wikipedia</a>');
+        (S.socials || []).filter(function (u) { return /linkedin/i.test(u); }).slice(0, 1).forEach(function (u) { src.push('<a href="' + esc(u) + '" target="_blank" rel="noopener">LinkedIn page</a>'); });
         cpBox.innerHTML = '<p class="eyebrow">Know your company</p><h2 style="margin:4px 0 8px">' + esc(title) + '</h2>' +
-          (overview ? '<p class="cp-ov">' + esc(String(overview).slice(0, 700)) + '</p>' : '') + rows.join('') +
+          (overview ? overview.split('\n\n').map(function (p) { return '<p class="cp-ov">' + esc(p.slice(0, 650)) + '</p>'; }).join('') : '') + rows.join('') +
           '<p class="f" style="margin:12px 0 4px">💡 Impress the interviewer</p><ul class="list small">' + tips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' +
           '<p class="small muted" style="margin:10px 0 0">Compiled from VKV Sir research' + (src.length ? ', ' + src.join(' and ') : '') + (c.as_of ? ' (' + esc(c.as_of) + ')' : '') + '. Figures change every year; recheck before the interview.</p>';
         if (rows.length < 2 && !overview) cpBox.querySelector('.cp-ov') || (cpBox.innerHTML += '<p class="small">Add the company website in the form for a more detailed profile.</p>');
