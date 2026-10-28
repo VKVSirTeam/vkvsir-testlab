@@ -585,6 +585,7 @@
       wrap.innerHTML = '<div class="pdfx-h"><b>VKV Sir Test Lab</b> · Interview Preparation Plan<span>test.vkvsir.com</span></div>' + src.outerHTML +
         '<div class="pdfx-f">Prepared on VKV Sir Test Lab (test.vkvsir.com) · www.vkvsir.com · Practise every topic free online</div>';
       Array.prototype.forEach.call(wrap.querySelectorAll('button,.btn'), function (b) { b.remove(); });
+      Array.prototype.forEach.call(wrap.querySelectorAll('.rv,.in'), function (el) { el.classList.remove('rv', 'in'); });
       return window.html2pdf().set({ margin: [10, 10, 12, 10], filename: name, image: { type: 'jpeg', quality: 0.92 }, html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' }, jsPDF: { unit: 'mm', format: 'a4' }, pagebreak: { mode: ['css', 'legacy'], avoid: ['.card', '.jp-skill', 'li'] } })
         .from(wrap).outputPdf('blob').then(function (blob) { return { blob: blob, name: name }; });
     });
@@ -598,7 +599,8 @@
         .catch(function () { toast('Could not make the PDF. Use Print → Save as PDF instead.'); });
     };
     var probe = null; try { probe = new File([''], 'x.pdf', { type: 'application/pdf' }); } catch (e) {}
-    if (probe && navigator.canShare && navigator.canShare({ files: [probe] })) {
+    var touch = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+    if (touch && probe && navigator.canShare && navigator.canShare({ files: [probe] })) {
       bs.hidden = false;
       bs.onclick = function () {
         make(bs, '📤 Save to Drive / Email / WhatsApp').then(function (r) {

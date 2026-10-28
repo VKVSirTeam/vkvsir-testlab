@@ -594,8 +594,11 @@ body.veil .exam .qzoom{display:none!important}
 @media(max-width:820px){.tgrps{grid-template-columns:1fr 1fr}.tgrp.n2,.tgrp.n3{grid-column:1/-1}}
 @media(max-width:560px){.tgrps{grid-template-columns:1fr}.tgrp.n1,.tgrp.n2{grid-column:1/-1}.tgrp.n2 .tr-items{grid-template-columns:1fr}}
 /* ---- plan PDF export ---- */
-.pdfx{background:#fff;color:#111;padding:6px 4px;font-size:13px;width:760px}
+.pdfx{background:#fff;color:#111;padding:6px 4px;font-size:13px;width:690px;box-sizing:border-box}.pdfx .card{max-width:100%;box-sizing:border-box}
 .pdfx .card{box-shadow:none!important;break-inside:avoid}
 .pdfx-h{display:flex;justify-content:space-between;border-bottom:2px solid #0e6b5c;padding:0 0 6px;margin:0 0 10px;font-size:12px;color:#0e6b5c}
 .pdfx-f{border-top:1px solid #ccc;margin-top:12px;padding-top:6px;font-size:11px;color:#666;text-align:center}
 @media(max-width:560px){.hx-panel{padding:12px}.hxp-grid{gap:8px}.hxp{padding:10px}.hxp small{display:none}.hxp-i{font-size:18px;margin-bottom:4px}.hxp-by{margin-top:10px;font-size:12.5px}.hx-cta .btn{flex:1 1 auto;justify-content:center}}
+
+.pdfx,.pdfx *{animation:none!important;transition:none!important}
+.pdfx *{opacity:1!important;transform:none!important}
