@@ -977,6 +977,7 @@
           '<button class="btn" id="sj-go" style="margin-top:8px">Detect &amp; save</button><p class="small" id="sj-out"></p></div>' +
         '<div class="card"><h2>Add a career page to crawl</h2><p class="small muted">The crawler visits these every week and reads job links on the same site. Pages that load jobs with JavaScript show “may load jobs with JavaScript”: add a direct job link instead.</p>' +
           '<input class="in" id="ss-co" placeholder="Company name"><input class="in" id="ss-url" placeholder="https://careers.company.com/…" style="margin-top:8px"><button class="btn" id="ss-go" style="margin-top:8px">Add source</button><p class="small" id="ss-out"></p></div></div>' +
+        '<div class="card"><h2>Free job-search API (Jooble)</h2><p class="small muted">Get a free key at <a href="https://jooble.org/api/about" target="_blank" rel="noopener">jooble.org/api/about</a> and paste it here. It is stored in the secure vault and used nightly and when students search a company.</p><div class="row" style="gap:8px;flex-wrap:wrap"><input class="in" id="ak-j" type="password" placeholder="Jooble API key" style="flex:1;min-width:220px"><button class="btn" id="ak-go">Save key</button></div><p class="small" id="ak-out"></p></div>' +
         '<div class="card"><h2>Latest mentions</h2><div style="overflow-x:auto"><table class="table"><thead><tr><th>Date</th><th>Company</th><th>Tool</th><th>Source</th></tr></thead><tbody>' +
           (d.recent || []).map(function (r) { return '<tr><td class="small">' + esc(r.date || '') + '</td><td>' + esc(r.company) + '</td><td>' + esc(r.tool) + '</td><td class="small">' + (r.url && /^http/.test(r.url) ? '<a href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.source.replace('_', ' ')) + '</a>' : esc(r.source.replace('_', ' '))) + '</td></tr>'; }).join('') + '</tbody></table></div></div>' +
         '<div class="card"><h2>Crawl sources (' + (d.sources || []).length + ')</h2><div style="overflow-x:auto"><table class="table"><thead><tr><th>Company</th><th>URL</th><th>Last run</th><th>Found</th><th>Status</th></tr></thead><tbody>' +
@@ -986,6 +987,10 @@
         rpc('jp_admin_add_jd', { p_company: q('#sj-co').value, p_text: q('#sj-text').value, p_url: q('#sj-url').value || null, p_posted: q('#sj-date').value || null, p_source: 'job_post' })
           .then(function (r) { q('#sj-out').innerHTML = r.found ? '✓ Saved ' + r.found + ' tool' + (r.found > 1 ? 's' : '') + ': <b>' + r.tools.map(esc).join(', ') + '</b>' : 'No catalogue tools found (or company not in the library).'; })
           .catch(function (e) { q('#sj-out').textContent = errMsg(e); }).finally(function () { b.disabled = false; });
+      };
+      rpc('jp_admin_api_keys').then(function (k) { if (k && k.jooble) q('#ak-out').textContent = '✓ A Jooble key is saved. Paste a new one only to replace it.'; }).catch(function () {});
+      q('#ak-go').onclick = function () {
+        rpc('jp_admin_set_api_key', { p_name: 'jooble_key', p_value: q('#ak-j').value }).then(function () { q('#ak-j').value = ''; q('#ak-out').textContent = '✓ Saved. Jooble will be used from the next run.'; }).catch(function (e) { q('#ak-out').textContent = errMsg(e); });
       };
       q('#ss-go').onclick = function () {
         rpc('jp_admin_sw_source', { p_company: q('#ss-co').value, p_url: q('#ss-url').value, p_active: true }).then(function () { q('#ss-out').textContent = '✓ Added. It will be crawled in the next nightly run.'; }).catch(function (e) { q('#ss-out').textContent = errMsg(e); });
