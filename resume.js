@@ -28,6 +28,19 @@
   };
   var VERBS = ['designed', 'developed', 'built', 'implemented', 'analysed', 'analyzed', 'improved', 'reduced', 'increased', 'optimised', 'optimized', 'led', 'managed', 'organised', 'organized', 'created', 'automated', 'modelled', 'modeled', 'simulated', 'tested', 'fabricated', 'programmed', 'coordinated', 'conducted', 'presented', 'published', 'won', 'achieved', 'trained', 'deployed', 'researched', 'evaluated', 'calculated', 'prepared', 'installed', 'maintained', 'supervised', 'planned', 'executed', 'drafted', 'surveyed', 'inspected', 'validated', 'integrated', 'migrated', 'debugged'];
 
+  var BULLETS = {
+    'Mechanical & Manufacturing': ['Designed a [part/fixture] in SolidWorks and validated it with [ANSYS static analysis], reducing weight by [X]%', 'Recorded cycle times for [N] stations and proposed line-balancing changes that cut idle time by [X]%', 'Applied 5S and kaizen on the [shop/line], freeing [X] sq. m of floor space and reducing search time by [X] min per shift', 'Analysed [N] rejection records using Pareto and fishbone diagrams; identified [root cause] behind [X]% of defects', 'Prepared process sheets and 2D drawings with GD&T for [N] components as per [IS/ISO] standards', 'Fabricated and tested a [prototype] with a team of [N]; achieved [result, e.g. efficiency/runtime]'],
+    'Civil & Construction': ['Prepared bar bending schedules and quantity estimates for a [G+N] building of [X] sq. ft', 'Analysed and designed a [structure] in STAAD.Pro as per IS 456 / IS 800, checking [N] load combinations', 'Supervised [concreting/excavation] of [X] cu. m and maintained daily progress and quality reports', 'Conducted [slump/cube/soil] tests on [N] samples and compared results with IS code limits', 'Drafted site layout and working drawings in AutoCAD for [project], reducing revision cycles by [X]', 'Planned a [N]-activity schedule in Primavera P6 / MS Project and identified the critical path'],
+    'Electrical & Power': ['Studied the [N] kV substation layout, protection relays and switchgear during summer training at [utility]', 'Simulated a [converter/motor drive] in MATLAB/Simulink and achieved [X]% efficiency at rated load', 'Designed the electrical layout and load schedule for a [building/plant] of [X] kW connected load', 'Performed load-flow and fault analysis on an IEEE [N]-bus system using [ETAP/PowerWorld]', 'Wired and tested a PLC-based [control panel] with [N] I/O points for [application]', 'Conducted an energy audit of [facility] and proposed savings of [X] kWh per month'],
+    'Electronics & Telecom': ['Designed a [N]-layer PCB in Altium/KiCad for [device] and brought up the prototype', 'Programmed an [Arduino/STM32/ESP32] to read [N] sensors and send data over [protocol] every [X] s', 'Simulated a [filter/amplifier] in LTspice/Multisim and verified a [X] dB gain at [Y] Hz', 'Implemented [modulation/protocol] in MATLAB and measured BER at [N] SNR levels', 'Tested [N] network elements during training at [telecom company] and documented [X] faults', 'Built an IoT [system] that reduced [manual checks/power use] by [X]%'],
+    'Instrumentation & Automation': ['Calibrated [N] pressure/temperature transmitters and maintained calibration records as per [standard]', 'Developed ladder logic for a [process] on [Siemens/Allen-Bradley] PLC with [N] interlocks', 'Configured a SCADA/HMI screen for [process] showing [N] tags, alarms and trends', 'Tuned a PID loop for [level/flow] control, reducing overshoot from [X]% to [Y]%', 'Prepared P&IDs and loop drawings for [N] control loops during training at [plant]', 'Troubleshot [N] field instrument faults and reduced downtime by [X] hours per month'],
+    'IT & Software': ['Built a [web/mobile app] using [React/Node/Java] with [N] features and deployed it on [platform]', 'Designed a normalised [MySQL/PostgreSQL] schema with [N] tables and wrote queries that cut load time by [X]%', 'Solved [N]+ problems on [LeetCode/CodeChef]; rated [X] in [contest]', 'Developed REST APIs for [module] with authentication and tested them with Postman ([N] test cases)', 'Automated [task] with Python, saving [X] hours of manual work per week', 'Analysed [dataset] of [N] rows in Python/Excel and built a Power BI dashboard used by [team]'],
+    'Energy & Utilities': ['Observed boiler, turbine and condenser operation during training at [N] MW [thermal/hydro] plant', 'Calculated heat rate and efficiency of [unit] from [N] days of operating data', 'Designed a [X] kW rooftop solar system in PVsyst with [N] modules and estimated annual yield of [Y] MWh', 'Studied [coal handling/ash handling/water treatment] and documented [N] improvement points', 'Prepared a preventive maintenance checklist for [N] auxiliaries'],
+    'Core GET / PSU': ['Completed [N]-week vocational training at [PSU/plant], covering [departments]', 'Prepared a technical report on [process/equipment] observed during training, presented to [N] engineers', 'Secured GATE [year] score [X] (AIR [Y]) in [paper]', 'Led a [N]-member team in the major project on [topic], delivering a working [prototype/model]', 'Applied [safety/quality] procedures such as permit-to-work and LOTO during plant training'],
+    General: ['Organised [event] for [N]+ participants with a team of [M] volunteers', 'Presented a paper on [topic] at [conference], [year]', 'Coordinated with [N] companies as student placement coordinator, scheduling [M] interviews', 'Represented the university in [sport] at [level] level', 'Mentored [N] juniors in [subject/tool] through weekly sessions']
+  };
+  var lastArea = null;
+
   function blank() {
     return { v: 1, title: 'My resume', goals: ['private'], role: '', company: '', name: '', email: '', phone: '', city: '', linkedin: '', github: '', portfolio: '',
       degree: 'B.Tech', branch: '', college: '', grad: '', cgpa: '', yearNow: '4', x12: '', x10: '', summary: '',
@@ -66,14 +79,36 @@
     if (!d.role) { kw = null; drawSide(); return; }
     V.rpc('rb_keywords', { p_role: d.role, p_branch: d.branch || null, p_company: d.company || null }).then(function (k) { kw = k; drawSide(); }).catch(function () {});
   }
+  function nice(k) { return k.length <= 4 && !/\s/.test(k) ? k.toUpperCase() : k.replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); }).replace(/\b([A-Z][a-z])\b/g, function (w) { return w.toUpperCase(); }); }
+  function jdList() {
+    if (!d.jdKw) return [];
+    var out = [], seen = {};
+    (d.jdKw.software || []).concat(d.jdKw.skills || []).forEach(function (k, i) {
+      var key = k.label.toLowerCase(); if (seen[key]) return;
+      if ((k.alts || []).some(function (a) { return seen[String(a).toLowerCase()]; })) return;
+      seen[key] = 1; (k.alts || []).forEach(function (a) { seen[String(a).toLowerCase()] = 1; });
+      out.push({ label: i < (d.jdKw.software || []).length ? k.label : nice(k.label), alts: k.alts && k.alts.length ? k.alts : [k.label], w: i < (d.jdKw.software || []).length ? 3 : 2 });
+    });
+    return out;
+  }
+  function checkJd() {
+    var t = (document.getElementById('rb-jd') || {}).value || '';
+    var b = document.getElementById('rb-jdgo'); b.disabled = true; b.textContent = 'Reading the job post…';
+    V.rpc('rb_jd_keywords', { p_text: t }).then(function (r) {
+      d.jd = t; d.jdKw = r;
+      if (!d.role && r.role && r.role.id) { d.role = r.role.id; loadKw(); }
+      persist(); render(true);
+    }).catch(function (e) { V.toast(V.errMsg(e)); }).finally(function () { if (b) { b.disabled = false; b.textContent = 'Check match'; } });
+  }
   function kwList() {
-    if (!kw) return [];
     var out = [], seen = {};
     function add(label, alts, w) { var key = label.toLowerCase(); if (seen[key]) return; seen[key] = 1; out.push({ label: label, alts: alts, w: w }); }
+    jdList().forEach(function (k) { add(k.label, k.alts, k.w); });
+    if (!kw) return out;
     (kw.company || []).forEach(function (c) { var n = c.name.split(/[/(]/)[0].trim(); add(n, [n], 3); });
     (kw.software || []).forEach(function (s) { var n = s.name.split(/[/(]/)[0].trim(); add(n, [n], s.tier === 1 ? 3 : 2); });
     (kw.skills || []).forEach(function (s) { (s.kw || []).slice(0, s.tier === 1 ? 4 : 2).forEach(function (k) { if (k.length > 1) add(k.length <= 4 && !/\s/.test(k) ? k.toUpperCase() : k.replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); }).replace(/\b([A-Z][a-z])\b/g, function (w) { return w.toUpperCase(); }), [k], s.tier === 1 ? 2 : 1); }); });
-    return out.slice(0, 24);
+    return out.slice(0, d.jdKw ? 36 : 24);
   }
   function fullText() {
     var t = [d.summary, d.skTech, d.skSoft, d.skOther];
@@ -93,7 +128,7 @@
     var ks = kwList(), got = ks.filter(function (k) { return found(text, k); }), wAll = 0, wGot = 0;
     ks.forEach(function (k) { wAll += k.w; }); got.forEach(function (k) { wGot += k.w; });
     var kscore = ks.length ? Math.round(30 * wGot / wAll) : (has(d.skTech) ? 15 : 0);
-    s.push(['Keywords for your target role', kscore, 30]);
+    s.push([d.jdKw ? 'Keywords (job post + role)' : 'Keywords for your target role', kscore, 30]);
     var miss = ks.filter(function (k) { return got.indexOf(k) < 0; });
     if (!ks.length) tips.push('Choose a target role (and company) in Step 1 so we can check the keywords recruiters search for.');
     var bl = []; d.projects.concat(d.exp).forEach(function (x) { bl = bl.concat(lines(x.bullets)); }); d.por.forEach(function (x) { bl = bl.concat(lines(x.text)); });
@@ -110,6 +145,7 @@
     if (!pr) tips.push('Remove “I”, “my” and “me”: write “Developed…”, not “I developed…”.');
     var ach = (d.ach.length ? 3 : 0) + (d.por.length ? 3 : 0) + (d.certs.length ? 2 : 0) + ((d.goals.indexOf('psu') >= 0 && has(d.tests.gate)) || d.pubs.length ? 2 : 0);
     s.push(['Achievements, leadership, certifications', Math.min(10, ach + (d.exp.length ? 2 : 0)), 10]);
+    if (/\[[^\]]{1,40}\]/.test(text)) tips.unshift('⚠ Some bullets still contain [ ] placeholders from the examples. Replace them with your real details before downloading.');
     var total = s.reduce(function (a, x) { return a + x[1]; }, 0);
     return { total: total, parts: s, tips: tips, miss: miss, got: got, bullets: bl.length };
   }
@@ -143,7 +179,8 @@
       '<div class="rb-grid">' +
       '<div class="rb-f"><label for="role">Target role <span class="req">*</span></label><select class="in" id="role"><option value="">Choose the closest role…</option>' + (V.__roles || []).map(function (r) { return '<option value="' + esc(r.id) + '"' + (d.role === r.id ? ' selected' : '') + '>' + esc(r.family + ' · ' + r.name) + '</option>'; }).join('') + '</select><small>Decides the keywords we check.</small></div>' +
       inp('company', 'Target company (optional)', 'e.g. Tata Motors', { hint: 'Adds the software this company is asking for in its current job posts.' }) +
-      inp('title', 'Name this resume', 'e.g. Core mechanical – 2027') + '</div>';
+      inp('title', 'Name this resume', 'e.g. Core mechanical – 2027') + '</div>' +
+      note('ok', '<b>Applying to a specific job?</b> In the last step you can paste its job description and see a % match with the exact keywords to add.');
   }
   function goalInfo() {
     var g = d.goals.filter(function (x) { return GUIDE[x]; });
@@ -170,7 +207,7 @@
   }
   function stepSkills() {
     var ks = kwList();
-    return '<h2>Skills</h2>' + (ks.length ? note('info', '<b>Keywords recruiters search for' + (kw && kw.company_name ? ' (incl. ' + esc(kw.company_name) + '’s current job posts)' : '') + ':</b> ' + ks.map(function (k) { return '<span class="rb-chip">' + esc(k.label) + '</span>'; }).join(' ') + '<br><small>Add only what you genuinely know. You will be asked about every skill you list.</small>') : note('warn', 'Choose a target role in Step 1 to see the keywords to aim for.')) +
+    return '<h2>Skills</h2>' + (ks.length ? note('info', '<b>Keywords recruiters search for' + (d.jdKw ? ' (incl. the job post you pasted)' : '') + (kw && kw.company_name ? ' (incl. ' + esc(kw.company_name) + '’s current job posts)' : '') + ':</b> ' + ks.map(function (k) { return '<span class="rb-chip">' + esc(k.label) + '</span>'; }).join(' ') + '<br><small>Add only what you genuinely know. You will be asked about every skill you list.</small>') : note('warn', 'Choose a target role in Step 1 to see the keywords to aim for.')) +
       inp('skTech', 'Technical skills (subjects / methods)', 'Engineering Mechanics, GD&T, Lean Manufacturing, Kaizen, 5S, Thermodynamics', { area: 1, wide: 1, rows: 2 }) +
       inp('skSoft', 'Software & tools', 'SolidWorks, AutoCAD, ANSYS Workbench, MS Excel (Pivot, VLOOKUP), Python (basic)', { area: 1, wide: 1, rows: 2, hint: 'Write the exact product names (e.g. “ANSYS Workbench”, not “simulation software”).' }) +
       inp('skOther', 'Other skills (optional)', 'Technical drawing, team leadership, technical writing', { area: 1, wide: 1, rows: 2 }) + inp('langs', 'Languages', 'English, Hindi') +
@@ -183,8 +220,14 @@
     }).join('') + '<button class="btn ghost rb-add" type="button" data-k="' + key + '">+ ' + addLabel + '</button>';
   }
   var BUL = { area: 1, wide: 1, rows: 3 };
+  function exampleBox() {
+    var r = (V.__roles || []).filter(function (x) { return x.id === d.role; })[0], fam = r && BULLETS[r.family] ? r.family : null;
+    var list = (fam ? BULLETS[fam] : []).concat(BULLETS.General);
+    return '<details class="rb-ex"' + (fam ? ' open' : '') + '><summary>💡 Example bullets' + (fam ? ' for ' + esc(fam) : '') + ' <small>(tap to insert into the box you last clicked; replace every [ ] with your real details)</small></summary><div>' +
+      list.map(function (b, i) { return '<button type="button" class="rb-exb" data-b="' + i + '">' + esc(b) + '</button>'; }).join('') + '</div></details>';
+  }
   function stepProj() {
-    return '<h2>Projects &amp; experience</h2>' + note('info', '<b>Formula for each bullet:</b> Action verb + what you did + tool used + result with a number. Example: “Designed a sheet-metal fixture in SolidWorks that cut loading time by 18% on the drilling line.”') +
+    return '<h2>Projects &amp; experience</h2>' + exampleBox() + note('info', '<b>Formula for each bullet:</b> Action verb + what you did + tool used + result with a number. Example: “Designed a sheet-metal fixture in SolidWorks that cut loading time by 18% on the drilling line.”') +
       listEditor('exp', 'Internships, training &amp; work', [['role', 'Role', 'Summer Intern – Production'], ['org', 'Organisation, City', 'Hero MotoCorp, Neemrana'], ['when', 'Dates', 'Jun 2026 – Jul 2026'], ['bullets', 'What you did (one point per line)', 'Mapped the engine assembly line and recorded cycle times for 22 stations\nIdentified 3 bottleneck stations and proposed line-balancing changes', BUL]], 'Add internship / training', 'Include industrial training, PSU/plant summer training, virtual internships and freelance work.') +
       listEditor('projects', 'Projects', [['title', 'Project title', 'Solar-powered grass cutter'], ['kind', 'Type', 'Major / Minor / Mini / Personal'], ['tools', 'Tools used', 'SolidWorks, Arduino'], ['when', 'When', 'Jan – Apr 2026'], ['link', 'Link (optional)', 'GitHub / Drive / video'], ['bullets', 'What you did (one point per line)', 'Designed the chassis and blade mount in SolidWorks\nBuilt and tested the prototype, achieving 2 hours of runtime per charge', BUL]], 'Add project', 'Major and minor projects, mini projects and serious personal projects all count. 2–4 strong projects are better than many weak ones.');
   }
@@ -196,6 +239,17 @@
       listEditor('pubs', 'Publications, papers &amp; patents', [['title', 'Title', 'Paper title / patent title'], ['venue', 'Journal / conference / patent office', 'IEEE conference, 2026 / Patent application no.'], ['year', 'Year', '2026']], 'Add publication / patent', 'List only genuine peer-reviewed work. Avoid paid “predatory” journals; interviewers check.') +
       inp('extra', 'Other activities (optional)', 'University-level football player; NSS volunteer (120 hours)', { area: 1, wide: 1, rows: 2 });
   }
+  function jdBox() {
+    var j = jdList(), text = fullText(), got = j.filter(function (k) { return found(text, k); }), pct = j.length ? Math.round(100 * got.length / j.length) : 0;
+    return '<div class="rb-jd"><h3>🎯 Match with a specific job post</h3><p class="small muted">Paste the job description you are applying to. We pick out the software and skills it asks for and check them against your resume.</p>' +
+      '<textarea class="in" id="rb-jd" rows="5" placeholder="Paste the full job description here">' + esc(d.jd || '') + '</textarea>' +
+      '<div class="row" style="gap:8px;margin-top:8px"><button class="btn" type="button" id="rb-jdgo">Check match</button>' + (d.jdKw ? '<button class="btn ghost" type="button" id="rb-jdclr">Clear</button>' : '') + '</div>' +
+      (d.jdKw ? (j.length ? '<div class="rb-jdres"><b class="' + (pct >= 75 ? 'ok' : pct >= 50 ? 'mid' : 'lo') + '">' + pct + '% match</b><span>' + got.length + ' of ' + j.length + ' keywords from this post are in your resume.</span></div>' +
+        '<p class="small"><b>Found:</b> ' + (got.map(function (k) { return '<span class="rb-chip ok">✓ ' + esc(k.label) + '</span>'; }).join(' ') || '–') + '</p>' +
+        '<p class="small"><b>Missing:</b> ' + (j.filter(function (k) { return got.indexOf(k) < 0; }).map(function (k) { return '<span class="rb-chip">' + esc(k.label) + '</span>'; }).join(' ') || 'nothing. Excellent!') + '</p>' +
+        '<p class="small muted">Aim for 75%+. Add a missing keyword where it is genuinely true: in Skills, or inside a project or internship bullet (that counts more than a bare list). Make a copy of this resume for each very different job.</p>'
+        : note('warn', 'We could not find known software or skill keywords in this text. Paste the full description, including the requirements section.')) : '') + '</div>';
+  }
   function stepFinal() {
     var s = score(), band = s.total >= 85 ? 'great' : s.total >= 70 ? 'good' : s.total >= 50 ? 'fair' : 'low';
     return '<h2>Your ATS score</h2><div class="rb-score ' + band + '"><b>' + s.total + '</b><span>/ 100</span><em>' + { great: 'Excellent: ready to send', good: 'Good: a few quick fixes left', fair: 'Fair: improve the points below', low: 'Needs work: follow the tips below' }[band] + '</em></div>' +
@@ -203,8 +257,9 @@
       (s.miss.length ? note('warn', '<b>Missing keywords</b> (add only if true; otherwise learn them): ' + s.miss.slice(0, 10).map(function (k) { return '<span class="rb-chip">' + esc(k.label) + '</span>'; }).join(' ')) : '') +
       (s.tips.length ? '<h3>Quick fixes</h3><ul class="rb-tips">' + s.tips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' : '') +
       '<h3>Boost your profile</h3><div class="rb-boost">' + boost().map(function (b) { return '<div><b>' + esc(b[0]) + '</b><p>' + esc(b[1]) + '</p></div>'; }).join('') + '</div>' +
-      '<div class="rb-actions"><button class="btn" id="rb-pdf" type="button">⬇ Download PDF (ATS-friendly)</button><button class="btn ghost" id="rb-txt" type="button">Copy as plain text</button></div>' +
-      '<p class="small muted">File name: <b>' + esc(fileName()) + '</b>. Send it as PDF unless a portal asks for Word. Use “Copy as plain text” for forms that ask you to paste your resume.</p>';
+      jdBox() +
+      '<div class="rb-actions"><button class="btn" id="rb-pdf" type="button">⬇ Download PDF (ATS-friendly)</button><button class="btn" id="rb-docx" type="button">⬇ Download Word (.docx)</button><button class="btn ghost" id="rb-txt" type="button">Copy as plain text</button></div>' +
+      '<p class="small muted">File name: <b>' + esc(fileName()) + '</b>. Send PDF by default; use Word only when a portal asks for .doc/.docx. Use “Copy as plain text” for forms that ask you to paste your resume.</p>';
   }
 
   /* ---------------- resume model (shared by preview, PDF and text) ---------------- */
@@ -296,6 +351,41 @@
       .finally(function () { b.disabled = false; b.textContent = '⬇ Download PDF (ATS-friendly)'; });
   }
 
+  /* ---------------- Word (.docx): real text, single column, Calibri ---------------- */
+  function loadDocx() {
+    if (window.docx) return Promise.resolve();
+    return new Promise(function (ok, bad) { var s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js'; s.onload = ok; s.onerror = bad; document.head.appendChild(s); });
+  }
+  function downloadDocx() {
+    var b = document.getElementById('rb-docx'); b.disabled = true; b.textContent = 'Preparing…';
+    loadDocx().then(function () {
+      var X = window.docx, m = model(), P = [], FONT = 'Calibri', RIGHT = 10466; // twips across A4 text width (margins 0.6")
+      function run(t, o) { o = o || {}; return new X.TextRun({ text: asc(t), font: FONT, size: o.size || 21, bold: !!o.bold, italics: !!o.italic }); }
+      function line(left, right, o) { o = o || {}; var ch = [run(left, o)]; if (right) { ch.push(new X.TextRun({ text: '\t' + asc(right), font: FONT, size: 21 })); } return new X.Paragraph({ children: ch, tabStops: right ? [{ type: X.TabStopType.RIGHT, position: RIGHT }] : [], spacing: { after: o.after == null ? 20 : o.after } }); }
+      P.push(new X.Paragraph({ alignment: X.AlignmentType.CENTER, spacing: { after: 40 }, children: [run(m.name, { size: 36, bold: true })] }));
+      P.push(new X.Paragraph({ alignment: X.AlignmentType.CENTER, spacing: { after: 120 }, children: [run(m.contact.join('  |  '), { size: 19 })] }));
+      m.sections.forEach(function (s) {
+        P.push(new X.Paragraph({ children: [run(s.h.toUpperCase(), { size: 23, bold: true })], spacing: { before: 140, after: 60 }, border: { bottom: { style: X.BorderStyle.SINGLE, size: 6, color: '222222', space: 1 } } }));
+        if (s.p) P.push(new X.Paragraph({ children: [run(s.p)], spacing: { after: 40 } }));
+        (s.rows || []).forEach(function (r) { P.push(new X.Paragraph({ children: [new X.TextRun({ text: asc(r[0]) + ': ', font: FONT, size: 21, bold: true }), run(r[1])], spacing: { after: 20 } })); });
+        (s.list || []).forEach(function (x) { P.push(new X.Paragraph({ children: [run(x)], bullet: { level: 0 }, spacing: { after: 10 } })); });
+        (s.items || []).forEach(function (x) {
+          P.push(line(x.a, x.b, { bold: true, size: 22 }));
+          if (x.c || x.dd) P.push(line(x.c || '', x.dd, { italic: true }));
+          (x.bl || []).forEach(function (bl) { P.push(new X.Paragraph({ children: [run(bl)], bullet: { level: 0 }, spacing: { after: 10 } })); });
+          P.push(new X.Paragraph({ children: [], spacing: { after: 40 } }));
+        });
+      });
+      var doc = new X.Document({ creator: 'VKV Sir Test Lab', title: asc(m.name) + ' - Resume', styles: { default: { document: { run: { font: FONT, size: 21 } } } },
+        sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 720, bottom: 720, left: 720, right: 720 } } }, children: P }] });
+      return X.Packer.toBlob(doc).then(function (blob) {
+        var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fileName().replace(/\.pdf$/, '.docx'); document.body.appendChild(a); a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000); V.toast('Word file downloaded.');
+      });
+    }).catch(function () { V.toast('Could not create the Word file. Please try again.'); })
+      .finally(function () { b.disabled = false; b.textContent = '⬇ Download Word (.docx)'; });
+  }
+
   /* ---------------- render ---------------- */
   function drawSide() {
     var pv = document.getElementById('rb-prev'); if (pv) pv.innerHTML = previewHtml();
@@ -324,6 +414,20 @@
     });
     Array.prototype.forEach.call(f.querySelectorAll('.rb-add'), function (b) { b.onclick = function () { var k = b.dataset.k, t = { exp: { role: '', org: '', when: '', bullets: '' }, projects: { title: '', kind: '', tools: '', link: '', when: '', bullets: '' }, ach: { text: '' }, por: { role: '', org: '', when: '', text: '' }, certs: { name: '', org: '', year: '' }, pubs: { title: '', venue: '', year: '' } }[k]; d[k].push(t); persist(); render(true); }; });
     Array.prototype.forEach.call(f.querySelectorAll('.rb-del'), function (b) { b.onclick = function () { d[b.dataset.k].splice(+b.dataset.i, 1); persist(); render(true); }; });
+    Array.prototype.forEach.call(f.querySelectorAll('textarea.in'), function (t) { t.addEventListener('focus', function () { lastArea = t; }); });
+    Array.prototype.forEach.call(f.querySelectorAll('.rb-exb'), function (b) {
+      b.onclick = function () {
+        var r = (V.__roles || []).filter(function (x) { return x.id === d.role; })[0], fam = r && BULLETS[r.family] ? r.family : null;
+        var text = (fam ? BULLETS[fam] : []).concat(BULLETS.General)[+b.dataset.b];
+        var t = lastArea && document.body.contains(lastArea) && /\.bullets$|\.text$/.test(lastArea.id) ? lastArea : f.querySelector('textarea[id$=".bullets"]');
+        if (!t) { V.toast('Add an internship or project first.'); return; }
+        t.value = (t.value.trim() ? t.value.replace(/\s+$/, '') + '\n' : '') + text; set(t.id, t.value); persist(); drawSide(); t.focus();
+        V.toast('Inserted. Now replace the [ ] parts with your real details.');
+      };
+    });
+    var jb = document.getElementById('rb-jdgo'); if (jb) jb.onclick = checkJd;
+    var jc = document.getElementById('rb-jdclr'); if (jc) jc.onclick = function () { d.jd = ''; d.jdKw = null; persist(); render(true); };
+    var dx = document.getElementById('rb-docx'); if (dx) dx.onclick = downloadDocx;
     var nx = document.getElementById('rb-next'), bk = document.getElementById('rb-back');
     if (nx) nx.onclick = function () { step++; render(); };
     if (bk) bk.onclick = function () { step--; render(); };

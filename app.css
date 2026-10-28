@@ -688,3 +688,12 @@ body.veil .exam .qzoom{display:none!important}
 .rb-goal small{display:block;line-height:1.4;margin-top:2px}.rb-goal b{line-height:1.3}
 .rb-score{flex-wrap:wrap}.rb-score b,.rb-score span{white-space:nowrap}
 @media(max-width:560px){.rb-score b{font-size:34px}.rb-score em{margin-left:0;flex-basis:100%}}
+.rb-ex{border:1px solid var(--line,#ddd);border-radius:12px;padding:8px 12px;margin:10px 0;background:rgba(224,122,47,.05)}
+.rb-ex summary{cursor:pointer;font-weight:700}.rb-ex summary small{font-weight:400;color:var(--muted,#666)}
+.rb-ex>div{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.rb-exb{text-align:left;font:inherit;font-size:13px;line-height:1.4;padding:7px 10px;border:1px dashed var(--line,#ccc);border-radius:9px;background:var(--card,#fff);color:inherit;cursor:pointer}
+.rb-exb:hover{border-color:#b5541a;border-style:solid}
+.rb-jd{border:1px solid var(--line,#ddd);border-radius:14px;padding:12px 14px;margin:16px 0}.rb-jd h3{margin-top:0}
+.rb-jdres{display:flex;align-items:center;gap:12px;margin:12px 0 6px;flex-wrap:wrap}
+.rb-jdres b{font-size:22px;padding:4px 12px;border-radius:10px}.rb-jdres b.ok{background:#e3f5ec;color:#16613f}.rb-jdres b.mid{background:#fff2e0;color:#8a4b0f}.rb-jdres b.lo{background:#fdecec;color:#9b2c2c}
+.rb-chip.ok{border-color:#2e9d6a;color:#1d6b47;background:#eaf7f0}
