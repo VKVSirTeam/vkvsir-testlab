@@ -3,7 +3,9 @@
 (function () {
   'use strict';
   var V, d, kw = null, step = 0, saveT = null, rid = null, LIST = [];
-  var LS = 'vkv-resume-draft';
+  var LS = 'vkv-resume-draft', LSL = 'vkv-resumes';
+  function localList() { try { return JSON.parse(localStorage.getItem(LSL) || '[]'); } catch (e) { return []; } }
+  function saveLocal(list) { try { localStorage.setItem(LSL, JSON.stringify(list)); } catch (e) {} }
 
   /* ---------------- goals and guidance ---------------- */
   var GOALS = [
@@ -137,7 +139,7 @@
   function autoTitle() {
     var who = (d.name || '').trim() ? d.name.trim().split(/\s+/).slice(0, 2).join(' ') : 'My';
     var tgt = shortCo(d.company) || (kw && kw.role ? kw.role.split(/[(/]/)[0].trim() : '');
-    var base = who + ' – CV' + (tgt ? ' – ' + tgt : ''), t = base, n = 2;
+    var base = who === 'My' ? 'New resume' + (tgt ? ' – ' + tgt : '') : who + ' – CV' + (tgt ? ' – ' + tgt : ''), t = base, n = 2;
     var taken = LIST.filter(function (r) { return r.id !== rid; }).map(function (r) { return (r.title || '').toLowerCase(); });
     while (taken.indexOf(t.toLowerCase()) >= 0) t = base + ' ' + (n++);
     return t;
@@ -145,6 +147,12 @@
   function titleNow() { if (d.autoT !== false || !has(d.title)) d.title = autoTitle(); return d.title; }
   function persist() {
     titleNow();
+    if (!V.session) {
+      if (!rid) rid = 'l' + Date.now().toString(36);
+      var e0 = LIST.filter(function (x) { return x.id === rid; })[0], sc = score().total;
+      if (e0) { e0.title = d.title; e0.data = d; e0.score = sc; } else { LIST.unshift({ id: rid, title: d.title, data: d, score: sc }); pickerHtml(); }
+      saveLocal(LIST);
+    }
     var tb = document.getElementById('rb-tname'); if (tb && document.activeElement !== tb) tb.textContent = d.title;
     try { localStorage.setItem(LS, JSON.stringify(d)); } catch (e) {}
     if (!V.session) return;
@@ -546,7 +554,7 @@
       '<div class="rb-headr"><span class="rb-mini" id="rb-mini"></span><span class="small muted" id="rb-saved">' + (V.session ? 'Saves to your account automatically' : 'Saved on this device · <a href="/login?next=/resume" data-link>Sign in</a> to keep it in your account') + '</span>' +
       '</div></div>' +
       '<div class="rb-tbar"><div class="rb-tname-w"><span>📄</span><b id="rb-tname" title="Resume name">' + esc(titleNow()) + '</b><button class="btn ghost small" type="button" id="rb-ren">✏ Rename</button></div>' +
-      '<div class="rb-tact"><span id="rb-pickw"></span><button class="btn ghost small" id="rb-new" type="button">+ New</button><button class="btn ghost small" id="rb-dup" type="button">⧉ Duplicate</button></div></div>' +
+      '<div class="rb-tact"><span id="rb-pickw"></span><button class="btn ghost small" id="rb-new" type="button" title="New resume with your personal details and education">+ New</button><button class="btn ghost small" id="rb-blank" type="button" title="Completely empty resume">+ Blank</button><button class="btn ghost small" id="rb-dup" type="button" title="Copy this resume to adapt it for another job">⧉ Duplicate</button><button class="btn ghost small rb-delb" id="rb-del" type="button" title="Delete this resume">🗑 Delete</button></div></div>' +
       '<nav class="rb-steps" id="rb-steps" aria-label="Steps"></nav><div class="rb-body"><div class="card rb-form" id="rb-form"></div><aside class="rb-side"><div class="rb-ptitle"><b>Live preview</b><span class="small muted">A4 · Helvetica · one column</span></div><div id="rb-prev"></div></aside></div></div>');
     document.getElementById('rb-steps').onclick = function (e) { var b = e.target.closest('button'); if (b) { step = +b.dataset.s; render(); } };
     document.getElementById('rb-new').onclick = function () {
@@ -555,13 +563,36 @@
       var nd = blank(); keep.forEach(function (k) { nd[k] = JSON.parse(JSON.stringify(d[k])); });
       d = nd; rid = null; kw = null; step = 0; titleNow(); persist(); render(); V.toast('New resume started with your personal details and education.');
     };
+    document.getElementById('rb-blank').onclick = function () {
+      d = blank(); rid = null; kw = null; step = 0; titleNow(); persist(); render(); V.toast('Blank resume started.');
+    };
+    document.getElementById('rb-del').onclick = function () {
+      if (!confirm('Delete “' + (d.title || 'this resume') + '”? This cannot be undone.')) return;
+      var gone = rid;
+      function after() {
+        LIST = LIST.filter(function (x) { return x.id !== gone; });
+        if (!V.session) saveLocal(LIST);
+        if (LIST.length) { rid = LIST[0].id; d = Object.assign(blank(), LIST[0].data); if (d.autoT == null) d.autoT = false; }
+        else { rid = null; d = blank(); }
+        try { localStorage.setItem(LS, JSON.stringify(d)); } catch (e) {}
+        kw = null; step = 0; document.getElementById('rb-tname').textContent = titleNow(); pickerHtml(); loadKw(); render(); V.toast('Resume deleted.');
+      }
+      if (V.session && gone && gone.charAt(0) !== 'l') V.sb.from('resumes').delete().eq('id', gone).then(function (r) { if (r.error) V.toast('Could not delete. Please try again.'); else after(); });
+      else after();
+    };
     document.getElementById('rb-dup').onclick = function () {
-      d = JSON.parse(JSON.stringify(d)); rid = null; d.autoT = true; d.title = ''; titleNow(); persist(); pickerHtml(); V.toast('Copy created: “' + d.title + '”. Edit it for another job.');
+      var from = d.title; d = JSON.parse(JSON.stringify(d)); rid = null;
+      if (d.autoT === false) { var base = from.replace(/\s*\(copy( \d+)?\)$/, ''), n = 1, t = base + ' (copy)'; var taken = LIST.map(function (x) { return (x.title || '').toLowerCase(); }); while (taken.indexOf(t.toLowerCase()) >= 0) t = base + ' (copy ' + (++n) + ')'; d.title = t; }
+      else d.title = '';
+      titleNow(); persist(); pickerHtml();
+      var tb = document.getElementById('rb-tname'); if (tb) tb.textContent = d.title;
+      V.toast('Copy created: “' + d.title + '”. Change the company or keywords for the new job.');
     };
     document.getElementById('rb-ren').onclick = function () {
       var n = prompt('Resume name', d.title || ''); if (n == null) return; n = n.trim().slice(0, 80);
       if (!n) { d.autoT = true; d.title = ''; } else { d.autoT = false; d.title = n; }
       titleNow(); document.getElementById('rb-tname').textContent = d.title;
+      LIST.forEach(function (r) { if (r.id === rid) r.title = d.title; }); pickerHtml();
       var ti = document.getElementById('title'); if (ti) ti.value = d.autoT ? '' : d.title;
       persist(); V.toast('Renamed.');
     };
@@ -570,6 +601,7 @@
   }
   function pickerHtml() {
     var w = document.getElementById('rb-pickw'); if (!w) return;
+    LIST.forEach(function (r) { if (r.id === rid) r.title = d.title; });
     if (LIST.length < 2) { w.innerHTML = LIST.length ? '<span class="small muted">1 saved resume</span>' : ''; return; }
     w.innerHTML = '<select class="in" id="rb-pick" aria-label="Open a saved resume">' + LIST.map(function (r) { return '<option value="' + r.id + '"' + (r.id === rid ? ' selected' : '') + '>' + esc(r.title || 'Resume') + (r.score != null ? ' · ' + r.score + '/100' : '') + '</option>'; }).join('') + '</select>';
     document.getElementById('rb-pick').onchange = function () { var v = this.value, r = LIST.filter(function (x) { return x.id === v; })[0]; if (r) { rid = r.id; d = Object.assign(blank(), r.data); if (d.autoT == null) d.autoT = false; step = 0; document.getElementById('rb-tname').textContent = titleNow(); loadKw(); render(); } };
@@ -584,10 +616,14 @@
       if (!SUG) V.rpc('rb_suggest').then(function (x) { SUG = x; }).catch(function () {});
       window.addEventListener('scroll', function () { if (box && !box.hidden && cur) showSug(cur.el); }, { passive: true });
       LIST = [];
+      if (!V.session) {
+        LIST = localList();
+        if (!LIST.length) { try { var old = JSON.parse(localStorage.getItem(LS) || 'null'); if (old && (old.name || old.skTech)) { LIST = [{ id: 'l' + Date.now().toString(36), title: old.title || '', data: old }]; saveLocal(LIST); } } catch (e) {} }
+      }
       var mine = V.session ? V.sb.from('resumes').select('id,title,score,data,updated_at').order('updated_at', { ascending: false }).then(function (r) { return r.data || []; }) : Promise.resolve([]);
       Promise.all([roles, mine]).then(function (rr) {
         var list = rr[1];
-        LIST = list.slice();
+        if (V.session) LIST = list.slice(); else list = LIST;
         if (list.length) { rid = list[0].id; d = Object.assign(blank(), list[0].data); if (d.autoT == null) d.autoT = !has(d.title) || d.title === 'My resume'; }
         shell(list);
       }).catch(function () { shell([]); });
