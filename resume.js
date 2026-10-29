@@ -523,7 +523,7 @@
     var body = [stepGoal, stepBasics, stepEdu, stepSkills, stepProj, stepAch, stepFinal][step]();
     document.getElementById('rb-steps').innerHTML = STEPS.map(function (s, i) { return '<button type="button" class="' + (i === step ? 'on' : i < step ? 'done' : '') + '" data-s="' + i + '"><i>' + (i + 1) + '</i><span>' + s + '</span></button>'; }).join('');
     var f = document.getElementById('rb-form');
-    f.innerHTML = '<div class="rb-sh"><span>Step ' + (step + 1) + ' of ' + STEPS.length + '</span><div class="rb-prog"><i style="width:' + Math.round(100 * (step + 1) / STEPS.length) + '%"></i></div></div>' + body + '<div class="rb-nav">' + (step ? '<button class="btn ghost" type="button" id="rb-back">← Back</button>' : '<span></span>') + (step < STEPS.length - 1 ? '<button class="btn" type="button" id="rb-next">Next: ' + STEPS[step + 1] + ' →</button>' : '') + '</div>';
+    f.innerHTML = '<div class="rb-sh"><span>Step ' + (step + 1) + ' of ' + STEPS.length + '</span><div class="rb-prog"><i style="width:' + Math.round(100 * (step + 1) / STEPS.length) + '%"></i></div></div>' + body + '<div class="rb-nav">' + (step ? '<button class="btn ghost" type="button" id="rb-back">← Back</button>' : '<span></span>') + (step < STEPS.length - 1 ? '<button class="btn" type="button" id="rb-next"><span class="rb-nl">Next: ' + STEPS[step + 1] + '</span><span class="rb-ns">Next</span> →</button>' : '') + '</div>';
     f.dataset.k = String(!!kw);
     wire(); drawSide();
     if (!keepScroll) document.getElementById('rb-top').scrollIntoView({ behavior: 'smooth', block: 'start' }); else window.scrollTo(0, y);

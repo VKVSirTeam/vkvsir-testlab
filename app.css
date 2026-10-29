@@ -1197,3 +1197,33 @@ a.nx-i:hover{border-color:var(--accent)}
 .rv-sample+.rv-paper{opacity:.92}
 .gm .gm-alt,.gm .gm-skip{display:block;margin-left:auto;margin-right:auto;width:fit-content}
 .gm .gm-skip{margin-top:8px}
+/* ================= BUTTON SYSTEM (site-wide) ================= */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;flex-shrink:0;line-height:1.2;min-height:44px;padding:10px 20px;font-size:15px;border-radius:12px;text-decoration:none!important;transition:transform .15s var(--ease),box-shadow .2s,filter .2s,background .2s,border-color .2s;cursor:pointer}
+.btn:active{transform:translateY(1px)}
+.btn:disabled,.btn[disabled]{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
+.btn:not(.ghost):not(.dark):not(.gm-g){box-shadow:0 6px 16px rgba(41,82,227,.22)}
+.btn:not(.ghost):not(.dark):not(.gm-g):hover{box-shadow:0 10px 22px rgba(41,82,227,.3)}
+.btn.small{min-height:36px;padding:7px 14px;font-size:13.5px;border-radius:10px}
+.btn.block{display:flex;width:100%;white-space:normal;text-align:center}
+.btn:focus-visible,.pill-btn:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 40%,transparent);outline-offset:2px}
+/* small inline action in lists: "Practise →" */
+.pill-btn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0;padding:7px 14px;border-radius:999px;font-size:13px;font-weight:700;color:var(--accent)!important;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 22%,transparent);text-decoration:none!important;transition:all .2s var(--ease)}
+.pill-btn i{font-style:normal;transition:transform .2s var(--ease)}
+.pill-btn:hover{background:var(--accent);color:#fff!important;border-color:var(--accent)}
+.pill-btn:hover i{transform:translateX(3px)}
+/* rows that hold a label + a button: label wraps, button keeps its shape */
+.jp-links{list-style:none;padding:0;margin:0}
+.jp-links li{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.jp-links li:first-child{border-top:0}
+.jp-links li>span{min-width:0;line-height:1.35;overflow-wrap:anywhere}
+.spread{gap:10px}.spread>*{min-width:0}
+.row{flex-wrap:wrap}
+@media(max-width:560px){.btn{font-size:14.5px;padding:10px 16px}.btn.small{font-size:13px}}
+.rb-ns{display:none}
+@media(max-width:560px){
+  .btn:not(.small){white-space:normal;text-align:center}
+  .rb-nl{display:none}.rb-ns{display:inline}
+  .tabs button{white-space:nowrap;font-size:12.5px;padding:8px 8px}
+}
+.sh,.share button{white-space:nowrap}
+.btn{max-width:100%}

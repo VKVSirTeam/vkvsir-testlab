@@ -734,7 +734,7 @@
     var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, gate: gate, ensureGuest: guestSession, activity: guestActivity, get guest() { return isGuest(); }, get anySession() { return session; }, get session() { return isGuest() ? null : session; }, get profile() { return profile; } };
     function run() { window.RB.render(api); }
     if (window.RB) return run();
-    var s = document.createElement('script'); s.src = '/resume.js?v=10'; s.onload = run;
+    var s = document.createElement('script'); s.src = '/resume.js?v=11'; s.onload = run;
     s.onerror = function () { h('<div class="card narrow center"><p>Could not load the resume builder. Please refresh.</p></div>'); };
     document.head.appendChild(s);
   }
@@ -797,7 +797,7 @@
     var sk = p.skills || [], sw = p.software || [];
     function practice(l) {
       var label = esc(l.name || (l.s + ' unit ' + l.u));
-      if (l.q >= 10) return '<li><span>' + label + '</span><a class="btn small-btn" href="/p/' + esc(String(l.s).toLowerCase()) + '/' + esc(l.u) + '" data-link>Practise</a></li>';
+      if (l.q >= 10) return '<li><span>' + label + '</span><a class="pill-btn" href="/p/' + esc(String(l.s).toLowerCase()) + '/' + esc(l.u) + '" data-link>Practise <i>→</i></a></li>';
       return '';
     }
     function skillCard(s) {
@@ -2051,7 +2051,7 @@
                 document.body.appendChild(m);
               }).catch(function (e) { toast(errMsg(e)); });
             }
-            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=10'; s.onload = show; document.head.appendChild(s); }
+            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=11'; s.onload = show; document.head.appendChild(s); }
           };
         });
       }).catch(function (e) { box.innerHTML = '<div class="card"><p>' + esc(errMsg(e)) + '</p></div>'; });
