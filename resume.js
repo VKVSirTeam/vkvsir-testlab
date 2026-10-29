@@ -287,20 +287,22 @@
       g.map(function (x) { return note('info', '<b>' + esc((GOALS.filter(function (y) { return y.id === x; })[0] || {}).t) + ':</b> ' + GUIDE[x]); }).join('') +
       (no.length && no.length === d.goals.length ? note('ok', 'You can still build a resume here: it helps in interviews, apprenticeships and backup private applications.') : '');
   }
+  function grp(t, inner, sub) { return '<fieldset class="rb-grp"><legend>' + t + '</legend>' + (sub ? '<p class="rb-gsub">' + sub + '</p>' : '') + '<div class="rb-grid">' + inner + '</div></fieldset>'; }
   function stepBasics() {
-    return '<h2>Basic details</h2><div class="rb-grid">' + inp('name', 'Full name', 'As in your marksheet', { req: 1 }) + inp('email', 'Email', 'firstname.lastname@gmail.com', { req: 1, type: 'email', hint: 'A professional address; avoid nicknames.' }) +
-      inp('phone', 'Mobile', '10-digit number', { req: 1, type: 'tel' }) + inp('city', 'City, State', 'e.g. Jaipur, Rajasthan', { req: 1 }) +
-      inp('linkedin', 'LinkedIn URL', 'linkedin.com/in/your-name', { hint: 'Strongly recommended.' }) + inp('github', 'GitHub (IT/ECE)', 'github.com/username') + inp('portfolio', 'Portfolio / Google Drive of projects (optional)', 'Link to drawings, models or reports') + '</div>' +
-      inp('summary', 'Professional summary (2–3 lines)', 'Final-year Mechanical Engineering student skilled in SolidWorks, ANSYS and lean manufacturing, seeking a Graduate Engineer Trainee role in automotive production.', { area: 1, wide: 1, hint: 'Name the role you want and your 2–3 strongest skills. No “I”.' }) +
-      note('info', '<b>Leave out for private jobs:</b> photo, date of birth, father’s name, religion, marital status, full address and “Declaration”. ATS software ignores them and they take space. (Government and PSU application forms ask for these separately.)');
+    return '<h2>Basic details</h2>' +
+      grp('Contact', inp('name', 'Full name', 'As in your marksheet', { req: 1 }) + inp('email', 'Email', 'firstname.lastname@gmail.com', { req: 1, type: 'email' }) + inp('phone', 'Mobile', '10-digit number', { req: 1, type: 'tel' }) + inp('city', 'City, State', 'e.g. Jaipur, Rajasthan', { req: 1 })) +
+      grp('Online profiles', inp('linkedin', 'LinkedIn URL', 'linkedin.com/in/your-name') + inp('github', 'GitHub (IT / ECE)', 'github.com/username') + inp('portfolio', 'Portfolio or project drive', 'Link to drawings, models or reports', { wide: 1 }), 'LinkedIn is strongly recommended.') +
+      grp('Summary', inp('summary', 'Professional summary (2–3 lines)', 'Final-year Mechanical Engineering student skilled in SolidWorks, ANSYS and lean manufacturing, seeking a Graduate Engineer Trainee role.', { area: 1, wide: 1, hint: 'Name the role you want and your 2–3 strongest skills. Type a few words to pick a template.' })) +
+      note('info', '<b>Leave out for private jobs:</b> photo, date of birth, father’s name, religion, marital status, full address and “Declaration”.');
   }
   function stepEdu() {
-    return '<h2>Education</h2><div class="rb-grid">' + inp('degree', 'Degree', 'B.Tech / B.E. / Diploma / M.Tech', { req: 1 }) + inp('branch', 'Branch', 'e.g. Mechanical Engineering', { req: 1 }) +
-      inp('college', 'College, City', 'e.g. Govt. Engineering College, Ajmer', { req: 1 }) + inp('grad', 'Graduation year', 'e.g. 2027', { req: 1 }) +
-      inp('cgpa', 'CGPA / %', 'e.g. 8.1 / 10 (till 6th sem)', { req: 1, hint: 'Write the scale. If below 6.5, you may still include it; many companies have cut-offs and check anyway.' }) +
-      '<div class="rb-f"><label for="yearNow">Current year of study</label><select class="in" id="yearNow">' + ['1', '2', '3', '4', 'Graduated'].map(function (y) { return '<option' + (String(d.yearNow) === y ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select></div>' +
-      inp('x12', 'Class 12 / Diploma (board, year, %)', 'RBSE, 2023, 86%') + inp('x10', 'Class 10 (board, year, %)', 'CBSE, 2021, 91%') + '</div>' +
-      '<h3>Test scores (optional)</h3><div class="rb-grid">' + inp('tests.gate', 'GATE score', 'e.g. 712') + inp('tests.gateAir', 'GATE AIR', 'e.g. 1450') + inp('tests.cat', 'CAT percentile', '') + inp('tests.gre', 'GRE', 'e.g. 318 (Q 167, V 151)') + inp('tests.toefl', 'TOEFL', 'e.g. 104') + inp('tests.ielts', 'IELTS', 'e.g. 7.5') + '</div>';
+    return '<h2>Education</h2>' +
+      grp('Degree', inp('degree', 'Degree', 'B.Tech / B.E. / Diploma', { req: 1 }) + inp('branch', 'Branch', 'e.g. Mechanical Engineering', { req: 1 }) +
+        inp('college', 'College, City', 'e.g. Govt. Engineering College, Ajmer', { req: 1, wide: 1 }) + inp('grad', 'Graduation year', 'e.g. 2027', { req: 1 }) +
+        inp('cgpa', 'CGPA / %', 'e.g. 8.1 / 10', { req: 1 }) +
+        '<div class="rb-f"><label for="yearNow">Current year of study</label><select class="in" id="yearNow">' + ['1', '2', '3', '4', 'Graduated'].map(function (y) { return '<option' + (String(d.yearNow) === y ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select></div>') +
+      grp('School', inp('x12', 'Class 12 / Diploma', 'RBSE, 2023, 86%') + inp('x10', 'Class 10', 'CBSE, 2021, 91%'), 'Board, year and percentage.') +
+      grp('Test scores', inp('tests.gate', 'GATE score', 'e.g. 712') + inp('tests.gateAir', 'GATE AIR', 'e.g. 1450') + inp('tests.cat', 'CAT percentile', '') + inp('tests.gre', 'GRE', 'e.g. 318') + inp('tests.toefl', 'TOEFL', 'e.g. 104') + inp('tests.ielts', 'IELTS', 'e.g. 7.5'), 'Optional. Fill only what applies to your goal.');
   }
   function stepSkills() {
     var ks = kwList();
@@ -490,7 +492,7 @@
   /* ---------------- render ---------------- */
   function drawSide() {
     var pv = document.getElementById('rb-prev'); if (pv) pv.innerHTML = previewHtml();
-    var sc = document.getElementById('rb-mini'); if (sc) { var s = score(); sc.innerHTML = '<b>' + s.total + '</b>/100 ATS score'; sc.className = 'rb-mini ' + (s.total >= 85 ? 'great' : s.total >= 70 ? 'good' : s.total >= 50 ? 'fair' : 'low'); }
+    var sc = document.getElementById('rb-mini'); if (sc) { var s = score(), band = s.total >= 85 ? 'great' : s.total >= 70 ? 'good' : s.total >= 50 ? 'fair' : 'low'; sc.className = 'rb-ring ' + band; sc.style.setProperty('--p', s.total); sc.innerHTML = '<span><b>' + s.total + '</b><small>ATS</small></span>'; }
     if (step === 3 || step === 6) { var f = document.getElementById('rb-form'); if (f && f.dataset.k !== String(!!kw)) { f.dataset.k = String(!!kw); render(true); } }
   }
   function render(keepScroll) {
@@ -498,7 +500,7 @@
     var body = [stepGoal, stepBasics, stepEdu, stepSkills, stepProj, stepAch, stepFinal][step]();
     document.getElementById('rb-steps').innerHTML = STEPS.map(function (s, i) { return '<button type="button" class="' + (i === step ? 'on' : i < step ? 'done' : '') + '" data-s="' + i + '"><i>' + (i + 1) + '</i><span>' + s + '</span></button>'; }).join('');
     var f = document.getElementById('rb-form');
-    f.innerHTML = body + '<div class="rb-nav">' + (step ? '<button class="btn ghost" type="button" id="rb-back">← Back</button>' : '<span></span>') + (step < STEPS.length - 1 ? '<button class="btn" type="button" id="rb-next">Next: ' + STEPS[step + 1] + ' →</button>' : '') + '</div>';
+    f.innerHTML = '<div class="rb-sh"><span>Step ' + (step + 1) + ' of ' + STEPS.length + '</span><div class="rb-prog"><i style="width:' + Math.round(100 * (step + 1) / STEPS.length) + '%"></i></div></div>' + body + '<div class="rb-nav">' + (step ? '<button class="btn ghost" type="button" id="rb-back">← Back</button>' : '<span></span>') + (step < STEPS.length - 1 ? '<button class="btn" type="button" id="rb-next">Next: ' + STEPS[step + 1] + ' →</button>' : '') + '</div>';
     f.dataset.k = String(!!kw);
     wire(); drawSide();
     if (!keepScroll) document.getElementById('rb-top').scrollIntoView({ behavior: 'smooth', block: 'start' }); else window.scrollTo(0, y);
@@ -550,13 +552,17 @@
     var tx = document.getElementById('rb-txt'); if (tx) tx.onclick = function () { var t = plainText(); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { V.toast('Copied as plain text.'); }).catch(function () { var a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove(); V.toast('Copied as plain text.'); }); };
   }
   function shell(list) {
-    V.h('<div class="rb" id="rb-top"><div class="rb-head"><div><p class="eyebrow">Free · No sign-up needed to download</p><h1>ATS Resume Builder</h1><p class="muted">One clean column, standard headings and a real-text PDF that applicant tracking systems can read, with keywords taken from real job posts.</p>' +
-      '<details class="softinfo"><summary>Why this builder is different</summary><ul><li><b>Free and unlimited:</b> download PDF and Word as often as you like. No subscription, no watermark.</li><li><b>Readable by ATS:</b> real text, one column and standard headings. Designed templates with columns and icons are often misread.</li><li><b>Real keywords:</b> skills and software from current job posts, including your target company’s.</li><li><b>Job-post match:</b> paste any job description and see the exact keywords you are missing.</li><li><b>Guidance for every goal:</b> private jobs, internships, PSUs, government exams and higher studies.</li></ul><a href="/why#resume" data-link>See all features</a></details></div>' +
-      '<div class="rb-headr"><span class="rb-mini" id="rb-mini"></span><span class="small muted" id="rb-saved">' + (V.session ? 'Saves to your account automatically' : 'Saved on this device · <a href="/login?next=/resume" data-link>Sign in</a> to keep it in your account') + '</span>' +
-      '</div></div>' +
-      '<div class="rb-tbar"><div class="rb-tname-w"><span>📄</span><b id="rb-tname" title="Resume name">' + esc(titleNow()) + '</b><button class="btn ghost small" type="button" id="rb-ren">✏ Rename</button></div>' +
-      '<div class="rb-tact"><span id="rb-pickw"></span><button class="btn ghost small" id="rb-new" type="button" title="New resume with your personal details and education">+ New</button><button class="btn ghost small" id="rb-blank" type="button" title="Completely empty resume">+ Blank</button><button class="btn ghost small" id="rb-dup" type="button" title="Copy this resume to adapt it for another job">⧉ Duplicate</button><button class="btn ghost small rb-delb" id="rb-del" type="button" title="Delete this resume">🗑 Delete</button></div></div>' +
-      '<nav class="rb-steps" id="rb-steps" aria-label="Steps"></nav><div class="rb-body"><div class="card rb-form" id="rb-form"></div><aside class="rb-side"><div class="rb-ptitle"><b>Live preview</b><span class="small muted">A4 · Helvetica · one column</span></div><div id="rb-prev"></div></aside></div></div>');
+    V.h('<div class="rb" id="rb-top"><div class="rb-head2"><div><h1>Resume Builder</h1><p class="muted">ATS-friendly resume with keywords from real job posts. Free, unlimited PDF &amp; Word downloads.</p>' +
+      '<details class="softinfo"><summary>Why this builder is different</summary><ul><li><b>Free and unlimited:</b> download PDF and Word as often as you like. No subscription, no watermark.</li><li><b>Readable by ATS:</b> real text, one column and standard headings.</li><li><b>Real keywords:</b> skills and software from current job posts, including your target company’s.</li><li><b>Job-post match:</b> paste any job description and see the exact keywords you are missing.</li></ul></details></div>' +
+      '<div class="rb-ring" id="rb-mini" title="Live ATS score"></div></div>' +
+      '<div class="rb-tbar"><div class="rb-tname-w"><span class="rb-doc">📄</span><div class="rb-tn"><b id="rb-tname">' + esc(titleNow()) + '</b><small id="rb-saved">' + (V.session ? 'Saves to your account automatically' : 'Saved on this device · <a href="/login?next=/resume" data-link>sign in</a> to keep it') + '</small></div></div>' +
+      '<div class="rb-tact"><span id="rb-pickw"></span><details class="rb-menu"><summary class="btn ghost small">⋯ Manage</summary><div class="rb-menu-p">' +
+        '<button type="button" id="rb-ren">✏️ Rename</button><button type="button" id="rb-dup">⧉ Duplicate for another job</button><button type="button" id="rb-new">＋ New (keep my details)</button><button type="button" id="rb-blank">＋ Blank resume</button><button type="button" id="rb-del" class="rb-delb">🗑 Delete this resume</button></div></details></div></div>' +
+      '<nav class="rb-steps" id="rb-steps" aria-label="Steps"></nav><div class="rb-body"><div class="card rb-form" id="rb-form"></div><aside class="rb-side" id="rb-side"><div class="rb-ptitle"><b>Live preview</b><span class="small muted">A4 · one column</span><button type="button" class="rb-pvx" id="rb-pvx" aria-label="Close preview">✕</button></div><div id="rb-prev"></div></aside></div>' +
+      '<button type="button" class="rb-pvbtn" id="rb-pvbtn">👁 Preview</button></div>');
+    document.getElementById('rb-pvbtn').onclick = function () { document.body.classList.add('rb-pv-open'); };
+    document.getElementById('rb-pvx').onclick = function () { document.body.classList.remove('rb-pv-open'); };
+    Array.prototype.forEach.call(document.querySelectorAll('.rb-menu-p button'), function (b) { b.addEventListener('click', function () { var m = b.closest('details'); if (m) m.open = false; }); });
     document.getElementById('rb-steps').onclick = function (e) { var b = e.target.closest('button'); if (b) { step = +b.dataset.s; render(); } };
     document.getElementById('rb-new').onclick = function () {
       // new resume keeps personal details and education, clears the target-specific parts

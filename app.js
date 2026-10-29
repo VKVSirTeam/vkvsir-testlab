@@ -50,16 +50,26 @@
   function setNav(active) {
     if (active !== undefined) navActive = active;
     active = navActive;
-    var html = '<a href="https://www.vkvsir.com" class="site-link" title="Go to vkvsir.com">&larr; vkvsir.com</a><a href="/" data-link class="' + (active === 'home' ? 'on' : '') + '">Tests</a><a href="/career" data-link class="' + (active === 'career' ? 'on' : '') + '">Job Prep</a><a href="/resume" data-link class="' + (active === 'resume' ? 'on' : '') + '"><span class="nl">Resume Builder</span><span class="ns">Resume</span></a>';
-    if (session) {
-      html += '<a href="/me" data-link class="' + (active === 'me' ? 'on' : '') + '">Dashboard</a>';
-      if (profile && profile.is_admin) html += '<a href="/admin" data-link class="' + (active === 'admin' ? 'on' : '') + '">Admin</a>';
-      var ini = ((profile && (profile.full_name || profile.email)) || '?').charAt(0).toUpperCase();
-      html += '<a href="/profile" data-link class="avatar" title="Profile and sign out" aria-label="Profile and sign out">' + esc(ini) + '</a>';
-    } else {
-      html += '<a href="/login" data-link class="' + (active === 'login' ? 'on' : '') + '">Sign in</a>';
-    }
-    $nav.innerHTML = html;
+    var items = [['home', '/', 'Practice Tests', '🎯', 'Topic-wise papers with instant results'], ['career', '/career', 'Job Prep', '🏢', 'Company-wise plan, software & interviews'], ['resume', '/resume', 'Resume Builder', '📄', 'ATS-ready resume, PDF & Word']];
+    if (session) items.push(['me', '/me', 'Dashboard', '📊', 'Your results and progress']);
+    if (session && profile && profile.is_admin) items.push(['admin', '/admin', 'Admin', '🛠', 'Control room']);
+    var ini = ((profile && (profile.full_name || profile.email)) || '?').charAt(0).toUpperCase();
+    var acct = session ? '<a href="/profile" data-link class="avatar" title="Profile and sign out" aria-label="Profile and sign out">' + esc(ini) + '</a>'
+      : '<a href="/login" data-link class="nav-cta' + (active === 'login' ? ' on' : '') + '">Sign in</a>';
+    $nav.innerHTML = '<div class="nav-links">' + items.map(function (x) { return '<a href="' + x[1] + '" data-link class="' + (active === x[0] ? 'on' : '') + '">' + x[2] + '</a>'; }).join('') + '</div>' +
+      '<div class="nav-right"><a href="https://www.vkvsir.com" class="site-link" title="Go to vkvsir.com">vkvsir.com ↗</a>' + acct +
+      '<button type="button" class="menu-btn" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button></div>';
+    // mobile drawer
+    var dr = document.getElementById('drawer');
+    if (!dr) { dr = document.createElement('div'); dr.id = 'drawer'; dr.className = 'drawer'; dr.setAttribute('aria-hidden', 'true'); document.body.appendChild(dr); }
+    dr.innerHTML = '<div class="drawer-bg" data-close></div><aside class="drawer-p" role="dialog" aria-label="Menu"><div class="drawer-h"><b>Menu</b><button type="button" class="drawer-x" data-close aria-label="Close menu">✕</button></div>' +
+      '<nav class="drawer-n">' + items.map(function (x) { return '<a href="' + x[1] + '" data-link class="' + (active === x[0] ? 'on' : '') + '"><span class="di">' + x[3] + '</span><span><b>' + x[2] + '</b><small>' + x[4] + '</small></span></a>'; }).join('') + '</nav>' +
+      '<div class="drawer-f">' + (session ? '<a class="btn ghost block" href="/profile" data-link>👤 My profile</a>' : '<a class="btn block" href="/login" data-link>Sign in / Create free account</a>') +
+      '<a class="drawer-site" href="https://www.vkvsir.com">Visit vkvsir.com ↗</a><a class="drawer-site" href="/why" data-link>Why VKV Sir Test Lab</a></div></aside>';
+    function openD(o) { dr.classList.toggle('open', o); dr.setAttribute('aria-hidden', o ? 'false' : 'true'); document.body.classList.toggle('noscroll', o); var b = $nav.querySelector('.menu-btn'); if (b) b.setAttribute('aria-expanded', o); }
+    $nav.querySelector('.menu-btn').onclick = function () { openD(true); };
+    dr.onclick = function (e) { if (e.target.closest('[data-close]') || e.target.closest('a')) openD(false); };
+    if (!window._drawerEsc) { window._drawerEsc = 1; document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { var d = document.getElementById('drawer'); if (d && d.classList.contains('open')) { d.classList.remove('open'); document.body.classList.remove('noscroll'); } } }); }
     $bar.classList.toggle('exam-mode', active === 'exam');
   }
 
@@ -192,33 +202,70 @@
           testsTree(rt) + linkGroups(linked) + ghost(more);
         return '<details class="trk ' + tr.k + '"' + (i === 0 ? ' id="tr0"' : '') + (tr.k === 'career' ? ' open' : '') + '><summary><span class="tic">' + tr.ic + '</span><span class="tt"><b>' + tr.t + '</b><small>' + tr.d + '</small></span><span class="tplus" aria-hidden="true"></span></summary><div class="tbody">' + body + '</div></details>';
       }).join('');
-      h('<section class="hx"><div class="hx-l"><p class="eyebrow">Free practice platform by VKV Sir</p><h1>Practise smarter for <em>exams, viva &amp; interviews</em>.</h1>' +
-        '<p class="hx-sub">Pick any subject, unit or topic and get a freshly balanced paper in seconds, with fair timing, instant results and clear explanations.</p>' +
-        '<ul class="hx-pts"><li><i>✓</i>Free forever</li><li><i>✓</i>Instant results &amp; explanations</li><li><i>✓</i>Works on mobile &amp; laptop</li></ul>' +
-        '<div class="hx-cta"><button class="btn" id="go-start">▶ Start practising</button><a class="btn ghost" href="#how">How it works</a><a class="btn ghost" href="/resume" data-link>📄 Free resume builder</a></div>' +
+      h('<section class="hx"><div class="hx-l"><p class="eyebrow">Free for every student · Practice · Job Prep · Resume</p><h1>From your first test to <em>your first job</em>.</h1>' +
+        '<p class="hx-sub">Practise any subject topic by topic, prepare for the exact company and role you want, and build an ATS-ready resume, all in one place and completely free.</p>' +
+        '<div class="hx-cta"><button class="btn" id="go-start">▶ Start practising</button><a class="btn ghost" href="/career" data-link>🎯 Plan for a company</a><a class="btn ghost" href="/resume" data-link>📄 Build my resume</a></div>' +
+        '<div class="hx-trust">' + [['20+', 'subjects & skills'], ['40+', 'job roles mapped'], ['200+', 'recruiters covered'], ['100%', 'free, no paywalls']].map(function (s) { return '<div><b>' + s[0] + '</b><span>' + s[1] + '</span></div>'; }).join('') + '</div>' +
         '</div>' +
         '<div class="hx-r2"><div class="hx-panel"><div class="hxp-grid">' +
           [['📚', 'Thousands', 'of practice questions'], ['🧭', '3 tracks', 'Semester · Competitive · Career'], ['🖼️', 'Image questions', 'Diagrams, figures & charts'], ['⚡', 'Fresh paper', 'Balanced mix every time']].map(function (s) { return '<div class="hxp"><span class="hxp-i">' + s[0] + '</span><b>' + s[1] + '</b><small>' + s[2] + '</small></div>'; }).join('') +
-          '</div><div class="hxp-by"><img src="/favicon.svg" alt=""><span>Questions prepared and reviewed by <b>Dr. Vinod Kumar Verma</b></span></div></div></div>' +
-        '</section><section class="hqs">' + heroSamples() + '</section>' +
-        '<section class="whystrip"><div class="whystrip-h"><b>Why students choose VKV Sir Test Lab</b><a href="/why" data-link>See all features →</a></div><div class="whystrip-g">' +
-          [['🎯', 'Fresh, balanced papers', 'A new mix of easy, moderate and hard every time'], ['🖼️', 'Image-based questions', 'Diagrams, 3D parts, charts and figures, with zoom'], ['🏢', 'Company-wise preparation', 'Software and interview questions from real job posts'], ['📄', 'Free ATS resume builder', 'Unlimited PDF & Word downloads, keyword score'], ['🧑‍🏫', 'Expert-checked', 'Every question reviewed; report anything doubtful'], ['💯', 'Free forever', 'No paywalls and no download limits']]
-            .map(function (x) { return '<div class="whyi"><span>' + x[0] + '</span><div><b>' + x[1] + '</b><small>' + x[2] + '</small></div></div>'; }).join('') + '</div></section>' +
-        '<section class="how" id="how"><h2 class="sh2">How it works</h2><div class="steps3"><div><span>1</span><b>Choose</b><p>Open a track and tick a whole subject, some units or single topics.</p></div><div><span>2</span><b>Practise</b><p>Pick your time and mode. Every paper is freshly mixed from easy to hard.</p></div><div><span>3</span><b>Improve</b><p>See your score, correct answers and explanations. Report any doubtful question.</p></div></div></section>' +
-        '<div class="stats reveal">' + [['20', '+', 'Subjects & skills'], ['40', '+', 'Job roles mapped'], ['200', '+', 'Recruiters covered'], ['100', '%', 'Free practice']].map(function (s) { return '<div class="st"><b class="cnt" data-to="' + s[0] + '">0</b><i>' + s[1] + '</i><span>' + s[2] + '</span></div>'; }).join('') + '</div>' +
+          '</div><div class="hxp-by"><img src="/favicon.svg" alt=""><span>Prepared and reviewed by the <b>VKV Sir team of experts</b></span></div></div></div>' +
+        '</section>' +
         '<div class="marq" aria-hidden="true"><div class="marq-in">' + (function () { var c = ['TCS', 'Infosys', 'L&amp;T', 'Tata Motors', 'Shri Bhagwati Machines', 'NTPC', 'BHEL', 'JK Tyre', 'Maruti Suzuki', 'Wipro', 'Bosch', 'Siemens', 'UltraTech', 'Tata Steel', 'Accenture', 'Mahindra', 'IOCL', 'ABB']; var s = c.map(function (x) { return '<span>' + x + '</span>'; }).join(''); return s + s; })() + '</div></div>' +
-        '<h2 class="sh2" id="tracks-h">Choose what to practise</h2><div class="tracks">' + tracksHtml + '</div>' +
-        '<section><h2 class="sh2">Ways to practise</h2><div class="modes">' + [
+        
+        '<section class="hs trio rv"><p class="eyebrow center">Three tools · one goal</p><h2 class="hs-h center">Everything you need to get exam-ready and job-ready</h2><div class="trio-g">' +
+          [['practice', '🎯', 'Practice Tests', 'Topic-wise papers with fair timing, instant results and clear explanations.', ['Semester, competitive & career tracks', 'Image & diagram questions', 'Unit-wise result analysis'], 'c-blue'],
+           ['jobprep', '🏢', 'Job Prep', 'A personal plan for the company, role and level you are targeting.', ['Software asked in real job posts', 'Company interview questions', 'Detailed company profile'], 'c-violet'],
+           ['resume', '📄', 'Resume Builder', 'An ATS-friendly resume with a live score and keyword guidance.', ['Unlimited PDF & Word downloads', 'Job-post match %', 'Duplicate for every company'], 'c-orange']]
+          .map(function (c) { return '<a class="trio-c ' + c[5] + '" href="#' + c[0] + '"><span class="trio-i">' + c[1] + '</span><b>' + c[2] + '</b><p>' + c[3] + '</p><ul>' + c[4].map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul><em>Explore ↓</em></a>'; }).join('') + '</div></section>' +
+
+        '<section class="hs band-a" id="practice"><div class="split"><div class="split-t rv"><p class="eyebrow">Practice tests</p><h2 class="hs-h">Practise smarter, not longer</h2><p class="muted">Pick a whole subject, a unit or a single topic. Every paper is freshly balanced from easy to hard, so each attempt teaches you something new.</p>' +
+          '<ul class="ticks"><li><b>Fresh paper every time</b> with fair time per question</li><li><b>Instant results</b> with the correct answer and a clear explanation</li><li><b>Unit-wise analysis</b> shows exactly where to improve</li><li><b>Image questions</b> with zoom: machines, tools, circuits, charts</li><li><b>Rapid fire</b> for quick revision once a unit is covered</li><li><b>Report</b> any doubtful question; our team reviews it</li></ul>' +
+          '<button class="btn" type="button" id="go-start2">Choose a subject →</button></div>' +
+          '<div class="split-v rv"><div class="tabs" role="tablist"><button type="button" class="on" data-tab="img">🖼️ Image questions</button><button type="button" data-tab="mcq">✍️ Technical MCQ</button></div>' +
+            '<div class="tabp" data-p="img">' + heroSamples() + '</div>' +
+            '<div class="tabp" data-p="mcq" hidden><div class="card sq"><span class="hq-dom" style="background:var(--teal)">Automobile</span><p class="mq-q">In an Ackermann steering mechanism, the correct steering condition is:</p>' +
+              ['cot φ − cot θ = w / l', 'cot φ + cot θ = w / l', 'tan φ − tan θ = w / l', 'sin φ − sin θ = w / l'].map(function (o, i) { return '<button class="sqo" data-ok="' + (i === 0) + '">' + 'ABCD'[i] + '&nbsp; ' + o + '</button>'; }).join('') +
+          
+              '<p class="small muted sqx" hidden>✓ <b>cot φ − cot θ = w / l</b>, where φ and θ are the outer and inner wheel angles, w the kingpin centre distance and l the wheelbase. Want more like this? Open <b>Fundamentals → Automobile Engineering</b>.</p></div></div></div></div>' +
+        '<h2 class="sh2" id="tracks-h">Choose what to practise</h2><p class="muted hs-sub">Open a track, tick a subject, units or single topics, then pick your time and start.</p><div class="tracks">' + tracksHtml + '</div>' +
+        '<div class="modes-wrap"><p class="f">Ways to practise</p><div class="modes">' + [
           ['📝', 'Fixed paper', 'A set number of questions with fair time for each, like a real exam.'],
           ['⚡', 'Rapid fire', 'Questions keep coming until time runs out. Unlocks after you cover all topics of a unit.'],
           ['🎯', 'Topic focus', 'Tick a single topic to master it before moving on.'],
           ['🏆', 'Ready-made tests', 'Full mock papers for exams such as RTO / MVI.'],
           ['👥', 'Group tests', 'Teachers can share one link so a whole class takes the same paper.'],
           ['🚩', 'Report & rate', 'Flag doubtful questions; repeatedly reported ones are paused for review.']
-        ].map(function (m) { return '<div class="mode"><span class="mi">' + m[0] + '</span><b>' + m[1] + '</b><p>' + m[2] + '</p></div>'; }).join('') + '</div></section>' +
-        '<section class="sample"><h2 class="sh2">Try a sample question</h2><div class="card sq"><p class="mq-q">In an Ackermann steering mechanism, the correct steering condition is:</p>' +
-          ['cot φ − cot θ = w / l', 'cot φ + cot θ = w / l', 'tan φ − tan θ = w / l', 'sin φ − sin θ = w / l'].map(function (o, i) { return '<button class="sqo" data-ok="' + (i === 0) + '">' + 'ABCD'[i] + '&nbsp; ' + o + '</button>'; }).join('') +
-          '<p class="small muted sqx" hidden>✓ <b>cot φ − cot θ = w / l</b>, where φ and θ are the outer and inner wheel angles, w the kingpin centre distance and l the wheelbase. Want more like this? Open <b>Fundamentals → Automobile Engineering</b>.</p></div></section>' +
+        ].map(function (m) { return '<div class="mode"><span class="mi">' + m[0] + '</span><b>' + m[1] + '</b><p>' + m[2] + '</p></div>'; }).join('') + '</div></div></section>' +
+
+        '<section class="hs band-b" id="jobprep"><div class="hs-top rv"><p class="eyebrow">Job Prep</p><h2 class="hs-h">Prepare for the exact company and role you want</h2><p class="muted hs-sub">Enter a company, your branch, role and level, or paste the job post. You get one clear plan covering everything that matters for that job.</p></div>' +
+          '<div class="flow rv">' + [['1', '🏢', 'Choose company & role', 'Any company, your branch and level (student, fresher, experienced).'], ['2', '📚', 'Subjects & topics', 'The topics that matter most, linked to one-click practice.'], ['3', '⚙️', 'Software to learn', 'From real job posts: 🔥 asked now, ↑ rising, or used earlier.'], ['4', '🎤', 'Interview: Technical & HR', 'Questions reported for that company, with model answers.']]
+            .map(function (s) { return '<div class="flow-s"><span class="flow-n">' + s[0] + '</span><span class="flow-i">' + s[1] + '</span><b>' + s[2] + '</b><p>' + s[3] + '</p></div>'; }).join('') + '</div>' +
+          '<div class="plan-demo rv"><div class="pd-h"><span class="pd-logo">H</span><div><b>Hero MotoCorp</b><small>Graduate Engineer Trainee · Mechanical · Fresher</small></div><span class="pill good">Sample plan</span></div>' +
+            '<div class="pd-g"><div><p class="f">🔥 Software asked now</p><div class="chips">' + ['SAP', 'MS Excel', 'ANSYS', 'AutoCAD', 'Teamcenter', 'Minitab'].map(function (x) { return '<span class="chip">' + x + '</span>'; }).join('') + '</div></div>' +
+            '<div><p class="f">📚 Top topics</p><div class="chips">' + ['Manufacturing processes', 'Lean & Kaizen', 'Quality tools', 'IC engines'].map(function (x) { return '<span class="chip">' + x + '</span>'; }).join('') + '</div></div>' +
+            '<div class="pd-q"><p class="f">🎤 Asked at this company</p><p><b>Q.</b> What is OEE and how is it calculated?</p><p class="small muted">Availability × Performance × Quality; about 85% is world class.</p></div></div>' +
+            '<p class="small muted pd-note">Also included: a detailed company profile (products, customers, competitors, official website) to help in written tests, interviews and your final decision.</p>' +
+            '<div class="row" style="gap:10px"><a class="btn" href="/career" data-link>Build my plan →</a><span class="small muted">No sign-up needed to see your plan.</span></div></div></section>' +
+
+        '<section class="hs band-c" id="resume"><div class="split rev"><div class="split-t rv"><p class="eyebrow">Resume Builder</p><h2 class="hs-h">An ATS-ready resume in minutes, and one for every job</h2><p class="muted">Most companies screen resumes with software before a person reads them. Our builder is designed to pass that step, and it is free without limits.</p>' +
+          '<ul class="ticks"><li><b>Live ATS score</b> with clear fixes, updated as you type</li><li><b>Paste a job description</b> to see your % match and the exact keywords you are missing</li><li><b>Duplicate in one click</b>: change the company or a few keywords and keep a resume for every job</li><li><b>Unlimited downloads</b> in PDF and Word, no watermark</li><li><b>Keywords from real job posts</b>, including your target company</li></ul>' +
+          '<a class="btn" href="/resume" data-link>Build my resume →</a></div>' +
+          '<div class="split-v rv"><div class="cv-demo"><div class="cv-paper"><b class="cv-n">Rohit Sharma</b><span class="cv-c">rohit.sharma@gmail.com · Ajmer, Rajasthan · linkedin.com/in/rohit</span>' +
+            '<i class="cv-h">EDUCATION</i><span class="cv-l w9"></span><span class="cv-l w6"></span><i class="cv-h">TECHNICAL SKILLS</i><span class="cv-l w8"></span><span class="cv-l w7"></span><i class="cv-h">INTERNSHIPS</i><span class="cv-l w9"></span><span class="cv-l w8"></span><span class="cv-l w5"></span><i class="cv-h">PROJECTS</i><span class="cv-l w9"></span><span class="cv-l w7"></span></div>' +
+            '<div class="cv-badge b1"><b>86</b><span>/100 ATS score</span></div><div class="cv-badge b2"><b>82%</b><span>match with job post</span></div><div class="cv-badge b3"><span>📄 CV – Hero MotoCorp</span><span>📄 CV – Shree Cement</span><span>📄 CV – Tata Motors</span></div><div class="cv-badge b4">⬇ PDF · Word</div></div></div></div></section>' +
+
+        '<section class="whystrip"><div class="whystrip-h"><b>Why students choose VKV Sir Test Lab</b><a href="/why" data-link>See all features →</a></div><div class="whystrip-g">' +
+          [['🎯', 'Fresh, balanced papers', 'A new mix of easy, moderate and hard every time'], ['🖼️', 'Image-based questions', 'Diagrams, 3D parts, charts and figures, with zoom'], ['🏢', 'Company-wise preparation', 'Software and interview questions from real job posts'], ['📄', 'Free ATS resume builder', 'Unlimited PDF & Word downloads, keyword score'], ['🧑‍🏫', 'Expert-checked', 'Every question reviewed; report anything doubtful'], ['💯', 'Free forever', 'No paywalls and no download limits']]
+            .map(function (x) { return '<div class="whyi"><span>' + x[0] + '</span><div><b>' + x[1] + '</b><small>' + x[2] + '</small></div></div>'; }).join('') + '</div></section>' +
+        
+        '<section class="hs faq rv"><h2 class="hs-h center">Frequently asked questions</h2><div class="faq-l">' + [
+          ['Is everything really free?', 'Yes. Practice tests, Job Prep plans and the resume builder are free, with unlimited resume downloads in PDF and Word.'],
+          ['Do I need to sign in?', 'You can explore, build a plan and make a resume without signing in. Sign in to start tests, save results and keep your resumes in your account.'],
+          ['Where do the company software lists come from?', 'From real, dated job posts and company career pages, updated regularly. For small companies we show what similar companies in the same field ask for.'],
+          ['How accurate are the questions?', 'Every question is prepared and reviewed by our team. If you find a doubtful answer, tap Report and it is reviewed promptly.'],
+          ['Can I make different resumes for different companies?', 'Yes. Duplicate a resume, change the company or keywords, and keep as many versions as you need.']
+        ].map(function (f) { return '<details><summary>' + f[0] + '</summary><p>' + f[1] + '</p></details>'; }).join('') + '</div></section>' +
         '<section class="ask" id="ask"><div><h2 class="sh2" style="margin:0 0 6px">Didn\'t find your exam or topic? Ask for it.</h2><p class="muted">Tell us the subject, exam, or the company and role you are preparing for. We build new question banks from these requests.</p>' +
           '<a class="btn" href="' + (session ? '/me#suggest' : '/login?next=/me') + '" data-link>💡 Send your request</a><p class="small muted" style="margin-top:8px">Find the request box on <b>My dashboard</b> and below every result.</p></div>' +
           '<div class="reqs"><p class="small muted" style="margin:0 0 8px">Examples of requests you can send:</p>' + [
@@ -290,6 +337,9 @@
           .catch(function (e) { var m = errMsg(e); if (m === 'PROFILE_INCOMPLETE') return go('/profile?next=' + location.pathname); q('#se').textContent = lockText(m); g.disabled = false; g.textContent = 'Start practice'; });
       };
       q('#go-start').onclick = function () { var t = q('#tr0'); t.open = true; t.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+      var gs2 = q('#go-start2'); if (gs2) gs2.onclick = q('#go-start').onclick;
+      $view.querySelectorAll('.tabs button').forEach(function (b) { b.onclick = function () { var t = b.getAttribute('data-tab'); b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); $view.querySelectorAll('.tabp').forEach(function (p) { p.hidden = p.getAttribute('data-p') !== t; }); }; });
+      $view.querySelectorAll('.trio-c').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var t = document.getElementById(a.getAttribute('href').slice(1)); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
       $view.querySelectorAll('.sqo').forEach(function (b) { b.onclick = function () { $view.querySelectorAll('.sqo').forEach(function (x) { x.disabled = true; x.classList.add(x.getAttribute('data-ok') === 'true' ? 'ok' : (x === b ? 'bad' : '')); }); q('.sqx').hidden = false; }; });
       setTimeout(function () { tour([
         ['.hx-cta', 'Welcome to VKV Sir Test Lab 👋', 'A free practice platform for semester exams, viva, competitive exams and interviews. Tap “Start practising” any time.'],
@@ -312,7 +362,7 @@
       ['5. Exam patterns and names', 'Names of examinations, universities, boards, organisations or companies are used only to describe the nature or level of practice. Questions are not official, previous-year or leaked papers unless expressly stated, and no affiliation, endorsement or sponsorship is implied.'],
       ['6. Scores and rankings', 'Scores, leaderboards, timings and analyses are indicative only, may change as content is corrected, and do not predict or guarantee performance, selection or results in any examination or interview.'],
       ['7. Different opinion? Report it', 'If you find an answer that differs from your reference book or seems ambiguous, tap Report on that question during the quiz or from your result page, where the correct answer and explanation for each question are shown. Our team reviews every report and updates content where needed; decisions on changes rest with the platform.'],
-      ['8. Limitation of liability', 'To the maximum extent permitted by law, VKV Sir Test Lab, Dr. Vinod Kumar Verma and associated contributors shall not be liable for any direct, indirect, incidental or consequential loss, damage, claim or grievance arising from the use of, or reliance on, any content, answer, score or service of this platform.'],
+      ['8. Limitation of liability', 'To the maximum extent permitted by law, VKV Sir Test Lab, the VKV Sir team and associated contributors shall not be liable for any direct, indirect, incidental or consequential loss, damage, claim or grievance arising from the use of, or reliance on, any content, answer, score or service of this platform.'],
       ['9. Fair use and conduct', 'Content is for personal, non-commercial learning. Copying, scraping, republishing or redistributing questions, or misusing the platform, is not permitted. Accounts may be restricted for misuse, unfair means or attempts to manipulate scores or feedback.'],
       ['10. Changes and acceptance', 'These terms may be updated at any time without prior notice; the version on this page applies. By accessing or using this platform, you acknowledge that you have read, understood and accepted this disclaimer and these terms. Any dispute shall be subject to the jurisdiction of courts at Ajmer, Rajasthan, India.']
     ];
@@ -592,7 +642,7 @@
       wrap.innerHTML = '<div class="pdfx-h"><b>VKV Sir Test Lab</b> · Interview Preparation Plan<span>test.vkvsir.com</span></div>' + src.outerHTML +
         '<div class="pdfx-f">Prepared on VKV Sir Test Lab (test.vkvsir.com) · www.vkvsir.com · Practise every topic free online</div>';
       Array.prototype.forEach.call(wrap.querySelectorAll('button,.btn'), function (b) { b.remove(); });
-      Array.prototype.forEach.call(wrap.querySelectorAll('.rv,.in'), function (el) { el.classList.remove('rv', 'in'); });
+      Array.prototype.forEach.call(wrap.querySelectorAll('.rv,.rv-in'), function (el) { el.classList.remove('rv', 'rv-in'); });
       // <details> is drawn badly by the PDF renderer (text overlaps): turn each one into plain, always-open blocks
       Array.prototype.forEach.call(wrap.querySelectorAll('details'), function (d) {
         var box = document.createElement('div'); box.className = 'pdq ' + (d.className || '');
@@ -638,7 +688,7 @@
         (how ? '<details class="why-how"><summary>How to use it</summary><ol>' + how.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ol></details>' : '') + '</section>';
     }
     h('<div class="why narrow-wide"><div class="why-hero"><p class="eyebrow">About the platform</p><h1>World-class preparation, <em>completely free</em>.</h1>' +
-      '<p class="muted">VKV Sir Test Lab brings practice tests, company-wise job preparation and a professional resume builder together in one place, built and reviewed by Dr. Vinod Kumar Verma for semester exams, competitive exams and campus placements.</p>' +
+      '<p class="muted">VKV Sir Test Lab brings practice tests, company-wise job preparation and a professional resume builder together in one place, built and reviewed by the VKV Sir team of experts for semester exams, competitive exams and campus placements.</p>' +
       '<nav class="why-toc">' + [['tests', 'Practice tests'], ['images', 'Image questions'], ['jobprep', 'Job Prep'], ['resume', 'Resume builder'], ['trust', 'Quality & fairness']].map(function (t) { return '<a href="#' + t[0] + '">' + t[1] + '</a>'; }).join('') + '</nav></div>' +
       sec('tests', '🎯', 'Practice tests that adapt to you', 'Pick a subject, unit or single topic and get a freshly balanced paper in seconds.', [
         ['Fresh paper every time:', 'questions are mixed from easy to hard, so repeated attempts stay useful.'],
@@ -690,7 +740,7 @@
     var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, get session() { return session; }, get profile() { return profile; } };
     function run() { window.RB.render(api); }
     if (window.RB) return run();
-    var s = document.createElement('script'); s.src = '/resume.js?v=6'; s.onload = run;
+    var s = document.createElement('script'); s.src = '/resume.js?v=7'; s.onload = run;
     s.onerror = function () { h('<div class="card narrow center"><p>Could not load the resume builder. Please refresh.</p></div>'); };
     document.head.appendChild(s);
   }
@@ -847,7 +897,7 @@
         row('Turnover', pf.revenue || (W.revenue ? [W.revenue + (W.net_income ? ' (net profit ' + W.net_income + ')' : '')] : null)); row('Growth trend', pf.trend);
         row('Key products', pf.products || sp(W.products) || (S.products && S.products.filter(function (x) { return x.length < 45 && !/^\d|we follow|our .*capabilities|transforming/i.test(x); }).length ? S.products.filter(function (x) { return x.length < 45 && !/^\d|we follow|our .*capabilities|transforming/i.test(x); }).slice(0, 8) : null) || (c.products ? [c.products] : null));
         chips('Services', (S.services || []).filter(function (x) { return x.length < 45 && !/trusted|we offer|challenges|^ai services$/i.test(x); }).slice(0, 12));
-        chips('Industries served', (S.industries || []).filter(function (x) { return x.length < 40 && !/we offer|solutions$/i.test(x); }).slice(0, 10));
+        chips('Industries served', (S.industries || []).filter(function (x) { return x.length < 40 && !/we offer|solutions$/i.test(x); chips('Customers & clients', (S.clients || []).filter(function (x) { return x.length > 2 && x.length < 40 && !/client|customer|testimonial|case stud|our work|portfolio/i.test(x); }).slice(0, 10)); row('Markets served', sp(W.area_served)); }).slice(0, 10));
         chips('Technologies used', S.tech);
         row('Recent work / case studies', (S.clients || []).filter(function (x) { return x.length > 25; }).slice(0, 5));
         row('Roles they hire for', (S.careers || []).filter(function (x) { return x.length < 45 && !/we are|synergize|opportunit|join|life|culture/i.test(x); }).slice(0, 8));
@@ -1178,11 +1228,11 @@
   /* ---------- light animations: reveal on scroll + count-up ---------- */
   function animateIn() {
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var els = document.querySelectorAll('.card, .tr-item, .trk, .st, .ab-card, .reveal');
-    if (!('IntersectionObserver' in window) || reduce) { Array.prototype.forEach.call(els, function (e) { e.classList.add('in'); }); return; }
-    var io = new IntersectionObserver(function (es) { es.forEach(function (en) { if (!en.isIntersecting) return; var e = en.target; e.classList.add('in'); io.unobserve(e);
+    var els = document.querySelectorAll('.card, .tr-item, .trk, .st, .ab-card, .reveal, .rv');
+    if (!('IntersectionObserver' in window) || reduce) { Array.prototype.forEach.call(els, function (e) { e.classList.add('rv-in'); }); return; }
+    var io = new IntersectionObserver(function (es) { es.forEach(function (en) { if (!en.isIntersecting) return; var e = en.target; e.classList.add('rv-in'); io.unobserve(e);
       Array.prototype.forEach.call(e.querySelectorAll ? e.querySelectorAll('.cnt') : [], function (c) { var to = +c.getAttribute('data-to'), t0 = performance.now(); (function tick(t) { var k = Math.min(1, (t - t0) / 900); c.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(tick); })(t0); }); }); }, { threshold: 0.08 });
-    Array.prototype.forEach.call(els, function (e) { if (!e.classList.contains('in')) { e.classList.add('rv'); io.observe(e); } });
+    Array.prototype.forEach.call(els, function (e) { if (!e.classList.contains('rv-in')) { e.classList.add('rv'); io.observe(e); } });
   }
   new MutationObserver(function () { clearTimeout(animateIn.t); animateIn.t = setTimeout(animateIn, 60); }).observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
   window.addEventListener('scroll', function () { var b = document.getElementById('bar'); if (b) b.classList.toggle('scrolled', scrollY > 8); }, { passive: true });
@@ -1752,7 +1802,7 @@
                 document.body.appendChild(m);
               }).catch(function (e) { toast(errMsg(e)); });
             }
-            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=6'; s.onload = show; document.head.appendChild(s); }
+            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=7'; s.onload = show; document.head.appendChild(s); }
           };
         });
       }).catch(function (e) { box.innerHTML = '<div class="card"><p>' + esc(errMsg(e)) + '</p></div>'; });
