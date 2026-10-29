@@ -1626,17 +1626,40 @@
           '<div class="rfb" data-no="' + x.no + '"><span class="small muted">Is this answer right?</span><button type="button" class="icon-btn" data-r="1" aria-pressed="false" aria-label="Looks right">' + THUMB_UP + '</button><button type="button" class="icon-btn" data-r="-1" aria-pressed="false" aria-label="I have a concern">' + THUMB_DN + '</button>' +
           '<div class="chips" hidden>' + RFLAGS.map(function (f) { return '<button type="button" class="chip" aria-pressed="false" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div></div>';
       }).join('');
-      h('<div class="stack" style="max-width:760px;margin:0 auto"><div class="card"><div class="score-hero">' +
+      var acc = r.attempted ? Math.round(100 * r.score / r.attempted) : 0, att = r.n ? Math.round(100 * r.attempted / r.n) : 0;
+      var V = pct >= 85 ? ['great', '🏆 Excellent', 'You have a strong grip on this. Move to harder topics or a full-length paper.'] : pct >= 70 ? ['good', '👍 Good', 'Solid work. Fix the few weak spots below to reach the top band.'] : pct >= 50 ? ['fair', '📈 Getting there', 'You know the basics. Practise the units marked “Focus” and you will improve quickly.'] : ['low', '🎯 Needs practice', 'Start with the explanations below, then practise one unit at a time.'];
+      var tip = acc >= 80 && att < 75 ? 'Your accuracy is high but you left many questions. Try to attempt more; time management will raise your score.' : acc < 60 && att >= 85 ? 'You attempted almost everything but accuracy is low. Slow down a little and avoid guessing.' : '';
+      var units = (r.units || []).map(function (u) { var p = u.n ? Math.round(100 * u.ok / u.n) : 0; return { u: u, p: p, band: p >= 75 ? 'strong' : p >= 50 ? 'mid' : 'weak' }; }).sort(function (a, b) { return a.p - b.p; });
+      function ulink(u) { return u.subject ? '/p/' + String(u.subject).toLowerCase() + '/' + u.unit : '/'; }
+      var tcount = {}; (r.review || []).forEach(function (x) { if (x.topic) tcount[x.topic] = (tcount[x.topic] || 0) + 1; });
+      var topics = Object.keys(tcount).sort(function (a, b) { return tcount[b] - tcount[a]; }).slice(0, 6);
+      var weak = units.filter(function (x) { return x.band === 'weak'; }), mid = units.filter(function (x) { return x.band === 'mid'; });
+      var steps = [];
+      if (rev) steps.push(['📖', 'Read every explanation below', 'Understand why the correct answer is right before practising again.']);
+      if (weak.length) steps.push(['🎯', 'Practise ' + esc(weak[0].u.name), 'Your lowest unit (' + weak[0].p + '%). A short unit test now will lift it fastest.', ulink(weak[0].u)]);
+      else if (mid.length) steps.push(['🎯', 'Strengthen ' + esc(mid[0].u.name), 'Push this unit above 75%.', ulink(mid[0].u)]);
+      steps.push(['⚡', 'Revise with Rapid fire', 'Once a unit is covered, rapid fire builds speed and recall.']);
+      steps.push(['🔁', 'Retake in 2–3 days', 'A fresh paper on the same topics shows whether it stuck.']);
+      h('<div class="res" style="max-width:860px;margin:0 auto">' +
+        '<div class="card res-top res-' + V[0] + '"><div class="score-hero">' +
         '<svg class="ring" viewBox="0 0 132 132" role="img" aria-label="Score ' + pct + ' percent"><circle class="bg" cx="66" cy="66" r="54" fill="none" stroke-width="10"/>' +
         '<circle class="fg" cx="66" cy="66" r="54" fill="none" stroke-width="10" stroke-linecap="round" transform="rotate(-90 66 66)" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - pct / 100)) + '"/>' +
         '<text x="66" y="76" text-anchor="middle">' + pct + '%</text></svg>' +
-        '<div><p class="eyebrow">' + esc(r.title) + '</p><div class="big">' + r.score + '<span class="muted" style="font-size:28px"> / ' + r.n + '</span></div>' +
-        '<p class="muted" style="margin-top:8px">' + esc(r.end_reason || '') + ' &middot; ' + esc(fmtDate(r.finished_at)) + (r.strikes ? ' &middot; ' + r.strikes + ' penalty pause(s)' : '') + '</p></div></div>' +
-        '<div class="tiles" style="margin-top:18px"><div class="tile"><b style="color:var(--good)">' + r.score + '</b><span>Correct</span></div><div class="tile"><b style="color:var(--bad)">' + wrong + '</b><span>Wrong</span></div><div class="tile"><b style="color:var(--warn)">' + skip + '</b><span>Not answered</span></div></div>' +
-        (r.units && r.units.length > 1 ? '<h3 style="margin-top:18px">By unit</h3>' + unitBars(r.units, 'ok') : '') +
-        '<div class="row" style="margin-top:18px">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/" data-link>Practise again</a><a class="btn ghost" href="/me" data-link>My dashboard</a>') + '</div></div>' +
-        (rev ? '<h2 style="margin-top:28px">Learn from your mistakes</h2><p class="small muted">Questions you missed, with the right answer.</p>' + rev : '<div class="card center"><h2>Perfect score!</h2><p class="muted">Every answer was correct.</p></div>') + '</div>');
-      var rv = q('.stack'); if (rv) rv.insertAdjacentHTML('beforeend', '<p class="small muted" style="text-align:center;margin:4px 0 0">Questions are expert-prepared and double-checked. Although every answer is carefully reviewed, if you find any ambiguity in an answer or in the wording, use 🚩 <b>Report</b> on that question; our team reviews every report. <a href="/disclaimer" data-link>Terms of use</a></p>' + suggestBox());
+        '<div class="res-h"><p class="eyebrow">' + esc(r.title) + '</p><div class="res-v">' + V[1] + '</div><div class="big">' + r.score + '<span class="muted"> / ' + r.n + '</span></div>' +
+        '<p class="muted small">' + esc(r.end_reason || '') + ' · ' + esc(fmtDate(r.finished_at)) + (r.strikes ? ' · ' + r.strikes + ' penalty pause(s)' : '') + '</p></div></div>' +
+        '<p class="res-msg">' + V[2] + '</p>' +
+        '<div class="res-tiles"><div><b class="g">' + r.score + '</b><span>Correct</span></div><div><b class="b">' + wrong + '</b><span>Wrong</span></div><div><b class="w">' + skip + '</b><span>Not answered</span></div><div><b>' + acc + '%</b><span>Accuracy</span></div><div><b>' + att + '%</b><span>Attempted</span></div></div>' +
+        (tip ? '<div class="res-tip">💡 ' + tip + '</div>' : '') +
+        '<div class="row res-act">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/" data-link>Practise again</a><a class="btn ghost" href="/me" data-link>My dashboard</a>') + '</div></div>' +
+        (units.length ? '<div class="card"><h2>Unit-wise analysis</h2><p class="small muted" style="margin-top:-6px">Sorted from weakest to strongest. Practise the red ones first.</p><div class="ua">' +
+          units.map(function (x) { return '<div class="ua-i ' + x.band + '"><div class="ua-t"><b>' + esc(x.u.name) + '</b><span class="pill">' + (x.band === 'strong' ? 'Strong' : x.band === 'mid' ? 'Improve' : 'Focus') + '</span></div><div class="ua-bar"><i style="width:' + x.p + '%"></i></div><div class="ua-m"><span>' + x.u.ok + ' / ' + x.u.n + ' correct · ' + x.p + '%</span>' + (!tok && x.band !== 'strong' && x.u.subject ? '<a href="' + ulink(x.u) + '" data-link>Practise this unit →</a>' : '') + '</div></div>'; }).join('') + '</div>' +
+          (topics.length ? '<p class="f" style="margin-top:14px">Topics to revise</p><div class="chips">' + topics.map(function (t) { return '<span class="chip">' + esc(t) + (tcount[t] > 1 ? ' · ' + tcount[t] : '') + '</span>'; }).join('') + '</div>' : '') + '</div>' : '') +
+        '<div class="card"><h2>Your next steps</h2><div class="nx">' + steps.map(function (s, k) { return (s[3] && !tok ? '<a class="nx-i" href="' + s[3] + '" data-link>' : '<div class="nx-i">') + '<span class="nx-n">' + (k + 1) + '</span><span class="nx-e">' + s[0] + '</span><div><b>' + s[1] + '</b><p>' + s[2] + '</p></div>' + (s[3] && !tok ? '</a>' : '</div>'); }).join('') + '</div></div>' +
+        (rev ? '<div class="res-rv"><div class="spread res-rvh"><div><h2>Learn from your mistakes</h2><p class="small muted">Questions you missed, with the right answer and explanation.</p></div>' +
+          '<div class="tabs" id="rvf"><button type="button" class="on" data-f="all">All</button><button type="button" data-f="no">Wrong · ' + wrong + '</button><button type="button" data-f="skip">Not answered · ' + skip + '</button></div></div>' + rev + '</div>'
+          : '<div class="card center"><h2>Perfect score! 🎉</h2><p class="muted">Every answer was correct.</p></div>') + '</div>');
+      var rvf = q('#rvf'); if (rvf) rvf.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; rvf.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); var f = b.dataset.f; $view.querySelectorAll('.review').forEach(function (rw) { rw.hidden = f !== 'all' && !rw.classList.contains(f); }); };
+      var rv = q('.res'); if (rv) rv.insertAdjacentHTML('beforeend', '<p class="small muted" style="text-align:center;margin:4px 0 0">Questions are expert-prepared and double-checked. Although every answer is carefully reviewed, if you find any ambiguity in an answer or in the wording, use 🚩 <b>Report</b> on that question; our team reviews every report. <a href="/disclaimer" data-link>Terms of use</a></p>' + suggestBox());
       renderMath($view);
       $view.querySelectorAll('.rfb').forEach(function (box) {
         var no = +box.getAttribute('data-no'), rating = null, flags = [], chips = box.querySelector('.chips');
@@ -1680,7 +1703,7 @@
       h('<div class="stack"><div class="spread"><div><p class="eyebrow">Dashboard</p><h1>Hello, ' + esc(name) + '</h1>' +
         '<p class="muted small" style="margin:0">' + (d.last ? 'Last test: ' + esc(fmtDate(d.last)) : 'No tests yet') + '</p></div><a class="btn ghost" href="/profile" data-link>Edit profile</a></div>' +
         (d.locked > 0 ? '<div class="note">You are paused for leaving a test screen. You can start again in ' + mmss(d.locked * 1000) + '.</div>' : '') +
-        '<div id="cat"></div>' +
+        '<div class="qa">' + [['🎯', 'Practise', 'Start a new test', '#cat'], ['🏢', 'Job Prep', 'Plan for a company', '/career'], ['📄', 'My resumes', 'Build or update', '/resume']].map(function (x) { return '<a class="qa-i" href="' + x[3] + '"' + (x[3].charAt(0) === '/' ? ' data-link' : '') + '><span>' + x[0] + '</span><b>' + x[1] + '</b><small>' + x[2] + '</small></a>'; }).join('') + '</div>' +
         '<div class="tiles"><div class="tile"><b>' + done.length + '</b><span>Tests taken</span></div><div class="tile"><b>' + avg + (avg === '–' ? '' : '%') + '</b><span>Average score</span></div>' +
         '<div class="tile"><b>' + best + (best === '–' ? '' : '%') + '</b><span>Best score</span></div><div class="tile"><b>' + (tot.correct + tot.wrong + tot.skipped) + '</b><span>Questions seen</span></div></div>' +
         (done.length ? '<div class="grid2"><section class="card"><h3>All answers so far</h3>' + donut([{ l: 'Correct', v: tot.correct, c: 'var(--good)' }, { l: 'Wrong', v: tot.wrong, c: 'var(--bad)' }, { l: 'Not answered', v: tot.skipped, c: 'var(--warn)' }]) + '</section>' +
@@ -1688,8 +1711,10 @@
         (d.units && d.units.length ? '<section class="card"><h3>Accuracy by unit</h3>' + unitBars(d.units) + '</section>' : '') +
         (weak ? '<section class="card"><h3>Focus areas</h3><p class="small muted">Your weakest topics first. Practise these next.</p><div class="bars">' + weak + '</div></section>' : '') +
         '<section class="card"><div class="spread"><h2 style="margin:0">History</h2></div><div class="list" style="margin-top:8px">' + hist + '</div></section>' +
+        '<section class="dash-cat"><h2>Start a new test</h2><p class="small muted">Open a track, tick a subject, units or topics, then choose your time.</p><div id="cat"></div></section>' +
         '<a class="wa-card" href="https://whatsapp.com/channel/0029Va5ka1rFHWq4y4OcYy3U" target="_blank" rel="noopener"><svg viewBox=\"0 0 32 32\" width=\"30\" height=\"30\" aria-hidden=\"true\" style=\"vertical-align:-4px\"><path fill=\"#25D366\" d=\"M16 3C9 3 3.3 8.6 3.3 15.6c0 2.4.7 4.6 1.9 6.6L3 29l7-2.2c1.9 1 4 1.6 6.1 1.6 7 0 12.7-5.7 12.7-12.7S23 3 16 3z\"/><path fill=\"#fff\" d=\"M22.6 18.9c-.3-.2-2-1-2.3-1.1-.3-.1-.5-.2-.8.2-.2.3-.9 1.1-1.1 1.3-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.7-1.7-1-.9-1.7-2-1.9-2.3-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.4 0-.6l-1-2.5c-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.4 1.4 3.6c.2.2 2.4 3.7 5.9 5.2.8.4 1.5.6 2 .7.8.3 1.6.2 2.2.1.7-.1 2-.8 2.3-1.6.3-.8.3-1.5.2-1.6-.1-.1-.3-.2-.6-.4z\"/></svg><span><b>Follow VKV Sir on WhatsApp</b><small>Openings, opportunities, new tests &amp; updates</small></span><span>&rarr;</span></a>' + suggestBox() + boardCard(board, 'Top performers') + shareBar(location.origin + '/', 'I practise with VKV Sir Test Lab. Free quizzes with instant results:', 'Invite friends:') + '</div>');
       mountCatalog(q('#cat'));
+      var qa1 = $view.querySelector('.qa-i[href="#cat"]'); if (qa1) qa1.onclick = function (ev) { ev.preventDefault(); q('#cat').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
 
