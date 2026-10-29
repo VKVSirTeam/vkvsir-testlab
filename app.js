@@ -994,6 +994,15 @@
         if (sw0) secEl.insertBefore(box, sw0); else if (gen) secEl.insertBefore(box, gen); else secEl.insertBefore(box, secEl.querySelector('.row'));
       }).catch(function () {});
     }
+    if (coName) rpc('jp_company_pay_for', { p_company: coName }).then(function (rows) {
+      if (!rows || !rows.length || !secEl) return;
+      var srcs = []; rows.forEach(function (r) { if (r.url && !srcs.some(function (s) { return s[1] === r.url; })) srcs.push([r.source, r.url]); });
+      var box = document.createElement('div'); box.className = 'card payc';
+      box.innerHTML = '<h2>💼 Salary &amp; career path</h2><p class="small muted" style="margin-top:-6px">Typical pay at each level and usual time before the next promotion. Approximate; actual figures depend on performance, location and company policy.</p>' +
+        '<ol class="ladder">' + rows.map(function (r, i) { return '<li><span class="ld-n">' + (i + 1) + '</span><div class="ld-c"><b>' + esc(r.title) + '</b><span class="ld-pay">' + esc(r.pay) + '</span>' + (r.years && r.years !== '—' ? '<small>⏱ ' + esc(r.years) + '</small>' : '') + (r.note ? '<small class="ld-note">' + esc(r.note) + '</small>' : '') + '</div></li>'; }).join('') + '</ol>' +
+        '<p class="small muted ld-src">Sources: ' + srcs.map(function (s) { return '<a href="' + esc(s[1]) + '" target="_blank" rel="noopener">' + esc(s[0]) + '</a>'; }).join(' · ') + '</p>';
+      var a3 = secEl.querySelector('.salc') || secEl.querySelector('.swfp') || secEl.querySelector('.jp-swt'); if (a3) secEl.insertBefore(box, a3); else secEl.insertBefore(box, secEl.querySelector('.row'));
+    }).catch(function () {});
     if (coName) rpc('jp_company_salary', { p_company: coName }).then(function (rows) {
       if (!rows || !rows.length || !secEl) return;
       var LV = { fresher: 'Fresher (0–1 yr)', junior: '2–4 years', senior: '5+ years' };
