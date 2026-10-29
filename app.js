@@ -710,8 +710,9 @@
       var levels = [['student', 'Student', 'Still studying'], ['fresher', 'Fresher', '0 to 1 year'], ['junior', 'Experienced', '2 to 4 years'], ['senior', 'Senior', '5+ years']];
       h('<section class="hero jp-hero"><p class="eyebrow">Career &amp; interview preparation</p><h1>Know exactly what to prepare for <em>your</em> target job.</h1>' +
 
-        '<details class="softinfo"><summary>How your plan is built</summary><p>We match your role and branch to the topics, software and interview questions that matter. For the company, we use its <b>current job posts</b> (read nightly from career pages and hiring systems, and refreshed when you search) to show which software it is asking for now. If we have little data for a company, we show what similar companies in the same field ask for. <a href="/why#jobprep" data-link>Learn more</a></p></details>' +
+
         '<p class="muted" style="max-width:680px">Tell us the company, role and branch, or paste the job post. You get a clear plan: the most important subjects and topics, what to refresh, software to learn, likely interview questions, and one-click practice for each topic.</p></section>' +
+        '<details class="softinfo"><summary>How your plan is built</summary><p>We match your role and branch to the topics, software and interview questions that matter. For the company, we use its <b>current job posts</b> (read nightly from career pages and hiring systems, and refreshed when you search) to show which software it is asking for now. If we have little data for a company, we show what similar companies in the same field ask for. <a href="/why#jobprep" data-link>Learn more</a></p></details>' +
         '<div class="card stack jp-form">' +
         '<div class="two"><div><label class="f" for="jc">Company (optional)</label><input class="in" id="jc" list="jcl" placeholder="e.g. Tata Motors, Infosys, L&amp;T" autocomplete="off"><datalist id="jcl">' + (o.companies || []).map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist><input class="in" id="ju" placeholder="Company website (optional), e.g. www.tatamotors.com" style="margin-top:6px"></div>' +
         '<div><label class="f" for="jr">Job role</label><select class="in" id="jr">' + roleOpts + '</select></div></div>' +
@@ -720,7 +721,8 @@
         '<div><label class="f" for="jt">Job post or description (optional, but gives the best result)</label><textarea class="in" id="jt" rows="6" placeholder="Paste the full job post text from LinkedIn, Naukri, the company careers page or the campus notice. Include skills, eligibility and responsibilities."></textarea>' +
         '<p class="small muted" style="margin:6px 0 0">Tip: links cannot be opened automatically (LinkedIn and Naukri block it). Open the post, select all its text, copy and paste it here.</p></div>' +
         '<div class="err" id="je" role="alert"></div><button class="btn block" id="jgo">Build my preparation plan</button></div>' +
-        '<div id="jout"></div>');
+        '<div id="iqr-slot"></div><div id="jout"></div>');
+      q('#iqr-slot').appendChild(reportBox(saved.company || '', ''));
       var level = saved.level || 'fresher';
       function setLevel(v) { level = v; Array.prototype.forEach.call(q('#jl').children, function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-l') === v); }); }
       setLevel(level);
@@ -830,6 +832,8 @@
         if (F.team) keyFacts.push(F.team); if (F.clients) keyFacts.push(F.clients); if (F.projects) keyFacts.push(F.projects);
         if (F.countries) keyFacts.push('Serves ' + F.countries); if (F.experience) keyFacts.push(F.experience);
         row('Full name', pf.full_name || (L.wiki && L.wiki.title) || c.name || S.name);
+        var off = L.official || c.website || S.url;
+        if (off) { var offU = /^https?:/.test(off) ? off : 'https://' + off; rows.push('<div class="cp-r"><span>Official website</span><div><a href="' + esc(offU) + '" target="_blank" rel="noopener">' + esc(offU.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')) + ' ↗</a></div></div>'); }
         row('Industry', c.industry || comp.industry || W.industry);
         row('Type', W.type);
         row('Founded', pf.founded || W.founded || F.founded); row('Founders', sp(W.founders) || (S.founder ? [S.founder] : null));
@@ -961,7 +965,6 @@
         block('Likely technical interview questions', tech, 'Try answering aloud first, then tap to see a model answer and key points.') +
         block('HR &amp; behavioural questions', hr, 'Prepare your own honest version of each answer.');
       var sec = q('#jout section'); if (sec) sec.insertBefore(box, sec.querySelector('.row'));
-      if (sec) sec.insertBefore(reportBox(coName, p.role ? p.role.name : ''), sec.querySelector('.row'));
     }).catch(function () {});
     if (profile && profile.is_admin) { var a = document.createElement('p'); a.className = 'small'; a.innerHTML = '<a href="/admin/jobprep" data-link>Admin: see what students are asking for →</a>'; q('#jout').appendChild(a); }
   }
@@ -995,14 +998,17 @@
 
   /* ---------- students share interview questions (reviewed before publishing) ---------- */
   function reportBox(company, role) {
-    var d = document.createElement('div'); d.className = 'card iqr no-pdf';
-    var yr = new Date().getFullYear();
-    d.innerHTML = '<h2>🎤 Interviewed recently? Help your juniors</h2><p class="small muted" style="margin-top:-6px">Share the questions you were asked. We check each one, add a model answer and show it to students preparing for the same company.</p>' +
-      '<div class="two"><div><label class="f">Company</label><input class="in" id="iqr-co" value="' + esc(company || '') + '" placeholder="Company name"></div><div><label class="f">Role / post</label><input class="in" id="iqr-ro" value="' + esc(role || '') + '" placeholder="e.g. GET Mechanical"></div></div>' +
+    var d = document.createElement('details'); d.className = 'card iqr no-pdf';
+    var yr = new Date().getFullYear(), O = jpOpts || {};
+    var roleList = '<datalist id="iqr-rl">' + (O.roles || []).map(function (r) { return '<option value="' + esc(r.name) + '">' + esc(r.family || '') + '</option>'; }).join('') + '</datalist>';
+    var coList = '<datalist id="iqr-cl">' + (O.companies || []).map(function (c) { return '<option value="' + esc(typeof c === 'string' ? c : c.name) + '">'; }).join('') + '</datalist>';
+    d.innerHTML = '<summary><span class="iqr-ic">🎤</span><span><b>Interviewed recently? Help your juniors</b><small>Share the questions you were asked at any company. No resume or plan needed.</small></span><em>Share →</em></summary><div class="iqr-body">' +
+      '<p class="small muted">We check each question, add a model answer and show it to students preparing for the same company.</p>' +
+      '<div class="two"><div><label class="f" for="iqr-co">Company</label><input class="in" id="iqr-co" list="iqr-cl" autocomplete="off" value="' + esc(company || '') + '" placeholder="Start typing, e.g. Tata Motors"></div><div><label class="f" for="iqr-ro">Role / post</label><input class="in" id="iqr-ro" list="iqr-rl" autocomplete="off" value="' + esc(role || '') + '" placeholder="Pick from the list or type your own"></div></div>' + roleList + coList +
       '<div class="two" style="margin-top:8px"><div><label class="f">Round</label><select class="in" id="iqr-rd"><option>Technical</option><option>HR</option><option>Managerial</option><option>Aptitude</option><option>Coding</option><option>Group discussion</option></select></div><div><label class="f">Year</label><select class="in" id="iqr-yr">' + [yr, yr - 1, yr - 2].map(function (y) { return '<option>' + y + '</option>'; }).join('') + '</select></div></div>' +
       '<label class="f" style="margin-top:8px;display:block">Questions (one per line)</label><textarea class="in" id="iqr-q" rows="5" placeholder="What is the difference between…\nExplain your final-year project…"></textarea>' +
       '<label class="f" style="margin-top:8px;display:block">Tip for juniors (optional)</label><input class="in" id="iqr-tip" placeholder="e.g. They asked a lot about the internship">' +
-      '<button class="btn" id="iqr-go" type="button" style="margin-top:10px">Share questions</button><p class="small" id="iqr-out"></p>';
+      '<button class="btn" id="iqr-go" type="button" style="margin-top:10px">Share questions</button><p class="small" id="iqr-out"></p></div>';
     d.querySelector('#iqr-go').onclick = function () {
       if (!session) { toast('Please sign in to share.'); go('/login?next=' + encodeURIComponent(location.pathname)); return; }
       var b = this; b.disabled = true;
