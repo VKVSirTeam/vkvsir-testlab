@@ -51,10 +51,10 @@
     if (active !== undefined) navActive = active;
     active = navActive;
     var items = [['home', '/', 'Practice Tests', '🎯', 'Topic-wise papers with instant results', 'Tests'], ['career', '/career', 'Job Prep', '🏢', 'Company-wise plan, software & interviews', 'Job Prep'], ['resume', '/resume', 'Resume Builder', '📄', 'ATS-ready resume, PDF & Word', 'Resume']];
-    if (session) items.push(['me', '/me', 'Dashboard', '📊', 'Your results and progress', 'My tests']);
+    if (session && !isGuest()) items.push(['me', '/me', 'Dashboard', '📊', 'Your results and progress', 'My tests']);
     if (session && profile && profile.is_admin) items.push(['admin', '/admin', 'Admin', '🛠', 'Control room', 'Admin']);
     var ini = ((profile && (profile.full_name || profile.email)) || '?').charAt(0).toUpperCase();
-    var acct = session ? '<a href="/profile" data-link class="avatar" title="Profile and sign out" aria-label="Profile and sign out">' + esc(ini) + '</a>'
+    var acct = session && !isGuest() ? '<a href="/profile" data-link class="avatar" title="Profile and sign out" aria-label="Profile and sign out">' + esc(ini) + '</a>'
       : '<a href="/login" data-link class="nav-cta' + (active === 'login' ? ' on' : '') + '">Sign in</a>';
     $nav.innerHTML = '<div class="nav-links">' + items.map(function (x) { return '<a href="' + x[1] + '" data-link class="' + (active === x[0] ? 'on' : '') + '"><i aria-hidden="true">' + x[3] + '</i><span class="nl">' + x[2] + '</span><span class="ns">' + x[5] + '</span></a>'; }).join('') + '</div>' +
       '<div class="nav-right"><a href="https://www.vkvsir.com" class="site-link" title="Go to vkvsir.com">vkvsir.com ↗</a>' + acct +
@@ -77,14 +77,16 @@
     if (!session) { profile = null; return Promise.resolve(null); }
     return rpc('my_profile').then(function (p) { profile = p; return p; });
   }
-  function requireAuth(next) {
-    if (!session) { go('/login?next=' + encodeURIComponent(next), true); return false; }
-    if (!profile || !profile.complete) { go('/profile?next=' + encodeURIComponent(next), true); return false; }
-    return true;
+  function isGuest() { return !session || !!(session.user && session.user.is_anonymous); }
+  function requireAuth(next, retry) {
+    if (session) return true;
+    gate('tests', next, retry);
+    return false;
   }
 
   /* ---------- router ---------- */
   function route() {
+    setTimeout(function () { if (session && !isGuest() && profile && !/^\/(exam|g)\//.test(location.pathname)) checkNotice(false); }, 1200);
     if (cleanup) { try { cleanup(); } catch (e) {} cleanup = null; }
     var p = location.pathname.replace(/\/+$/, '') || '/';
     var m;
@@ -326,7 +328,7 @@
         q('#sdur').querySelectorAll('button').forEach(function (x) { x.hidden = mode === 'rapid' && x.getAttribute('data-d') === '15'; }); if (mode === 'rapid' && dur === 15) dur = 10; };
       q('#sdur').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; dur = +b.getAttribute('data-d'); this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); };
       q('#sgo').onclick = function () {
-        if (!requireAuth(location.pathname)) return;
+        if (!requireAuth(location.pathname, function () { q('#sgo').click(); })) return;
         var g = this, s = selection(); g.disabled = true; g.textContent = 'Preparing your paper…'; q('#se').textContent = '';
         var call;
         if (mode === 'rapid') {
@@ -334,7 +336,7 @@
           call = rpc('start_rapid', { p_subject: s[0].s, p_unit: s[0].u == null ? null : s[0].u, p_duration: dur });
         } else call = rpc('start_multi', { p_sel: s, p_duration: dur });
         call.then(function (v) { go('/exam/' + v.attempt); })
-          .catch(function (e) { var m = errMsg(e); if (m === 'PROFILE_INCOMPLETE') return go('/profile?next=' + location.pathname); q('#se').textContent = lockText(m); g.disabled = false; g.textContent = 'Start practice'; });
+          .catch(function (e) { var m = errMsg(e); if (gateErr(m, location.pathname)) m = ''; q('#se').textContent = lockText(m); g.disabled = false; g.textContent = 'Start practice'; });
       };
       q('#go-start').onclick = function () { var t = q('#tr0'); t.open = true; t.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
       var gs2 = q('#go-start2'); if (gs2) gs2.onclick = q('#go-start').onclick;
@@ -430,13 +432,15 @@
     setNav('login');
     if (session) return go(nextParam(), true);
     var next = nextParam();
-    h('<div class="narrow stack"><div><p class="eyebrow">Welcome</p><h1>Sign in with your email</h1>' +
-      '<p class="muted">No password needed. We will email you a 6-digit code. New here? The same step creates your free account.</p></div>' +
+    h('<div class="narrow stack"><div><p class="eyebrow">Welcome</p><h1>Sign in to VKV Sir Test Lab</h1>' +
+      '<p class="muted">No password needed. New here? The same step creates your free account. Your tests, reports and resumes are saved to your ID.</p></div>' +
       '<div class="card" id="box">' +
+      '<button type="button" class="btn block gm-g" id="lg-g">' + G_ICON + '<span>Continue with Google</span></button><p class="gm-30">Fastest: one tap with your Gmail account</p><div class="gm-or"><span>or use an email code</span></div>' +
       '<label class="f" for="em">Email address</label><input class="in" id="em" type="email" inputmode="email" autocomplete="email" autocapitalize="off" placeholder="you@example.com">' +
       '<div class="err" id="er" role="alert"></div><button class="btn block" id="send">Send code</button>' +
       '<p class="small center" style="margin:16px 0 0"><button class="link-btn" id="forgot">Forgot which email you used?</button></p></div></div>');
     var email = '';
+    q('#lg-g').onclick = function () { googleSignIn(next); };
     q('#send').onclick = function () {
       email = q('#em').value.trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { q('#er').textContent = 'Enter a valid email address.'; return; }
@@ -495,33 +499,13 @@
   var STATES = ['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Delhi','Goa','Gujarat','Haryana','Himachal Pradesh','Jammu and Kashmir','Jharkhand','Karnataka','Kerala','Ladakh','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Puducherry','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Chandigarh','Andaman and Nicobar Islands','Dadra and Nagar Haveli and Daman and Diu','Lakshadweep'];
   function viewProfile() {
     setNav('me');
-    if (!session) return go('/login?next=' + encodeURIComponent(location.pathname + location.search), true);
+    if (isGuest()) return go('/login?next=' + encodeURIComponent(location.pathname + location.search), true);
     var p = profile || {}, next = nextParam();
-    function fld(id, label, val, attrs) { return '<label class="f" for="' + id + '">' + label + '</label><input class="in" id="' + id + '" value="' + esc(val || '') + '" ' + (attrs || '') + '>'; }
-    h('<div class="narrow stack"><div><p class="eyebrow">' + (p.complete ? 'Your profile' : 'One-time setup') + '</p><h1>' + (p.complete ? 'Edit your details' : 'Tell us about you') + '</h1>' +
-      (p.complete ? '<p class="muted">These details stay private. Only your teacher and the admin can see them.</p></div>' :
-      '<div class="notice"><b>Fill this carefully. You only do it once.</b><ul>' +
-      '<li>This form is asked <b>only one time</b>. It will not be shown again.</li>' +
-      '<li>Your details are <b>private</b>. Only your teacher and the admin can see them. Leaderboards show your first name only.</li>' +
-      '<li><b>This email (' + esc(p.email || '') + ') is your permanent identity.</b> Always sign in with it to practise, see your reports and track progress.</li>' +
-      '<li>Wrong or fake details may lead to your account being <b>blocked</b>.</li></ul></div></div>') +
-      '<div class="card">' + '<p class="small muted" style="margin:0">Signed in as <b>' + esc(p.email || '') + '</b></p>' +
-      fld('fn', 'Full name', p.full_name, 'autocomplete="name" maxlength="80"') +
-      fld('mb', 'Mobile number', p.mobile, 'type="tel" inputmode="numeric" maxlength="13" autocomplete="tel"') +
-      '<p class="small muted" style="margin:6px 0 0">Used only to remind you which email you signed up with. It is never used to sign in.</p>' +
-      fld('cl', 'College or institute', p.college, 'maxlength="120"') +
-      fld('ct', 'City', p.city, 'maxlength="60" autocomplete="address-level2"') +
-      '<label class="f" for="st">State</label><input class="in" id="st" list="states" value="' + esc(p.state || '') + '" maxlength="60"><datalist id="states">' + STATES.map(function (s) { return '<option value="' + s + '">'; }).join('') + '</datalist>' +
-      fld('co', 'Country', p.country || 'India', 'maxlength="60" autocomplete="country-name"') +
-      '<div class="err" id="er" role="alert"></div><button class="btn block" id="save">Save and continue</button>' +
+    h('<div class="narrow stack"><div><p class="eyebrow">Your profile</p><h1>' + (p.complete ? 'Your details' : 'Complete your details') + '</h1><p class="muted">Private: only your teacher and the admin can see them. Leaderboards show your first name only.</p></div>' +
+      '<div class="card"><p class="small muted" style="margin:0 0 6px">Signed in as <b>' + esc(p.email || '') + '</b></p><div id="pf-box"></div>' +
       '<p class="small center" style="margin:16px 0 0"><button class="link-btn" id="out">Sign out</button></p></div></div>');
+    profileForm(q('#pf-box'), function () { go(next || '/', true); });
     q('#out').onclick = function () { sb.auth.signOut().then(function () { go('/', true); }); };
-    q('#save').onclick = function () {
-      var b = this; b.disabled = true; b.textContent = 'Saving…';
-      rpc('save_profile', { p_full_name: q('#fn').value, p_mobile: q('#mb').value, p_college: q('#cl').value, p_city: q('#ct').value, p_state: q('#st').value, p_country: q('#co').value })
-        .then(function (np) { profile = np; toast('Profile saved'); go(next, true); })
-        .catch(function (e) { q('#er').textContent = errMsg(e); b.disabled = false; b.textContent = 'Save and continue'; });
-    };
   }
 
   /* ---------- test landing ---------- */
@@ -542,10 +526,11 @@
         '<div class="card stack">' +
         (t.active_attempt ? '<div class="note">You have an unfinished attempt. Continue where you left off.</div><a class="btn block" href="/exam/' + t.active_attempt + '" data-link>Resume test</a>' :
           '<div><p class="f" style="margin-top:0;font-weight:700">How much time do you have?</p><div class="seg" id="seg">' + segs + '</div></div>' +
+          '<div class="tw">' + [['⏱', 'Fair time', t.sec_per_q + ' s per question'], ['✅', 'Instant answers', 'with explanations'], ['📊', 'Unit analysis', 'strong & weak areas'], ['🎯', 'Next steps', 'what to practise']].map(function (x) { return '<div><span>' + x[0] + '</span><b>' + x[1] + '</b><small>' + x[2] + '</small></div>'; }).join('') + '</div>' +
           '<ul class="rules small"><li>' + t.sec_per_q + ' seconds per question, one question at a time.</li><li>No going back once you move on.</li>' +
           '<li>The paper submits automatically when time ends.</li><li>' + (t.show_result ? 'You will see your score and answers right after submitting.' : 'Results will be released by your teacher.') + '</li></ul>' +
           (opens ? '<div class="note">Opens ' + esc(fmtDate(t.open_at)) + '</div>' : '') +
-          '<div class="err" id="er" role="alert"></div><button class="btn block" id="go">' + (session ? 'Prepare my paper' : 'Sign in to start') + '</button>') +
+          '<div class="err" id="er" role="alert"></div><button class="btn block" id="go">' + (session ? 'Prepare my paper' : 'Start test') + '</button>') +
         '<p class="small muted center" style="margin:0">Free forever. Your progress is saved to your dashboard.</p></div></div>');
       var sg = q('#seg');
       if (sg) sg.addEventListener('click', function (e) {
@@ -555,13 +540,13 @@
       });
       var g = q('#go');
       if (g) g.onclick = function () {
-        if (!requireAuth('/t/' + slug)) return;
+        if (!requireAuth('/t/' + slug, function () { q('#go').click(); })) return;
         g.disabled = true; g.textContent = 'Preparing your paper…';
         rpc('start_attempt', { p_slug: slug, p_duration: dur }).then(function (v) {
           go('/exam/' + v.attempt);
         }).catch(function (e) {
           var m = errMsg(e);
-          if (m === 'PROFILE_INCOMPLETE') return go('/profile?next=/t/' + slug);
+          if (gateErr(m, '/t/' + slug)) m = '';
           q('#er').textContent = lockText(m); g.disabled = false; g.textContent = 'Prepare my paper';
         });
       };
@@ -623,11 +608,11 @@
         '<p class="center small"><a href="/" data-link>Explore all subjects and tests</a></p></div>');
       var fd = q('#fd'); if (fd) fd.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; dur = +b.getAttribute('data-d'); Array.prototype.forEach.call(fd.children, function (c) { c.setAttribute('aria-pressed', c === b); }); };
       var g = q('#fgo'); if (g) g.onclick = function () {
-        if (!requireAuth(location.pathname)) return;
+        if (!requireAuth(location.pathname, function () { q('#fgo').click(); })) return;
         g.disabled = true; g.textContent = 'Preparing your paper…';
         rpc('start_custom', { p_subject: n.subj.id, p_unit: n.unit ? n.unit.unit : null, p_topic: n.topic ? n.topic.id : null, p_duration: dur })
           .then(function (v) { go('/exam/' + v.attempt); })
-          .catch(function (e) { var m = errMsg(e); if (m === 'PROFILE_INCOMPLETE') return go('/profile?next=' + location.pathname); q('#fe').textContent = lockText(m); g.disabled = false; g.textContent = 'Start my quiz'; });
+          .catch(function (e) { var m = errMsg(e); if (gateErr(m, location.pathname)) m = ''; q('#fe').textContent = lockText(m); g.disabled = false; g.textContent = 'Start my quiz'; });
       };
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
@@ -739,10 +724,10 @@
   /* ---------- resume builder (loaded on demand) ---------- */
   function viewResume() {
     setNav('resume'); loading();
-    var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, get session() { return session; }, get profile() { return profile; } };
+    var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, gate: gate, get guest() { return isGuest(); }, get session() { return isGuest() ? null : session; }, get profile() { return profile; } };
     function run() { window.RB.render(api); }
     if (window.RB) return run();
-    var s = document.createElement('script'); s.src = '/resume.js?v=8'; s.onload = run;
+    var s = document.createElement('script'); s.src = '/resume.js?v=9'; s.onload = run;
     s.onerror = function () { h('<div class="card narrow center"><p>Could not load the resume builder. Please refresh.</p></div>'); };
     document.head.appendChild(s);
   }
@@ -782,6 +767,7 @@
       q('#jl').onclick = function (e) { var b = e.target.closest('button'); if (b) setLevel(b.getAttribute('data-l')); };
       if (saved.company) q('#jc').value = saved.company; if (saved.url && q('#ju')) q('#ju').value = saved.url; if (saved.role) q('#jr').value = saved.role; if (saved.branch) q('#jb').value = saved.branch; if (saved.text) q('#jt').value = saved.text;
       q('#jgo').onclick = function () {
+        if (isGuest()) { var tp = +(localStorage.getItem('vkv-trial-plans') || 0); if (tp >= 2) { gate('plan', '/career'); return; } try { localStorage.setItem('vkv-trial-plans', String(tp + 1)); } catch (e) {} }
         var inp = { url: (q('#ju') ? q('#ju').value.trim() : ''), company: q('#jc').value.trim(), role: q('#jr').value, branch: q('#jb').value, level: level, text: q('#jt').value.trim() };
         if (!inp.company && !inp.url && !inp.role && !inp.text && !inp.branch) { q('#je').textContent = 'Choose a role or branch, or paste a job post.'; return; }
         q('#je').textContent = '';
@@ -1391,7 +1377,7 @@
               return '<button class="chip sel" ' + (off ? 'disabled title="More questions coming soon"' : '') + ' aria-pressed="' + (topic === t) + '" data-t="' + esc(t.id) + '">' + esc(t.name) + (t.new ? ' <span class="badge">New</span>' : '') + (off ? ' <span class="muted">(soon)</span>' : '') + '</button>';
             }).join('') + '</div>' : '') +
           '<p class="f">Time</p>' + (ds.length ? '<div class="seg" id="cd">' + ds.map(function (d) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + Math.floor(d * 60 / 45) + ' Qs</span></button>'; }).join('') + '</div>' : '<p class="muted small">Not enough questions here yet. Choose a wider option.</p>') +
-          '<div class="err" id="ce" role="alert"></div><button class="btn block" id="cgo" ' + (ds.length ? '' : 'disabled') + '>' + (session ? 'Prepare my paper' : 'Sign in to start') + '</button>' +
+          '<div class="err" id="ce" role="alert"></div><button class="btn block" id="cgo" ' + (ds.length ? '' : 'disabled') + '>' + (session ? 'Prepare my paper' : 'Start test') + '</button>' +
           shareBar(practiceLink(subj.id, unit && unit.unit, topic && topic.id), 'Practise ' + (topic ? topic.name : unit ? 'Unit ' + unit.unit + ' (' + unit.name + ')' : subj.name) + ' free with VKV Sir:', 'Share this practice:') +
           (newOnes.length ? '<p class="small" style="margin:14px 0 0"><span class="badge">New</span> Recently added: ' + esc(newOnes.slice(0, 8).join(', ')) + (newOnes.length > 8 ? '…' : '') + '</p>' : '') +
           '</section>';
@@ -1400,11 +1386,11 @@
         var ct = el.querySelector('#ct'); if (ct) ct.onclick = function (e) { var b = e.target.closest('button'); if (!b || b.disabled) return; var v = b.getAttribute('data-t'); topic = v ? unit.topics.filter(function (t) { return t.id === v; })[0] : null; draw(); };
         var cd = el.querySelector('#cd'); if (cd) cd.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; dur = +b.getAttribute('data-d'); draw(); };
         el.querySelector('#cgo').onclick = function () {
-          if (!requireAuth(location.pathname)) return;
+          if (!requireAuth(location.pathname, function () { el.querySelector('#cgo').click(); })) return;
           var g = this; g.disabled = true; g.textContent = 'Preparing your paper…';
           rpc('start_custom', { p_subject: subj.id, p_unit: unit ? unit.unit : null, p_topic: topic ? topic.id : null, p_duration: dur })
             .then(function (v) { go('/exam/' + v.attempt); })
-            .catch(function (e) { var m = errMsg(e); if (m === 'PROFILE_INCOMPLETE') return go('/profile?next=' + location.pathname); el.querySelector('#ce').textContent = lockText(m); g.disabled = false; g.textContent = 'Prepare my paper'; });
+            .catch(function (e) { var m = errMsg(e); if (gateErr(m, location.pathname)) m = ''; el.querySelector('#ce').textContent = lockText(m); g.disabled = false; g.textContent = 'Prepare my paper'; });
         };
       }
       draw();
@@ -1683,7 +1669,7 @@
   /* ---------- dashboard ---------- */
   function viewDashboard() {
     setNav('me');
-    if (!requireAuth('/me')) return;
+    if (isGuest()) { h('<div class="narrow card center gate-page"><div class="gm-ic">📊</div><h1>Your personal dashboard</h1><p class="muted">Score trend, accuracy by unit, focus areas and your full test history: all built from the tests saved to your ID.</p><p class="muted">' + (session ? 'You are on a guest trial, so nothing is saved to a dashboard yet.' : 'Sign in once and it stays with you on every device.') + '</p><button type="button" class="btn" id="gp-g">' + G_ICON + ' Continue with Google</button><p class="small" style="margin-top:12px"><a href="/login?next=/me" data-link>Use an email code instead</a></p></div>'); q('#gp-g').onclick = function () { googleSignIn('/me'); }; return; }
     loading();
     Promise.all([rpc('my_dashboard'), rpc('leaderboard', { p_subject: null })]).then(function (r) {
       var d = r[0], board = r[1], at = d.attempts || [], done = at.filter(function (a) { return a.status === 'done'; });
@@ -1745,6 +1731,114 @@
     document.addEventListener('mouseleave', function () { cur = null; hide(); });
     window.addEventListener('blur', hide);
   })();
+
+  /* ---------- sign-in gate, guest trial, profile prompt, notices ---------- */
+  var G_ICON = '<svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+  function googleSignIn(next) {
+    var to = location.origin + (next || location.pathname + location.search);
+    var p = session && session.user && session.user.is_anonymous && sb.auth.linkIdentity
+      ? sb.auth.linkIdentity({ provider: 'google', options: { redirectTo: to } }).then(function (r) { if (r.error) throw r.error; return r; })
+      : Promise.reject();
+    p.catch(function () { return sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: to } }); });
+  }
+  function gmodal(html, opts) {
+    opts = opts || {};
+    var m = document.createElement('div'); m.className = 'gm-wrap'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
+    m.innerHTML = '<div class="gm">' + (opts.locked ? '' : '<button type="button" class="gm-x" aria-label="Close">✕</button>') + html + '</div>';
+    document.body.appendChild(m); document.body.classList.add('noscroll');
+    function close() { m.remove(); if (!document.querySelector('.gm-wrap')) document.body.classList.remove('noscroll'); }
+    if (!opts.locked) { m.querySelector('.gm-x').onclick = close; m.addEventListener('click', function (e) { if (e.target === m) close(); }); }
+    return { el: m, close: close };
+  }
+  var GATE_TXT = {
+    tests: ['📝', 'Sign in to save your tests', 'Your scores, weak units and history are saved to your own private ID.'],
+    limit: ['🎯', 'You have used your free trial tests', 'Great start! Sign in to keep practising and see your full report.'],
+    dashboard: ['📊', 'Your dashboard needs your ID', 'Your progress, score trend and focus areas are built from the tests saved to your ID.'],
+    resume: ['📄', 'Sign in to keep more resumes', 'You can build one resume as a guest. Sign in to save it, make more versions and compare them.'],
+    plan: ['🏢', 'Sign in for more plans', 'You have built your free plans. Sign in to keep exploring companies and save your work.']
+  };
+  function gate(kind, next, retry) {
+    var t = GATE_TXT[kind] || GATE_TXT.tests, nx = next || location.pathname + location.search;
+    var trial = kind === 'tests' && !session && window.__anonOk !== false;
+    var g = gmodal('<div class="gm-ic">' + t[0] + '</div><h2>' + t[1] + '</h2><p class="gm-lead">' + t[2] + '</p>' +
+      '<div class="gm-story"><p><b>Why sign in?</b> Without your ID, the website cannot tell that it is you. Change your phone, clear the browser or come back next week, and your tests, reports and resumes are gone. With your ID, everything is kept safe and your progress report grows with every test.</p></div>' +
+      '<button type="button" class="btn block gm-g" id="gm-g">' + G_ICON + '<span>Continue with Google</span></button>' +
+      '<p class="gm-30">⏱ Takes about 30 seconds · free forever</p>' +
+      '<a class="gm-alt" href="/login?next=' + encodeURIComponent(nx) + '" data-link>Use an email code instead</a>' +
+      (trial ? '<div class="gm-or"><span>or</span></div><button type="button" class="btn ghost block" id="gm-t">Try 2 free tests without signing in</button><p class="gm-30">Guest results are not saved to a dashboard.</p>' : ''));
+    g.el.querySelector('#gm-g').onclick = function () { googleSignIn(nx); };
+    g.el.querySelector('.gm-alt').addEventListener('click', function () { g.close(); });
+    var tb = g.el.querySelector('#gm-t');
+    if (tb) tb.onclick = function () {
+      tb.disabled = true; tb.textContent = 'Starting your trial…';
+      (sb.auth.signInAnonymously ? sb.auth.signInAnonymously() : Promise.reject()).then(function (r) {
+        if (r.error) throw r.error;
+        session = r.data.session; g.close(); toast('Trial started: 2 free tests.'); if (retry) setTimeout(retry, 200);
+      }).catch(function () { window.__anonOk = false; tb.remove(); toast('Guest trial is not available right now. Please sign in.'); });
+    };
+  }
+  function gateErr(m, next) {
+    if (m === 'GUEST_LIMIT') { gate('limit', next); return true; }
+    if (m === 'PROFILE_INCOMPLETE') { profilePrompt(true); return true; }
+    if (m === 'PROFILE_FIX') { checkNotice(true); return true; }
+    return false;
+  }
+  var CC = [['+91', 'India'], ['+977', 'Nepal'], ['+880', 'Bangladesh'], ['+94', 'Sri Lanka'], ['+971', 'UAE'], ['+966', 'Saudi Arabia'], ['+974', 'Qatar'], ['+968', 'Oman'], ['+965', 'Kuwait'], ['+973', 'Bahrain'], ['+1', 'USA / Canada'], ['+44', 'UK'], ['+61', 'Australia'], ['+65', 'Singapore'], ['+49', 'Germany']];
+  function profileForm(box, onDone) {
+    var p = profile || {}, mm = String(p.mobile || '').match(/^\s*(\+\d{1,4})\s*(.*)$/), cc = mm ? mm[1] : '+91', num = mm ? mm[2] : (p.mobile || '');
+    box.innerHTML = '<div class="pf">' +
+      '<div class="pf-f"><label for="pf-fn">Full name<sup>*</sup></label><input class="in" id="pf-fn" autocomplete="name" maxlength="80" value="' + esc(p.full_name || '') + '" placeholder="As in your marksheet"><small class="pf-e" data-e="name">Enter your real full name (no short forms like “abc”).</small></div>' +
+      '<div class="pf-f"><label for="pf-mb">Mobile<sup>*</sup></label><div class="pf-ph"><select class="in" id="pf-cc" aria-label="Country code">' + CC.map(function (c) { return '<option value="' + c[0] + '"' + (c[0] === cc ? ' selected' : '') + '>' + c[0] + ' ' + c[1] + '</option>'; }).join('') + '</select><input class="in" id="pf-mb" type="tel" inputmode="numeric" maxlength="14" value="' + esc(num) + '" placeholder="10-digit number"></div><small class="pf-e" data-e="mobile">Enter a valid mobile number for the selected country.</small></div>' +
+      '<div class="pf-f"><label for="pf-cl">College or institute<sup>*</sup></label><input class="in" id="pf-cl" maxlength="120" value="' + esc(p.college || '') + '" placeholder="Full name of your college"><small class="pf-e" data-e="college">Enter the full name of your college or institute.</small></div>' +
+      '<div class="pf-2"><div class="pf-f"><label for="pf-ct">City<sup>*</sup></label><input class="in" id="pf-ct" maxlength="60" value="' + esc(p.city || '') + '" autocomplete="address-level2"><small class="pf-e" data-e="city">Enter your city.</small></div>' +
+      '<div class="pf-f"><label for="pf-st">State<sup>*</sup></label><input class="in" id="pf-st" list="pf-states" maxlength="60" value="' + esc(p.state || '') + '"><datalist id="pf-states">' + STATES.map(function (s) { return '<option value="' + s + '">'; }).join('') + '</datalist></div></div>' +
+      '<div class="pf-f"><label for="pf-co">Country<sup>*</sup></label><input class="in" id="pf-co" maxlength="60" value="' + esc(p.country || 'India') + '"></div>' +
+      '<div class="err" id="pf-er" role="alert"></div><button type="button" class="btn block" id="pf-save">Save my details</button>' +
+      '<p class="pf-warn">⚠️ Please enter true and complete information. For wrong or incomplete details, the system may block your account.</p></div>';
+    function val(id) { return box.querySelector(id).value.trim(); }
+    box.querySelector('#pf-save').onclick = function () {
+      var b = this, mob = val('#pf-cc') + ' ' + val('#pf-mb').replace(/\D/g, '');
+      box.querySelectorAll('.pf-e').forEach(function (e) { e.classList.remove('on'); });
+      var missing = !val('#pf-st') || !val('#pf-co');
+      b.disabled = true; b.textContent = 'Checking…';
+      rpc('profile_check', { p_full_name: val('#pf-fn'), p_mobile: mob, p_college: val('#pf-cl'), p_city: val('#pf-ct') }).then(function (c) {
+        var bad = Object.keys(c).filter(function (k) { return !c[k]; });
+        bad.forEach(function (k) { var e = box.querySelector('.pf-e[data-e="' + k + '"]'); if (e) e.classList.add('on'); });
+        if (bad.length || missing) throw new Error(bad.length ? 'Please correct the highlighted details' + (missing ? ' and fill State and Country.' : '.') : 'Please fill State and Country.');
+        b.textContent = 'Saving…';
+        return rpc('save_profile', { p_full_name: val('#pf-fn'), p_mobile: mob, p_college: val('#pf-cl'), p_city: val('#pf-ct'), p_state: val('#pf-st'), p_country: val('#pf-co') });
+      }).then(function (np) { profile = np; noticeAt = 0; toast('Thank you! Your details are saved.'); if (onDone) onDone(np); })
+        .catch(function (e) { box.querySelector('#pf-er').textContent = errMsg(e); b.disabled = false; b.textContent = 'Save my details'; });
+    };
+  }
+  function profilePrompt(forced) {
+    if (isGuest() || document.querySelector('.gm-pf')) return;
+    var g = gmodal('<div class="gm-pf"><div class="gm-ic">🎉</div><h2>You’re doing great!</h2><p class="gm-lead">' + (forced ? 'To continue practising and keep your reports, please complete your details. It takes a minute.' : 'You have been using VKV Sir Test Lab well. Add your details so we can personalise your reports and keep your account safe.') + '</p><div id="pf-box"></div>' + (forced ? '' : '<button type="button" class="link-btn gm-later">Remind me later</button>') + '</div>', { locked: forced });
+    profileForm(g.el.querySelector('#pf-box'), function () { g.close(); });
+    var l = g.el.querySelector('.gm-later'); if (l) l.onclick = function () { try { localStorage.setItem('vkv-pf-later', String(Date.now())); } catch (e) {} g.close(); };
+  }
+  var noticeAt = 0;
+  function checkNotice(force) {
+    if (isGuest() || document.querySelector('.gm-wrap')) return;
+    if (!force && Date.now() - noticeAt < 120000) return;
+    noticeAt = Date.now();
+    rpc('my_notice').then(function (n) {
+      if (!n) {
+        if (force) profilePrompt(true);
+        else if (profile && !profile.complete) {
+          var v = +(sessionStorage.getItem('vkv-views') || 0) + 1; sessionStorage.setItem('vkv-views', v);
+          var later = +(localStorage.getItem('vkv-pf-later') || 0);
+          if (v >= 4 && Date.now() - later > 864e5) profilePrompt(false);
+        }
+        return;
+      }
+      var canSkip = n.skips_left > 0;
+      var g = gmodal('<div class="gm-ic">⚠️</div><h2>Please update your details</h2><ul class="gm-msgs">' + n.messages.map(function (m) { return '<li>' + esc(m) + '</li>'; }).join('') + '</ul>' +
+        '<button type="button" class="btn block" id="nt-up">Update my details</button>' + (canSkip ? '<button type="button" class="btn ghost block" id="nt-sk" style="margin-top:8px">Skip for now</button>' : '<p class="gm-30">This is required to continue using the website.</p>'), { locked: !canSkip });
+      g.el.querySelector('#nt-up').onclick = function () { g.close(); var f = gmodal('<div class="gm-pf"><h2>Update your details</h2><div id="pf-box"></div></div>', { locked: !canSkip }); profileForm(f.el.querySelector('#pf-box'), function () { f.close(); }); };
+      var sk = g.el.querySelector('#nt-sk'); if (sk) sk.onclick = function () { rpc('notice_skip', { p_id: n.id }).then(function () { g.close(); gmodal('<div class="gm-ic">ℹ️</div><h2>Skipped this time</h2><p class="gm-lead">Skip works only once. Next time you will need to provide true and complete information to keep using the website.</p><button type="button" class="btn block" onclick="this.closest(\'.gm-wrap\').remove();document.body.classList.remove(\'noscroll\')">OK, understood</button>'); }).catch(function (e) { toast(errMsg(e)); }); };
+    }).catch(function () {});
+  }
 
   /* ---------- homepage: who is it for (personas) ---------- */
   var PERSONA_SVG = {
@@ -1897,7 +1991,7 @@
                 document.body.appendChild(m);
               }).catch(function (e) { toast(errMsg(e)); });
             }
-            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=8'; s.onload = show; document.head.appendChild(s); }
+            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=9'; s.onload = show; document.head.appendChild(s); }
           };
         });
       }).catch(function (e) { box.innerHTML = '<div class="card"><p>' + esc(errMsg(e)) + '</p></div>'; });
@@ -2138,11 +2232,25 @@
       box.innerHTML = '<div class="spread"><h2 style="margin:0">' + esc(p.full_name || p.email) + '</h2><button class="link-btn" data-close>Close</button></div>' +
         '<p class="small">' + esc(p.email) + ' &middot; ' + esc(p.mobile || '') + '<br>' + esc([p.college, p.city, p.state, p.country].filter(Boolean).join(', ')) + '<br>Joined ' + esc(fmtDate(p.created_at)) + ' &middot; Status: <b>' + esc(p.status) + '</b></p>' +
         (d.same_mobile.length ? '<div class="note">Same mobile also used by: ' + esc(d.same_mobile.join(', ')) + '</div>' : '') +
+        '<div class="ntc"><b>📨 Ask this student to fix their details</b><div id="ntc-auto" class="small muted">Checking details…</div><div class="ntc-l">' +
+          ['Fill in your correct and full name.', 'Your details seem incorrect. Update them immediately to continue.', 'Complete all your details in your profile.', 'Enter a valid mobile number with the country code.', 'Enter the full name of your college or institute.']
+            .map(function (t, i) { return '<label><input type="checkbox" value="' + esc(t) + '"> ' + esc(t) + '</label>'; }).join('') +
+          '</div><input class="in" id="ntc-x" placeholder="Or add your own message (optional)" maxlength="200"><div class="row" style="margin-top:8px;gap:8px"><button class="btn" id="ntc-go">Send to student</button><span class="small muted" id="ntc-o">They see it as a pop-up on their next visit, with one skip.</span></div></div>' +
         '<div class="row" style="margin:12px 0"><button class="btn ghost" id="un">Remove lock</button><select class="in" id="stt" style="max-width:220px"><option value="active">Active</option><option value="duplicate_mobile">Duplicate mobile</option><option value="closed">Closed (blocked)</option></select><button class="btn dark" id="sv">Save status</button></div>' +
         '<div class="table"><table><tr><th>Test</th><th>Score</th><th>Left screen</th><th>Ended</th><th></th></tr>' + d.attempts.map(function (a) {
           return '<tr><td>' + esc(a.title) + '<br><span class="small muted">' + esc(fmtDate(a.at)) + '</span></td><td class="mono">' + (a.score == null ? '–' : a.score + '/' + a.n) + '</td><td>' + a.leaves + (a.strikes ? ' (' + a.strikes + ' pen.)' : '') + '</td><td class="small">' + esc(a.end || a.status) + '</td><td>' + (a.status === 'done' ? '<a href="/result/' + a.id + '" data-link data-close>View</a>' : '') + '</td></tr>';
         }).join('') + '</table></div>';
       box.querySelector('#stt').value = p.status;
+      rpc('profile_check', { p_full_name: p.full_name || '', p_mobile: p.mobile || '', p_college: p.college || '', p_city: p.city || '' }).then(function (c) {
+        var bad = [['name', 'Name looks incorrect'], ['mobile', 'Mobile looks invalid'], ['college', 'College looks incomplete'], ['city', 'City looks incorrect']].filter(function (x) { return !c[x[0]]; });
+        box.querySelector('#ntc-auto').innerHTML = bad.length ? '⚠ Auto-check: ' + bad.map(function (x) { return '<b>' + x[1] + '</b>'; }).join(' · ') : '✓ Auto-check: details look valid';
+      }).catch(function () {});
+      box.querySelector('#ntc-go').onclick = function () {
+        var msgs = Array.prototype.map.call(box.querySelectorAll('.ntc-l input:checked'), function (x) { return x.value; });
+        var x = box.querySelector('#ntc-x').value.trim(); if (x) msgs.push(x);
+        if (!msgs.length) { box.querySelector('#ntc-o').textContent = 'Tick at least one message.'; return; }
+        rpc('admin_send_notice', { p_user: id, p_messages: msgs }).then(function () { box.querySelector('#ntc-o').textContent = '✓ Sent. It will pop up on their next visit.'; }).catch(function (e) { box.querySelector('#ntc-o').textContent = errMsg(e); });
+      };
       box.querySelector('#un').onclick = function () { rpc('admin_set_student', { p_id: id, p_status: null, p_unlock: true }).then(function () { toast('Lock removed'); }); };
       box.querySelector('#sv').onclick = function () { rpc('admin_set_student', { p_id: id, p_status: box.querySelector('#stt').value, p_unlock: false }).then(function () { toast('Saved'); m.remove(); reload(); }); };
     });

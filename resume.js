@@ -560,7 +560,8 @@
         '<button type="button" id="rb-ren">✏️ Rename</button><button type="button" id="rb-dup">⧉ Duplicate for another job</button><button type="button" id="rb-new">＋ New (keep my details)</button><button type="button" id="rb-blank">＋ Blank resume</button><button type="button" id="rb-del" class="rb-delb">🗑 Delete this resume</button></div></details></div></div>' +
       '<nav class="rb-steps" id="rb-steps" aria-label="Steps"></nav><div class="rb-body"><div class="card rb-form" id="rb-form"></div><aside class="rb-side" id="rb-side"><div class="rb-ptitle"><b>Live preview</b><span class="small muted">A4 · one column</span><button type="button" class="rb-pvx" id="rb-pvx" aria-label="Close preview">✕</button></div><div id="rb-prev"></div></aside></div>' +
       '<button type="button" class="rb-pvbtn" id="rb-pvbtn">👁 Preview</button></div>');
-    document.getElementById('rb-gal').onclick = gallery;
+    document.getElementById('rb-gal').onclick = function () { if (V.guest) return V.gate('resume', '/resume'); gallery(); };
+    ['rb-new', 'rb-blank', 'rb-dup'].forEach(function (id) { var b = document.getElementById(id); if (b) b.addEventListener('click', function (e) { if (V.guest) { e.stopImmediatePropagation(); V.gate('resume', '/resume'); } }, true); });
     document.getElementById('rb-pvbtn').onclick = function () { document.body.classList.add('rb-pv-open'); };
     document.getElementById('rb-pvx').onclick = function () { document.body.classList.remove('rb-pv-open'); };
     Array.prototype.forEach.call(document.querySelectorAll('.rb-menu-p button'), function (b) { b.addEventListener('click', function () { var m = b.closest('details'); if (m) m.open = false; }); });
