@@ -80,13 +80,20 @@
   function isGuest() { return !session || !!(session.user && session.user.is_anonymous); }
   function requireAuth(next, retry) {
     if (session) return true;
-    gate('tests', next, retry);
+    guestSession().then(function (ok) { if (ok && retry) retry(); else if (!ok) gate('tests', next, retry, { hard: true }); });
     return false;
+  }
+  // a private guest ID so visitors can try things and their footprints are kept (moves to their account on sign-in)
+  function guestSession() {
+    if (session) return Promise.resolve(true);
+    if (window.__anonOk === false || !sb.auth.signInAnonymously) return Promise.resolve(false);
+    return sb.auth.signInAnonymously().then(function (r) { if (r.error) throw r.error; session = r.data.session; return true; })
+      .catch(function () { window.__anonOk = false; return false; });
   }
 
   /* ---------- router ---------- */
   function route() {
-    setTimeout(function () { if (session && !isGuest() && profile && !/^\/(exam|g)\//.test(location.pathname)) checkNotice(false); }, 1200);
+    setTimeout(function () { if (session && !isGuest() && profile && !/^\/(exam|g)\//.test(location.pathname)) checkNotice(false); else nudgeOnOpen(); }, 1200);
     if (cleanup) { try { cleanup(); } catch (e) {} cleanup = null; }
     var p = location.pathname.replace(/\/+$/, '') || '/';
     var m;
@@ -190,7 +197,7 @@
           '<input class="in" id="qr" placeholder="Job role / post (e.g. Design Engineer, GET)"><button class="btn" id="qgo" type="button">Build my plan</button></div>' +
           '<p class="small muted" style="margin:6px 0 0">Have the full job post? Open the <a href="/career" data-link>full planner</a> and paste it for an exact match.</p></div>' +
           '<div class="tr-items" style="margin-top:12px"><a class="tr-item tr-feature" href="/career" data-link><b>🎯 Job Prep planner</b><span class="small muted">Company + role + level → topics to master, software to learn, likely interview questions with answers.</span><span class="pill good">Open planner →</span></a>' +
-          '<a class="tr-item tr-feature" href="/drill" data-link><b>⚡ Unlimited aptitude drill</b><span class="small muted">Fresh numeric questions every time, no sign-in needed.</span><span class="pill good">Start drilling →</span></a></div>';
+          '<a class="tr-item tr-feature" href="/drill" data-link><b>⚡ Unlimited aptitude drill</b><span class="small muted">Fresh numeric questions every time.</span><span class="pill good">Start drilling →</span></a></div>';
       }
       var live = {}; cat.forEach(function (s) { live[s.id] = 1; });
       var tracksHtml = TRACKS.map(function (tr, i) {
@@ -213,7 +220,7 @@
           [['📚', 'Thousands', 'of practice questions'], ['🧭', '3 tracks', 'Semester · Competitive · Career'], ['🖼️', 'Image questions', 'Diagrams, figures & charts'], ['⚡', 'Fresh paper', 'Balanced mix every time']].map(function (s) { return '<div class="hxp"><span class="hxp-i">' + s[0] + '</span><b>' + s[1] + '</b><small>' + s[2] + '</small></div>'; }).join('') +
           '</div><div class="hxp-by"><img src="/favicon.svg" alt=""><span>Prepared and reviewed by the <b>VKV Sir team of experts</b></span></div></div></div>' +
         '</section>' + personasHtml() +
-        '<div class="marq" aria-hidden="true"><div class="marq-in">' + (function () { var c = ['TCS', 'Infosys', 'L&amp;T', 'Tata Motors', 'Shri Bhagwati Machines', 'NTPC', 'BHEL', 'JK Tyre', 'Maruti Suzuki', 'Wipro', 'Bosch', 'Siemens', 'UltraTech', 'Tata Steel', 'Accenture', 'Mahindra', 'IOCL', 'ABB']; var s = c.map(function (x) { return '<span>' + x + '</span>'; }).join(''); return s + s; })() + '</div></div>' +
+        '<div class="marq"><div class="marq-in">' + (function () { var c = ['TCS', 'Infosys', 'L&T', 'Tata Motors', 'Shri Bhagwati Machines', 'NTPC', 'BHEL', 'JK Tyre', 'Maruti Suzuki', 'Wipro', 'Bosch', 'Siemens', 'UltraTech', 'Tata Steel', 'Accenture', 'Mahindra', 'IOCL', 'ABB']; function one(k) { return c.map(function (x) { return '<a href="/career?company=' + encodeURIComponent(x) + '" data-link' + (k ? ' tabindex="-1" aria-hidden="true"' : '') + ' title="Open ' + esc(x) + ' preparation">' + esc(x) + '</a>'; }).join(''); } return one(0) + one(1); })() + '</div></div>' +
         
         '<section class="hs trio rv"><p class="eyebrow center">Three tools · one goal</p><h2 class="hs-h center">Everything you need to get exam-ready and job-ready</h2><div class="trio-g">' +
           [['practice', '🎯', 'Practice Tests', 'Topic-wise papers with fair timing, instant results and clear explanations.', ['Semester, competitive & career tracks', 'Image & diagram questions', 'Unit-wise result analysis'], 'c-blue'],
@@ -248,7 +255,7 @@
             '<div><p class="f">📚 Top topics</p><div class="chips">' + ['Manufacturing processes', 'Lean & Kaizen', 'Quality tools', 'IC engines'].map(function (x) { return '<span class="chip">' + x + '</span>'; }).join('') + '</div></div>' +
             '<div class="pd-q"><p class="f">🎤 Asked at this company</p><p><b>Q.</b> What is OEE and how is it calculated?</p><p class="small muted">Availability × Performance × Quality; about 85% is world class.</p></div></div>' +
             '<p class="small muted pd-note">Also included: a detailed company profile (products, customers, competitors, official website) to help in written tests, interviews and your final decision.</p>' +
-            '<div class="row" style="gap:10px"><a class="btn" href="/career" data-link>Build my plan →</a><span class="small muted">No sign-up needed to see your plan.</span></div></div></section>' +
+            '<div class="row" style="gap:10px"><a class="btn" href="/career" data-link>Build my plan →</a><span class="small muted">Takes under a minute.</span></div></div></section>' +
 
         '<section class="hs band-c" id="resume"><div class="split rev"><div class="split-t rv"><p class="eyebrow">Resume Builder</p><h2 class="hs-h">An ATS-ready resume in minutes, and one for every job</h2><p class="muted">Most companies screen resumes with software before a person reads them. Our builder is designed to pass that step, and it is free without limits.</p>' +
           '<ul class="ticks"><li><b>Live ATS score</b> with clear fixes, updated as you type</li><li><b>Paste a job description</b> to see your % match and the exact keywords you are missing</li><li><b>Duplicate in one click</b>: change the company or a few keywords and keep a resume for every job</li><li><b>Unlimited downloads</b> in PDF and Word, no watermark</li><li><b>Keywords from real job posts</b>, including your target company</li></ul>' +
@@ -263,7 +270,7 @@
         
         '<section class="hs faq rv"><h2 class="hs-h center">Frequently asked questions</h2><div class="faq-l">' + [
           ['Is everything really free?', 'Yes. Practice tests, Job Prep plans and the resume builder are free, with unlimited resume downloads in PDF and Word.'],
-          ['Do I need to sign in?', 'You can explore, build a plan and make a resume without signing in. Sign in to start tests, save results and keep your resumes in your account.'],
+          ['Do I need to sign in?', 'Sign in with your Gmail in about 10 seconds. It keeps your tests, reports, plans and resumes safe and lets us guide your preparation.'],
           ['Where do the company software lists come from?', 'From real, dated job posts and company career pages, updated regularly. For small companies we show what similar companies in the same field ask for.'],
           ['How accurate are the questions?', 'Every question is prepared and reviewed by our team. If you find a doubtful answer, tap Report and it is reviewed promptly.'],
           ['Can I make different resumes for different companies?', 'Yes. Duplicate a resume, change the company or keywords, and keep as many versions as you need.']
@@ -724,10 +731,10 @@
   /* ---------- resume builder (loaded on demand) ---------- */
   function viewResume() {
     setNav('resume'); loading();
-    var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, gate: gate, get guest() { return isGuest(); }, get session() { return isGuest() ? null : session; }, get profile() { return profile; } };
+    var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, gate: gate, ensureGuest: guestSession, activity: guestActivity, get guest() { return isGuest(); }, get anySession() { return session; }, get session() { return isGuest() ? null : session; }, get profile() { return profile; } };
     function run() { window.RB.render(api); }
     if (window.RB) return run();
-    var s = document.createElement('script'); s.src = '/resume.js?v=9'; s.onload = run;
+    var s = document.createElement('script'); s.src = '/resume.js?v=10'; s.onload = run;
     s.onerror = function () { h('<div class="card narrow center"><p>Could not load the resume builder. Please refresh.</p></div>'); };
     document.head.appendChild(s);
   }
@@ -739,6 +746,8 @@
     var load = jpOpts ? Promise.resolve(jpOpts) : rpc('jp_options').then(function (o) { jpOpts = o; return o; });
     load.then(function (o) {
       var saved = {}; try { saved = JSON.parse(localStorage.getItem('jp_last') || '{}'); } catch (e) {}
+      var qco = new URLSearchParams(location.search).get('company');
+      if (qco) saved = { company: qco, branch: saved.branch || '', level: saved.level || 'fresher' };
       var fams = {}; (o.roles || []).forEach(function (r) { (fams[r.family] = fams[r.family] || []).push(r); });
       var roleOpts = '<option value="">Not sure: detect from the job post</option>' + Object.keys(fams).map(function (f) {
         return '<optgroup label="' + esc(f) + '">' + fams[f].map(function (r) { return '<option value="' + esc(r.id) + '">' + esc(r.name) + '</option>'; }).join('') + '</optgroup>';
@@ -760,24 +769,23 @@
         '<div class="err" id="je" role="alert"></div><button class="btn block" id="jgo">Build my preparation plan</button></div>' +
         '<div id="iqr-slot"></div><div id="jout"></div>');
       q('#iqr-slot').appendChild(reportBox(saved.company || '', ''));
-      q('#iqr-slot').appendChild(salaryBox(saved.company || ''));
       var level = saved.level || 'fresher';
       function setLevel(v) { level = v; Array.prototype.forEach.call(q('#jl').children, function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-l') === v); }); }
       setLevel(level);
       q('#jl').onclick = function (e) { var b = e.target.closest('button'); if (b) setLevel(b.getAttribute('data-l')); };
       if (saved.company) q('#jc').value = saved.company; if (saved.url && q('#ju')) q('#ju').value = saved.url; if (saved.role) q('#jr').value = saved.role; if (saved.branch) q('#jb').value = saved.branch; if (saved.text) q('#jt').value = saved.text;
       q('#jgo').onclick = function () {
-        if (isGuest()) { var tp = +(localStorage.getItem('vkv-trial-plans') || 0); if (tp >= 2) { gate('plan', '/career'); return; } try { localStorage.setItem('vkv-trial-plans', String(tp + 1)); } catch (e) {} }
+        if (isGuest()) { var tp = +(localStorage.getItem('vkv-trial-plans') || 0); if (tp >= 3) { gate('plan', '/career', null, { hard: true }); return; } try { localStorage.setItem('vkv-trial-plans', String(tp + 1)); } catch (e) {} guestSession(); guestActivity('plan'); }
         var inp = { url: (q('#ju') ? q('#ju').value.trim() : ''), company: q('#jc').value.trim(), role: q('#jr').value, branch: q('#jb').value, level: level, text: q('#jt').value.trim() };
         if (!inp.company && !inp.url && !inp.role && !inp.text && !inp.branch) { q('#je').textContent = 'Choose a role or branch, or paste a job post.'; return; }
         q('#je').textContent = '';
         try { localStorage.setItem('jp_last', JSON.stringify(inp)); } catch (e) {}
         var b = this; b.disabled = true; b.textContent = 'Building your plan…';
         rpc('jp_plan', { p_text: inp.text || null, p_company: inp.company || null, p_role: inp.role || null, p_branch: inp.branch || null, p_level: inp.level, p_industry: null })
-          .then(function (plan) { window.__jpInp = inp; renderPlan(plan); b.disabled = false; b.textContent = 'Rebuild plan'; q('#jout').scrollIntoView({ behavior: 'smooth' }); })
+          .then(function (plan) { window.__jpInp = inp; renderPlan(plan); b.disabled = false; b.textContent = 'Rebuild plan'; refineBar(inp); q('#jout').scrollIntoView({ behavior: 'smooth' }); })
           .catch(function (e) { q('#je').textContent = errMsg(e); b.disabled = false; b.textContent = 'Build my preparation plan'; });
       };
-      if (/auto=1/.test(location.search) && (saved.company || saved.text || saved.branch)) q('#jgo').click();
+      if ((qco || /auto=1/.test(location.search)) && (saved.company || saved.text || saved.branch)) q('#jgo').click();
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
 
@@ -1073,12 +1081,12 @@
 
   /* ---------- students share interview questions (reviewed before publishing) ---------- */
   function reportBox(company, role) {
-    var d = document.createElement('details'); d.className = 'card iqr no-pdf';
+    var d = document.createElement('details'); d.className = 'card iqr no-pdf'; d.open = true;
     var yr = new Date().getFullYear(), O = jpOpts || {};
     var roleList = '<datalist id="iqr-rl">' + (O.roles || []).map(function (r) { return '<option value="' + esc(r.name) + '">' + esc(r.family || '') + '</option>'; }).join('') + '</datalist>';
     var coList = '<datalist id="iqr-cl">' + (O.companies || []).map(function (c) { return '<option value="' + esc(typeof c === 'string' ? c : c.name) + '">'; }).join('') + '</datalist>';
-    d.innerHTML = '<summary><span class="iqr-ic">🎤</span><span><b>Interviewed recently? Help your juniors</b><small>Share the questions you were asked at any company. No resume or plan needed.</small></span><em>Share →</em></summary><div class="iqr-body">' +
-      '<p class="small muted">We check each question, add a model answer and show it to students preparing for the same company.</p>' +
+    d.innerHTML = '<summary><span class="iqr-ic">🎤</span><span><b>Interviewed recently? Help your juniors crack it</b><small>One minute of your time can decide someone’s first job.</small></span></summary><div class="iqr-body">' +
+      '<div class="iqr-why"><div><span>🙌</span><b>Pay it forward</b><small>Seniors once helped you. Now it is your turn.</small></div><div><span>✅</span><b>We do the rest</b><small>We check each question and add a model answer.</small></div><div><span>🏢</span><b>Real, company-wise</b><small>Your questions appear under “Asked at [company]”.</small></div></div>' +
       '<div class="two"><div><label class="f" for="iqr-co">Company</label><input class="in" id="iqr-co" list="iqr-cl" autocomplete="off" value="' + esc(company || '') + '" placeholder="Start typing, e.g. Tata Motors"></div><div><label class="f" for="iqr-ro">Role / post</label><input class="in" id="iqr-ro" list="iqr-rl" autocomplete="off" value="' + esc(role || '') + '" placeholder="Pick from the list or type your own"></div></div>' + roleList + coList +
       '<div class="two" style="margin-top:8px"><div><label class="f">Round</label><select class="in" id="iqr-rd"><option>Technical</option><option>HR</option><option>Managerial</option><option>Aptitude</option><option>Coding</option><option>Group discussion</option></select></div><div><label class="f">Year</label><select class="in" id="iqr-yr">' + [yr, yr - 1, yr - 2].map(function (y) { return '<option>' + y + '</option>'; }).join('') + '</select></div></div>' +
       '<label class="f" style="margin-top:8px;display:block">Questions (one per line)</label><textarea class="in" id="iqr-q" rows="5" placeholder="What is the difference between…\nExplain your final-year project…"></textarea>' +
@@ -1612,6 +1620,7 @@
           '<div class="rfb" data-no="' + x.no + '"><span class="small muted">Is this answer right?</span><button type="button" class="icon-btn" data-r="1" aria-pressed="false" aria-label="Looks right">' + THUMB_UP + '</button><button type="button" class="icon-btn" data-r="-1" aria-pressed="false" aria-label="I have a concern">' + THUMB_DN + '</button>' +
           '<div class="chips" hidden>' + RFLAGS.map(function (f) { return '<button type="button" class="chip" aria-pressed="false" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div></div>';
       }).join('');
+      if (isGuest()) guestActivity('test'); else afterTest();
       var acc = r.attempted ? Math.round(100 * r.score / r.attempted) : 0, att = r.n ? Math.round(100 * r.attempted / r.n) : 0;
       var V = pct >= 85 ? ['great', '🏆 Excellent', 'You have a strong grip on this. Move to harder topics or a full-length paper.'] : pct >= 70 ? ['good', '👍 Good', 'Solid work. Fix the few weak spots below to reach the top band.'] : pct >= 50 ? ['fair', '📈 Getting there', 'You know the basics. Practise the units marked “Focus” and you will improve quickly.'] : ['low', '🎯 Needs practice', 'Start with the explanations below, then practise one unit at a time.'];
       var tip = acc >= 80 && att < 75 ? 'Your accuracy is high but you left many questions. Try to attempt more; time management will raise your score.' : acc < 60 && att >= 85 ? 'You attempted almost everything but accuracy is low. Slow down a little and avoid guessing.' : '';
@@ -1751,34 +1760,55 @@
     return { el: m, close: close };
   }
   var GATE_TXT = {
-    tests: ['📝', 'Sign in to save your tests', 'Your scores, weak units and history are saved to your own private ID.'],
-    limit: ['🎯', 'You have used your free trial tests', 'Great start! Sign in to keep practising and see your full report.'],
+    open: ['🔐', 'Keep your work safe', 'Without signing in, your tests, scores and resumes stay only in this browser and can be erased any time.'],
+    soft: ['✨', 'Unlock your full journey', 'Sign in with Gmail and we can guide you all the way.'],
+    record: ['🎉', 'You have a great track record here!', 'You have already done a lot. Preserve your work and reports before they are lost.'],
+    back: ['👋', 'Welcome back!', 'Sign in to continue exactly where you left off.'],
+    tests: ['📝', 'Sign in to continue your tests', 'Your scores, weak units and history are saved to your own private ID.'],
+    limit: ['🎯', 'Great start! Sign in to keep going', 'You have used your free tests as a visitor.'],
     dashboard: ['📊', 'Your dashboard needs your ID', 'Your progress, score trend and focus areas are built from the tests saved to your ID.'],
-    resume: ['📄', 'Sign in to keep more resumes', 'You can build one resume as a guest. Sign in to save it, make more versions and compare them.'],
-    plan: ['🏢', 'Sign in for more plans', 'You have built your free plans. Sign in to keep exploring companies and save your work.']
+    resume: ['📄', 'Sign in to keep more resumes', 'Save your resume, make versions for every company and compare them.'],
+    plan: ['🏢', 'Sign in for more plans', 'Keep exploring companies and save your plans.']
   };
-  function gate(kind, next, retry) {
-    var t = GATE_TXT[kind] || GATE_TXT.tests, nx = next || location.pathname + location.search;
-    var trial = kind === 'tests' && !session && window.__anonOk !== false;
+  var PERKS = '<ul class="gm-perks"><li><span>📊</span>Deep analysis of every test: units, trend, weak topics</li><li><span>🧭</span>Guidance for your dream company and role</li><li><span>📄</span>Resumes with ATS scores, saved and downloadable anytime</li><li><span>☁️</span>Your full history on any phone or laptop</li></ul>';
+  function gate(kind, next, retry, opt) {
+    opt = opt || {};
+    var t = GATE_TXT[kind] || GATE_TXT.tests, nx = next || location.pathname + location.search, n = nudgeState();
+    var skippable = !opt.hard;
     var g = gmodal('<div class="gm-ic">' + t[0] + '</div><h2>' + t[1] + '</h2><p class="gm-lead">' + t[2] + '</p>' +
-      '<div class="gm-story"><p><b>Why sign in?</b> Without your ID, the website cannot tell that it is you. Change your phone, clear the browser or come back next week, and your tests, reports and resumes are gone. With your ID, everything is kept safe and your progress report grows with every test.</p></div>' +
-      '<button type="button" class="btn block gm-g" id="gm-g">' + G_ICON + '<span>Continue with Google</span></button>' +
-      '<p class="gm-30">⏱ Takes about 30 seconds · free forever</p>' +
+      (kind === 'record' && n.acts ? '<p class="gm-rec">You have done <b>' + n.acts + '</b> activit' + (n.acts === 1 ? 'y' : 'ies') + ' here so far.</p>' : '') +
+      '<div class="gm-story"><p><b>Why sign in?</b> Without your Gmail ID we cannot keep track of your past and present work. Sign in so we can guide your journey, share deep analysis of your tests and help you build your resume.</p></div>' + PERKS +
+      '<button type="button" class="btn block gm-g" id="gm-g">' + G_ICON + '<span>Sign in with Google</span></button>' +
+      '<p class="gm-30">⏱ Hardly 10 seconds · free forever</p>' +
       '<a class="gm-alt" href="/login?next=' + encodeURIComponent(nx) + '" data-link>Use an email code instead</a>' +
-      (trial ? '<div class="gm-or"><span>or</span></div><button type="button" class="btn ghost block" id="gm-t">Try 2 free tests without signing in</button><p class="gm-30">Guest results are not saved to a dashboard.</p>' : ''));
+      (skippable ? '<button type="button" class="link-btn gm-skip" id="gm-s">Not now</button>' : ''), { locked: !skippable && opt.locked });
     g.el.querySelector('#gm-g').onclick = function () { googleSignIn(nx); };
     g.el.querySelector('.gm-alt').addEventListener('click', function () { g.close(); });
-    var tb = g.el.querySelector('#gm-t');
-    if (tb) tb.onclick = function () {
-      tb.disabled = true; tb.textContent = 'Starting your trial…';
-      (sb.auth.signInAnonymously ? sb.auth.signInAnonymously() : Promise.reject()).then(function (r) {
-        if (r.error) throw r.error;
-        session = r.data.session; g.close(); toast('Trial started: 2 free tests.'); if (retry) setTimeout(retry, 200);
-      }).catch(function () { window.__anonOk = false; tb.remove(); toast('Guest trial is not available right now. Please sign in.'); });
-    };
+    var sk = g.el.querySelector('#gm-s');
+    if (sk) sk.onclick = function () { var s0 = nudgeState(); s0.skips++; s0.lastAsk = Date.now(); nudgeSave(s0); g.close(); if (retry) retry(); };
+  }
+  /* nudge engine for visitors: ask on opening, after activity, after a break; firmer each time they skip */
+  function nudgeState() { try { return Object.assign({ acts: 0, skips: 0, last: 0, lastAsk: 0, seen: 0 }, JSON.parse(localStorage.getItem('vkv-nudge') || '{}')); } catch (e) { return { acts: 0, skips: 0, last: 0, lastAsk: 0, seen: 0 }; } }
+  function nudgeSave(s) { try { localStorage.setItem('vkv-nudge', JSON.stringify(s)); } catch (e) {} }
+  function guestActivity(kind) {
+    if (!isGuest()) return;
+    var s = nudgeState(); s.acts++; s.last = Date.now(); nudgeSave(s);
+    if (document.querySelector('.gm-wrap')) return;
+    if (s.acts === 2 || (s.acts > 2 && s.acts % 2 === 0)) setTimeout(function () { if (!document.querySelector('.gm-wrap')) gate(s.skips >= 2 ? 'record' : 'soft', null, null, { hard: s.skips >= 5, locked: false }); }, 900);
+  }
+  function nudgeOnOpen() {
+    if (!isGuest() || /^\/(login|exam|g)\b/.test(location.pathname)) return;
+    var s = nudgeState(), now = Date.now(), opened = false;
+    try { opened = sessionStorage.getItem('vkv-opened') === '1'; } catch (e) {}
+    var away = s.last && now - s.last > 3 * 3600e3;
+    if (!opened || away) {
+      try { sessionStorage.setItem('vkv-opened', '1'); } catch (e) {}
+      s.seen = now; if (away) s.last = now; nudgeSave(s);
+      setTimeout(function () { if (!document.querySelector('.gm-wrap')) gate(away && s.acts ? 'back' : 'open'); }, 1500);
+    }
   }
   function gateErr(m, next) {
-    if (m === 'GUEST_LIMIT') { gate('limit', next); return true; }
+    if (m === 'GUEST_LIMIT') { gate('limit', next, null, { hard: true }); return true; }
     if (m === 'PROFILE_INCOMPLETE') { profilePrompt(true); return true; }
     if (m === 'PROFILE_FIX') { checkNotice(true); return true; }
     return false;
@@ -1811,11 +1841,20 @@
         .catch(function (e) { box.querySelector('#pf-er').textContent = errMsg(e); b.disabled = false; b.textContent = 'Save my details'; });
     };
   }
+  function afterTest() {
+    if (!profile || profile.complete) return;
+    var k = 'vkv-tests-' + (session && session.user ? session.user.id : ''), n = +(localStorage.getItem(k) || 0) + 1;
+    try { localStorage.setItem(k, String(n)); } catch (e) {}
+    if (n >= 2) setTimeout(function () { profilePrompt(false); }, 1500);
+  }
   function profilePrompt(forced) {
     if (isGuest() || document.querySelector('.gm-pf')) return;
-    var g = gmodal('<div class="gm-pf"><div class="gm-ic">🎉</div><h2>You’re doing great!</h2><p class="gm-lead">' + (forced ? 'To continue practising and keep your reports, please complete your details. It takes a minute.' : 'You have been using VKV Sir Test Lab well. Add your details so we can personalise your reports and keep your account safe.') + '</p><div id="pf-box"></div>' + (forced ? '' : '<button type="button" class="link-btn gm-later">Remind me later</button>') + '</div>', { locked: forced });
+    var sk = +(localStorage.getItem('vkv-pf-skips') || 0); if (sk >= 2) forced = true;
+    var g = gmodal('<div class="gm-pf"><div class="gm-ic">🎉</div><h2>You’re doing great!</h2><p class="gm-lead">' + (forced ? 'Please complete your details to keep practising. It takes about a minute.' : 'Two quick minutes now make the website work better for you.') + '</p>' +
+      '<ul class="gm-perks"><li><span>📄</span>Your reports and resume show your correct name</li><li><span>🔐</span>Help to recover your account if you lose access</li><li><span>👩‍🏫</span>Teachers and admins can recognise you and your results</li></ul>' +
+      '<div id="pf-box"></div>' + (forced ? '' : '<button type="button" class="link-btn gm-later">Later (' + (2 - sk) + ' left)</button>') + '</div>', { locked: forced });
     profileForm(g.el.querySelector('#pf-box'), function () { g.close(); });
-    var l = g.el.querySelector('.gm-later'); if (l) l.onclick = function () { try { localStorage.setItem('vkv-pf-later', String(Date.now())); } catch (e) {} g.close(); };
+    var l = g.el.querySelector('.gm-later'); if (l) l.onclick = function () { try { localStorage.setItem('vkv-pf-skips', String(sk + 1)); localStorage.setItem('vkv-pf-later', String(Date.now())); } catch (e) {} g.close(); };
   }
   var noticeAt = 0;
   function checkNotice(force) {
@@ -1838,6 +1877,27 @@
       g.el.querySelector('#nt-up').onclick = function () { g.close(); var f = gmodal('<div class="gm-pf"><h2>Update your details</h2><div id="pf-box"></div></div>', { locked: !canSkip }); profileForm(f.el.querySelector('#pf-box'), function () { f.close(); }); };
       var sk = g.el.querySelector('#nt-sk'); if (sk) sk.onclick = function () { rpc('notice_skip', { p_id: n.id }).then(function () { g.close(); gmodal('<div class="gm-ic">ℹ️</div><h2>Skipped this time</h2><p class="gm-lead">Skip works only once. Next time you will need to provide true and complete information to keep using the website.</p><button type="button" class="btn block" onclick="this.closest(\'.gm-wrap\').remove();document.body.classList.remove(\'noscroll\')">OK, understood</button>'); }).catch(function (e) { toast(errMsg(e)); }); };
     }).catch(function () {});
+  }
+
+  /* plan refinement: ask for branch, then role or job post, and rebuild */
+  function refineBar(inp) {
+    var out = q('#jout'); if (!out) return;
+    var old = out.querySelector('.refine'); if (old) old.remove();
+    if (inp.branch && (inp.role || inp.text)) return;
+    var r = document.createElement('div'); r.className = 'card refine no-pdf';
+    var bOpts = q('#jb') ? q('#jb').innerHTML : '', rOpts = q('#jr') ? q('#jr').innerHTML : '';
+    r.innerHTML = '<div class="rf-h"><span>🎯</span><div><b>Make this plan sharper' + (inp.company ? ' for ' + esc(inp.company) : '') + '</b><small>Add your branch, then your role or the job description, and rebuild.</small></div></div>' +
+      '<div class="rf-g"><div><label class="f" for="rf-b">1 · Your branch</label><select class="in" id="rf-b">' + bOpts + '</select></div>' +
+      '<div><label class="f" for="rf-r">2 · Job role (if you know it)</label><select class="in" id="rf-r">' + rOpts + '</select></div></div>' +
+      '<details class="rf-jd"><summary>Have the job description? Paste it instead of choosing a role</summary><textarea class="in" id="rf-t" rows="4" placeholder="Paste the job post text"></textarea></details>' +
+      '<button type="button" class="btn" id="rf-go">↻ Rebuild my plan</button>';
+    out.insertBefore(r, out.firstChild);
+    r.querySelector('#rf-b').value = inp.branch || ''; r.querySelector('#rf-r').value = inp.role || '';
+    r.querySelector('#rf-go').onclick = function () {
+      q('#jb').value = r.querySelector('#rf-b').value; q('#jr').value = r.querySelector('#rf-r').value;
+      var t = r.querySelector('#rf-t').value.trim(); if (t) q('#jt').value = t;
+      q('#jgo').click();
+    };
   }
 
   /* ---------- homepage: who is it for (personas) ---------- */
@@ -1991,10 +2051,34 @@
                 document.body.appendChild(m);
               }).catch(function (e) { toast(errMsg(e)); });
             }
-            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=9'; s.onload = show; document.head.appendChild(s); }
+            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=10'; s.onload = show; document.head.appendChild(s); }
           };
         });
       }).catch(function (e) { box.innerHTML = '<div class="card"><p>' + esc(errMsg(e)) + '</p></div>'; });
+    }
+    load();
+  }
+
+  /* ---------- admin: what visitors (not signed in) are doing ---------- */
+  function admVisitors(box) {
+    var days = 30;
+    function load() {
+      box.innerHTML = '<div class="spinner"></div>';
+      rpc('admin_visitors', { p_days: days }).then(function (r) {
+        var st = r.stats || {}, rows = r.rows || [];
+        box.innerHTML = '<p class="small muted">Visitors use the website with a private guest ID before signing in. When they sign in with Google, they move to Students with their history.</p>' +
+          '<div class="row" style="gap:8px;margin:8px 0">' + [7, 30, 90].map(function (d) { return '<button class="btn ' + (d === days ? '' : 'ghost') + ' small" data-d="' + d + '">' + d + ' days</button>'; }).join('') + '</div>' +
+          '<div class="adm-stats">' + [['Visitors', st.visitors], ['Signed up with Google', st.converted], ['Tests by visitors', st.tests], ['Visitor resumes', st.resumes]].map(function (x) { return '<div class="card"><b>' + (x[1] || 0) + '</b><span class="small muted">' + x[0] + '</span></div>'; }).join('') + '</div>' +
+          (rows.length ? '<div class="vis-l">' + rows.map(function (v) {
+            return '<div class="card vis"><div class="spread"><b>Visitor · ' + esc(String(v.id).slice(0, 8)) + '</b><span class="small muted">' + (v.last ? 'Active ' + esc(fmtDate(v.last)) : '') + '</span></div>' +
+              '<div class="vis-k"><span>📝 ' + v.tests + ' test' + (v.tests === 1 ? '' : 's') + (v.avg != null ? ' · avg ' + v.avg + '%' : '') + '</span><span>🏢 ' + v.plans + ' plan' + (v.plans === 1 ? '' : 's') + '</span><span>📄 ' + (v.resumes || []).length + ' resume' + ((v.resumes || []).length === 1 ? '' : 's') + '</span></div>' +
+              ((v.subjects || []).length ? '<p class="small"><b>Subjects tried:</b> ' + v.subjects.map(esc).join(', ') + '</p>' : '') +
+              ((v.plan_cos || []).length ? '<p class="small"><b>Companies explored:</b> ' + v.plan_cos.map(esc).join(', ') + '</p>' : '') +
+              ((v.recent || []).length ? '<p class="small"><b>Recent tests:</b> ' + v.recent.map(function (a) { return '<a href="/result/' + a.id + '" data-link>' + esc(a.title || 'Test') + (a.score != null ? ' (' + a.score + '/' + a.n + ')' : '') + '</a>'; }).join(' · ') + '</p>' : '') +
+              ((v.resumes || []).length ? '<p class="small"><b>Resumes:</b> ' + v.resumes.map(function (x) { return esc(x.title) + (x.score != null ? ' · ATS ' + x.score : ''); }).join(', ') + '</p>' : '') + '</div>';
+          }).join('') + '</div>' : '<div class="card"><p class="muted">No visitor activity in this period.</p></div>');
+        box.querySelectorAll('[data-d]').forEach(function (b) { b.onclick = function () { days = +b.dataset.d; load(); }; });
+      }).catch(function (e) { box.innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; });
     }
     load();
   }
@@ -2005,11 +2089,11 @@
     if (!profile || !profile.is_admin) { h('<div class="narrow card center"><h2>Admins only</h2><p class="muted">This area is for teachers and admins.</p></div>'); return; }
     var tab = new URLSearchParams(location.search).get('tab') || 'overview';
     var tabsJp = '<a href="/admin/jobprep" data-link>Job Prep ↗</a>';
-    var tabs = [['overview', 'Live'], ['questions', 'Questions'], ['students', 'Students'], ['tests', 'Tests'], ['results', 'Results'], ['groups', 'Groups'], ['suggest', 'Suggestions'], ['links', 'Share links'], ['resumes', 'Resumes']];
+    var tabs = [['overview', 'Live'], ['questions', 'Questions'], ['students', 'Students'], ['tests', 'Tests'], ['results', 'Results'], ['groups', 'Groups'], ['suggest', 'Suggestions'], ['links', 'Share links'], ['resumes', 'Resumes'], ['visitors', 'Visitors']];
     h('<div class="stack"><div class="spread"><div><p class="eyebrow">Admin</p><h1>Control room</h1></div></div>' +
       '<div class="tabs">' + tabs.map(function (t) { return '<a href="/admin?tab=' + t[0] + '" data-link class="' + (t[0] === tab ? 'on' : '') + '">' + t[1] + '</a>'; }).join('') + tabsJp + '</div><div id="adm"></div></div>');
     var box = q('#adm');
-    ({ overview: admOverview, questions: admQuestions, students: admStudents, tests: admTests, results: admResults, links: admLinks, groups: admGroups, suggest: admSuggest, resumes: admResumes }[tab] || admOverview)(box);
+    ({ overview: admOverview, questions: admQuestions, students: admStudents, tests: admTests, results: admResults, links: admLinks, groups: admGroups, suggest: admSuggest, resumes: admResumes, visitors: admVisitors }[tab] || admOverview)(box);
   }
 
   function admSuggest(box) {

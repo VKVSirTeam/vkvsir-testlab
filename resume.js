@@ -145,9 +145,21 @@
     return t;
   }
   function titleNow() { if (d.autoT !== false || !has(d.title)) d.title = autoTitle(); return d.title; }
+  var gdbT = null, gid = null;
+  function guestDb() {
+    clearTimeout(gdbT);
+    gdbT = setTimeout(function () {
+      if (!V.anySession || !has(d.name)) return;
+      var row = { title: d.title || 'Resume', track: (d.goals || []).join(','), data: d, score: score().total, updated_at: new Date().toISOString() };
+      var p = gid ? V.sb.from('resumes').update(row).eq('id', gid).select('id').single() : V.sb.from('resumes').insert(row).select('id').single();
+      p.then(function (r) { if (r.data && r.data.id) { gid = r.data.id; try { localStorage.setItem('vkv-guest-rid', gid); } catch (e) {} } });
+    }, 2000);
+  }
   function persist() {
     titleNow();
     if (!V.session) {
+      if (V.guest && !V.__acted && has(d.name)) { V.__acted = 1; V.activity && V.activity('resume'); V.ensureGuest && V.ensureGuest().then(function (ok) { if (ok) guestDb(); }); }
+      else if (V.guest && V.anySession) guestDb();
       if (!rid) rid = 'l' + Date.now().toString(36);
       var e0 = LIST.filter(function (x) { return x.id === rid; })[0], sc = score().total;
       if (e0) { e0.title = d.title; e0.data = d; e0.score = sc; } else { LIST.unshift({ id: rid, title: d.title, data: d, score: sc }); pickerHtml(); }
@@ -384,7 +396,17 @@
     else sec.push(edu, skills, exp.items.length >= 1 ? exp : proj, exp.items.length >= 1 ? proj : exp, cert, ach, por, pubs, test);
     return { name: d.name || 'Your Name', contact: contact, sections: sec.filter(function (s) { return (s.items && s.items.length) || (s.list && s.list.length) || (s.rows && s.rows.length) || s.p; }) };
   }
+  var SAMPLE = { name: 'Aarav Mehta', email: 'aarav.mehta@gmail.com', phone: '98xxxxxx10', city: 'Jaipur, Rajasthan', linkedin: 'linkedin.com/in/aarav-mehta',
+    summary: 'Final-year Mechanical Engineering student skilled in SolidWorks, ANSYS and lean manufacturing, seeking a Graduate Engineer Trainee role in automotive production.',
+    degree: 'B.Tech', branch: 'Mechanical Engineering', college: 'Govt. Engineering College, Ajmer', grad: '2027', cgpa: '8.2 / 10', x12: 'RBSE, 2023, 88%', x10: 'CBSE, 2021, 92%',
+    skTech: 'Manufacturing processes, GD&T, Lean, Kaizen, 5S, Quality tools', skSoft: 'SolidWorks, AutoCAD, ANSYS Workbench, MS Excel, SAP (basic)', langs: 'English, Hindi',
+    exp: [{ role: 'Summer Intern – Production', org: 'Hero MotoCorp, Neemrana', when: 'Jun – Jul 2026', bullets: 'Recorded cycle times for 22 assembly stations and found 3 bottlenecks\nProposed line-balancing changes that cut idle time by 9%' }],
+    projects: [{ title: 'Solar-powered grass cutter', kind: 'Major project', tools: 'SolidWorks, Arduino', when: 'Jan – Apr 2026', bullets: 'Designed the chassis and blade mount in SolidWorks for a 12 kg prototype\nBuilt and tested the prototype, achieving 2 hours of runtime per charge' }],
+    certs: [{ name: 'Six Sigma Yellow Belt', org: 'NPTEL', year: '2026' }], ach: [{ text: 'Finalist, Smart India Hackathon 2025 (team of 6)' }],
+    por: [{ role: 'Coordinator', org: 'Mechanical Engineering Society', when: '2025 – 26', text: 'Organised 3 technical workshops attended by 250+ students' }], pubs: [], tests: {}, goals: ['private'] };
+  function isEmpty() { return !has(d.name); }
   function previewHtml() {
+    if (isEmpty()) { var keep = d; d = Object.assign(blank(), SAMPLE); var hs = previewHtml(); d = keep; return '<div class="rv-sample"><span>Sample resume · type your full name to start your own</span></div>' + hs; }
     var m = model();
     return '<div class="rv-paper"><div class="rv-name">' + esc(m.name) + '</div><div class="rv-contact">' + m.contact.map(esc).join(' | ') + '</div>' +
       m.sections.map(function (s) {
@@ -492,6 +514,7 @@
   /* ---------------- render ---------------- */
   function drawSide() {
     var pv = document.getElementById('rb-prev'); if (pv) pv.innerHTML = previewHtml();
+    var pb = document.getElementById('rb-pvbtn'); if (pb) pb.textContent = '👁 ' + (isEmpty() ? 'See sample' : 'Preview');
     var sc = document.getElementById('rb-mini'); if (sc) { var s = score(), band = s.total >= 85 ? 'great' : s.total >= 70 ? 'good' : s.total >= 50 ? 'fair' : 'low'; sc.className = 'rb-ring ' + band; sc.style.setProperty('--p', s.total); sc.innerHTML = '<span><b>' + s.total + '</b><small>ATS</small></span>'; }
     if (step === 3 || step === 6) { var f = document.getElementById('rb-form'); if (f && f.dataset.k !== String(!!kw)) { f.dataset.k = String(!!kw); render(true); } }
   }
@@ -555,11 +578,11 @@
     V.h('<div class="rb" id="rb-top"><div class="rb-head2"><div><h1>Resume Builder</h1><p class="muted">ATS-friendly resume with keywords from real job posts. Free, unlimited PDF &amp; Word downloads.</p>' +
       '<details class="softinfo"><summary>Why this builder is different</summary><ul><li><b>Free and unlimited:</b> download PDF and Word as often as you like. No subscription, no watermark.</li><li><b>Readable by ATS:</b> real text, one column and standard headings.</li><li><b>Real keywords:</b> skills and software from current job posts, including your target company’s.</li><li><b>Job-post match:</b> paste any job description and see the exact keywords you are missing.</li></ul></details></div>' +
       '<div class="rb-ring" id="rb-mini" title="Live ATS score"></div></div>' +
-      '<div class="rb-tbar"><div class="rb-tname-w"><span class="rb-doc">📄</span><div class="rb-tn"><b id="rb-tname">' + esc(titleNow()) + '</b><small id="rb-saved">' + (V.session ? 'Saves to your account automatically' : 'Saved on this device · <a href="/login?next=/resume" data-link>sign in</a> to keep it') + '</small></div></div>' +
+      '<div class="rb-tbar"><div class="rb-tname-w"><span class="rb-doc">📄</span><div class="rb-tn"><b id="rb-tname">' + esc(titleNow()) + '</b><small id="rb-saved">' + (V.session ? 'Saves to your account automatically' : 'Not saved to your account · <a href="/login?next=/resume" data-link>sign in</a> to keep it safe') + '</small></div></div>' +
       '<div class="rb-tact"><span id="rb-pickw"></span><button type="button" class="btn ghost small" id="rb-gal">🗂 My resumes</button><details class="rb-menu"><summary class="btn ghost small">⋯ Manage</summary><div class="rb-menu-p">' +
         '<button type="button" id="rb-ren">✏️ Rename</button><button type="button" id="rb-dup">⧉ Duplicate for another job</button><button type="button" id="rb-new">＋ New (keep my details)</button><button type="button" id="rb-blank">＋ Blank resume</button><button type="button" id="rb-del" class="rb-delb">🗑 Delete this resume</button></div></details></div></div>' +
       '<nav class="rb-steps" id="rb-steps" aria-label="Steps"></nav><div class="rb-body"><div class="card rb-form" id="rb-form"></div><aside class="rb-side" id="rb-side"><div class="rb-ptitle"><b>Live preview</b><span class="small muted">A4 · one column</span><button type="button" class="rb-pvx" id="rb-pvx" aria-label="Close preview">✕</button></div><div id="rb-prev"></div></aside></div>' +
-      '<button type="button" class="rb-pvbtn" id="rb-pvbtn">👁 Preview</button></div>');
+      '<button type="button" class="rb-pvbtn" id="rb-pvbtn">👁 ' + (isEmpty() ? 'See sample' : 'Preview') + '</button></div>');
     document.getElementById('rb-gal').onclick = function () { if (V.guest) return V.gate('resume', '/resume'); gallery(); };
     ['rb-new', 'rb-blank', 'rb-dup'].forEach(function (id) { var b = document.getElementById(id); if (b) b.addEventListener('click', function (e) { if (V.guest) { e.stopImmediatePropagation(); V.gate('resume', '/resume'); } }, true); });
     document.getElementById('rb-pvbtn').onclick = function () { document.body.classList.add('rb-pv-open'); };
@@ -661,7 +684,7 @@
     },
     preview: function (api, data) { var keepV = V, keepD = d; V = api; d = Object.assign(blank(), data); var html = previewHtml(); V = keepV || api; d = keepD; return html; },
     render: function (api) {
-      V = api; V.setNav('resume'); step = 0; rid = null;
+      V = api; V.setNav('resume'); step = 0; rid = null; try { gid = localStorage.getItem('vkv-guest-rid'); } catch (e) {}
       try { d = Object.assign(blank(), JSON.parse(localStorage.getItem(LS) || 'null') || {}); } catch (e) { d = blank(); }
       var roles = V.__roles ? Promise.resolve(V.__roles) : V.rpc('rb_roles').then(function (r) { V.__roles = r; return r; });
       if (!SUG) V.rpc('rb_suggest').then(function (x) { SUG = x; }).catch(function () {});
