@@ -50,13 +50,13 @@
   function setNav(active) {
     if (active !== undefined) navActive = active;
     active = navActive;
-    var items = [['home', '/', 'Practice Tests', '🎯', 'Topic-wise papers with instant results'], ['career', '/career', 'Job Prep', '🏢', 'Company-wise plan, software & interviews'], ['resume', '/resume', 'Resume Builder', '📄', 'ATS-ready resume, PDF & Word']];
-    if (session) items.push(['me', '/me', 'Dashboard', '📊', 'Your results and progress']);
-    if (session && profile && profile.is_admin) items.push(['admin', '/admin', 'Admin', '🛠', 'Control room']);
+    var items = [['home', '/', 'Practice Tests', '🎯', 'Topic-wise papers with instant results', 'Tests'], ['career', '/career', 'Job Prep', '🏢', 'Company-wise plan, software & interviews', 'Job Prep'], ['resume', '/resume', 'Resume Builder', '📄', 'ATS-ready resume, PDF & Word', 'Resume']];
+    if (session) items.push(['me', '/me', 'Dashboard', '📊', 'Your results and progress', 'My tests']);
+    if (session && profile && profile.is_admin) items.push(['admin', '/admin', 'Admin', '🛠', 'Control room', 'Admin']);
     var ini = ((profile && (profile.full_name || profile.email)) || '?').charAt(0).toUpperCase();
     var acct = session ? '<a href="/profile" data-link class="avatar" title="Profile and sign out" aria-label="Profile and sign out">' + esc(ini) + '</a>'
       : '<a href="/login" data-link class="nav-cta' + (active === 'login' ? ' on' : '') + '">Sign in</a>';
-    $nav.innerHTML = '<div class="nav-links">' + items.map(function (x) { return '<a href="' + x[1] + '" data-link class="' + (active === x[0] ? 'on' : '') + '">' + x[2] + '</a>'; }).join('') + '</div>' +
+    $nav.innerHTML = '<div class="nav-links">' + items.map(function (x) { return '<a href="' + x[1] + '" data-link class="' + (active === x[0] ? 'on' : '') + '"><i aria-hidden="true">' + x[3] + '</i><span class="nl">' + x[2] + '</span><span class="ns">' + x[5] + '</span></a>'; }).join('') + '</div>' +
       '<div class="nav-right"><a href="https://www.vkvsir.com" class="site-link" title="Go to vkvsir.com">vkvsir.com ↗</a>' + acct +
       '<button type="button" class="menu-btn" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button></div>';
     // mobile drawer
@@ -210,7 +210,7 @@
         '<div class="hx-r2"><div class="hx-panel"><div class="hxp-grid">' +
           [['📚', 'Thousands', 'of practice questions'], ['🧭', '3 tracks', 'Semester · Competitive · Career'], ['🖼️', 'Image questions', 'Diagrams, figures & charts'], ['⚡', 'Fresh paper', 'Balanced mix every time']].map(function (s) { return '<div class="hxp"><span class="hxp-i">' + s[0] + '</span><b>' + s[1] + '</b><small>' + s[2] + '</small></div>'; }).join('') +
           '</div><div class="hxp-by"><img src="/favicon.svg" alt=""><span>Prepared and reviewed by the <b>VKV Sir team of experts</b></span></div></div></div>' +
-        '</section>' +
+        '</section>' + personasHtml() +
         '<div class="marq" aria-hidden="true"><div class="marq-in">' + (function () { var c = ['TCS', 'Infosys', 'L&amp;T', 'Tata Motors', 'Shri Bhagwati Machines', 'NTPC', 'BHEL', 'JK Tyre', 'Maruti Suzuki', 'Wipro', 'Bosch', 'Siemens', 'UltraTech', 'Tata Steel', 'Accenture', 'Mahindra', 'IOCL', 'ABB']; var s = c.map(function (x) { return '<span>' + x + '</span>'; }).join(''); return s + s; })() + '</div></div>' +
         
         '<section class="hs trio rv"><p class="eyebrow center">Three tools · one goal</p><h2 class="hs-h center">Everything you need to get exam-ready and job-ready</h2><div class="trio-g">' +
@@ -338,6 +338,8 @@
       };
       q('#go-start').onclick = function () { var t = q('#tr0'); t.open = true; t.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
       var gs2 = q('#go-start2'); if (gs2) gs2.onclick = q('#go-start').onclick;
+      $view.querySelectorAll('.who-tabs button').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-who'); b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); }); $view.querySelectorAll('.who-p').forEach(function (p) { p.hidden = p.getAttribute('data-who') !== k; }); }; });
+      $view.querySelectorAll('.who-cta a[href^="#"]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var t = document.getElementById(a.getAttribute('href').slice(1)); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
       $view.querySelectorAll('.tabs button').forEach(function (b) { b.onclick = function () { var t = b.getAttribute('data-tab'); b.parentNode.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); $view.querySelectorAll('.tabp').forEach(function (p) { p.hidden = p.getAttribute('data-p') !== t; }); }; });
       $view.querySelectorAll('.trio-c').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var t = document.getElementById(a.getAttribute('href').slice(1)); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }; });
       $view.querySelectorAll('.sqo').forEach(function (b) { b.onclick = function () { $view.querySelectorAll('.sqo').forEach(function (x) { x.disabled = true; x.classList.add(x.getAttribute('data-ok') === 'true' ? 'ok' : (x === b ? 'bad' : '')); }); q('.sqx').hidden = false; }; });
@@ -740,7 +742,7 @@
     var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, get session() { return session; }, get profile() { return profile; } };
     function run() { window.RB.render(api); }
     if (window.RB) return run();
-    var s = document.createElement('script'); s.src = '/resume.js?v=7'; s.onload = run;
+    var s = document.createElement('script'); s.src = '/resume.js?v=8'; s.onload = run;
     s.onerror = function () { h('<div class="card narrow center"><p>Could not load the resume builder. Please refresh.</p></div>'); };
     document.head.appendChild(s);
   }
@@ -773,6 +775,7 @@
         '<div class="err" id="je" role="alert"></div><button class="btn block" id="jgo">Build my preparation plan</button></div>' +
         '<div id="iqr-slot"></div><div id="jout"></div>');
       q('#iqr-slot').appendChild(reportBox(saved.company || '', ''));
+      q('#iqr-slot').appendChild(salaryBox(saved.company || ''));
       var level = saved.level || 'fresher';
       function setLevel(v) { level = v; Array.prototype.forEach.call(q('#jl').children, function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-l') === v); }); }
       setLevel(level);
@@ -991,6 +994,14 @@
         if (sw0) secEl.insertBefore(box, sw0); else if (gen) secEl.insertBefore(box, gen); else secEl.insertBefore(box, secEl.querySelector('.row'));
       }).catch(function () {});
     }
+    if (coName) rpc('jp_company_salary', { p_company: coName }).then(function (rows) {
+      if (!rows || !rows.length || !secEl) return;
+      var LV = { fresher: 'Fresher (0–1 yr)', junior: '2–4 years', senior: '5+ years' };
+      var box = document.createElement('div'); box.className = 'card salc';
+      box.innerHTML = '<h2>💰 Salaries reported by students</h2><p class="small muted" style="margin-top:-6px">Approximate yearly CTC (₹ lakh), from anonymous reports in the last 4 years. Actual offers vary by role, location and negotiation.</p><div class="salg">' +
+        rows.map(function (r) { return '<div class="sal-i"><span>' + esc(LV[r.level] || r.level) + '</span><b>₹' + r.low + '–' + r.high + ' L</b><small>typical ₹' + r.mid + ' L · ' + r.n + ' reports' + (r.roles && r.roles.length ? ' · ' + esc(r.roles.join(', ')) : '') + '</small></div>'; }).join('') + '</div>';
+      var anchor2 = secEl.querySelector('.swfp') || secEl.querySelector('.jp-swt'); if (anchor2) secEl.insertBefore(box, anchor2); else secEl.insertBefore(box, secEl.querySelector('.row'));
+    }).catch(function () {});
     if (coName || p.industry) {
       drawFootprint();
       // live: refresh this company's job posts now if our data is more than a day old
@@ -1044,6 +1055,25 @@
       };
       Array.prototype.forEach.call(document.querySelectorAll('[data-ref]'), function (b) { b.onclick = function () { build(b.getAttribute('data-ref'), b).then(function () { viewCompaniesAdmin(); }); }; });
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
+  }
+
+  /* ---------- students share their salary (anonymous; shown only as ranges of 3+) ---------- */
+  function salaryBox(company) {
+    var d = document.createElement('details'); d.className = 'card iqr sal no-pdf';
+    var yr = new Date().getFullYear();
+    d.innerHTML = '<summary><span class="iqr-ic">💰</span><span><b>Got placed? Share your salary</b><small>Anonymous. Shown only as a range once 3 or more people report.</small></span><em>Share →</em></summary><div class="iqr-body">' +
+      '<div class="two"><div><label class="f" for="sl-co">Company</label><input class="in" id="sl-co" list="iqr-cl" autocomplete="off" value="' + esc(company || '') + '" placeholder="e.g. Tata Motors"></div><div><label class="f" for="sl-ro">Role / post</label><input class="in" id="sl-ro" list="iqr-rl" autocomplete="off" placeholder="e.g. Graduate Engineer Trainee"></div></div>' +
+      '<div class="two" style="margin-top:8px"><div><label class="f" for="sl-ctc">Yearly CTC (₹ lakh)</label><input class="in" id="sl-ctc" type="number" inputmode="decimal" step="0.1" min="0.5" max="250" placeholder="e.g. 4.5"></div><div><label class="f" for="sl-lv">Experience at offer</label><select class="in" id="sl-lv"><option value="fresher">Fresher (0–1 yr)</option><option value="junior">2–4 years</option><option value="senior">5+ years</option></select></div></div>' +
+      '<div class="two" style="margin-top:8px"><div><label class="f" for="sl-yr">Year of offer</label><select class="in" id="sl-yr">' + [yr, yr - 1, yr - 2, yr - 3].map(function (y) { return '<option>' + y + '</option>'; }).join('') + '</select></div><div><label class="f" for="sl-city">City (optional)</label><input class="in" id="sl-city" placeholder="e.g. Pune"></div></div>' +
+      '<button class="btn" id="sl-go" type="button" style="margin-top:10px">Share anonymously</button><p class="small muted" style="margin:8px 0 0">Your name is never shown. Figures help juniors set realistic expectations.</p><p class="small" id="sl-out"></p></div>';
+    d.querySelector('#sl-go').onclick = function () {
+      if (!session) { toast('Please sign in to share (your name stays hidden).'); go('/login?next=' + encodeURIComponent(location.pathname)); return; }
+      var b = this; b.disabled = true;
+      rpc('jp_report_salary', { p_company: d.querySelector('#sl-co').value, p_role: d.querySelector('#sl-ro').value, p_level: d.querySelector('#sl-lv').value, p_ctc: parseFloat(d.querySelector('#sl-ctc').value), p_year: +d.querySelector('#sl-yr').value, p_city: d.querySelector('#sl-city').value })
+        .then(function () { d.querySelector('#sl-out').textContent = '✓ Thank you! Your report has been added anonymously.'; d.querySelector('#sl-ctc').value = ''; })
+        .catch(function (e) { d.querySelector('#sl-out').textContent = errMsg(e); }).finally(function () { b.disabled = false; });
+    };
+    return d;
   }
 
   /* ---------- students share interview questions (reviewed before publishing) ---------- */
@@ -1682,6 +1712,37 @@
     window.addEventListener('blur', hide);
   })();
 
+  /* ---------- homepage: who is it for (personas) ---------- */
+  var PERSONA_SVG = {
+    grow: '<svg viewBox="0 0 200 130" aria-hidden="true"><defs><linearGradient id="pg1" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="var(--accent)" stop-opacity=".25"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs><rect x="18" y="80" width="22" height="34" rx="5" fill="url(#pg1)"/><rect x="52" y="64" width="22" height="50" rx="5" fill="url(#pg1)"/><rect x="86" y="48" width="22" height="66" rx="5" fill="url(#pg1)"/><rect x="120" y="30" width="22" height="84" rx="5" fill="url(#pg1)"/><path d="M20 70 L62 52 L96 38 L150 14" fill="none" stroke="var(--accent-2)" stroke-width="4" stroke-linecap="round"/><path d="M140 10 L154 13 L149 26" fill="none" stroke="var(--accent-2)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="174" cy="96" r="16" fill="var(--teal-soft)"/><path d="M167 96 l5 5 l10-11" fill="none" stroke="var(--teal)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    target: '<svg viewBox="0 0 200 130" aria-hidden="true"><circle cx="90" cy="68" r="52" fill="var(--violet-soft)"/><circle cx="90" cy="68" r="36" fill="none" stroke="var(--violet)" stroke-width="6" opacity=".45"/><circle cx="90" cy="68" r="20" fill="none" stroke="var(--violet)" stroke-width="6" opacity=".7"/><circle cx="90" cy="68" r="7" fill="var(--violet)"/><path d="M168 18 L94 66" stroke="var(--accent-2)" stroke-width="5" stroke-linecap="round"/><path d="M168 18 l-4 16 l12-6 z" fill="var(--accent-2)"/><path d="M160 14 l14 -4 l-4 14" fill="none" stroke="var(--accent-2)" stroke-width="4" stroke-linejoin="round"/></svg>',
+    ladder: '<svg viewBox="0 0 200 130" aria-hidden="true"><rect x="14" y="96" width="44" height="22" rx="6" fill="var(--teal-soft)"/><rect x="62" y="74" width="44" height="44" rx="6" fill="var(--teal-soft)"/><rect x="110" y="50" width="44" height="68" rx="6" fill="var(--teal-soft)"/><rect x="158" y="26" width="30" height="92" rx="6" fill="var(--teal)" opacity=".85"/><path d="M164 16 h18 v-10 l12 14 l-12 14 v-10 h-18 z" fill="var(--accent-2)" transform="translate(-6 -2) scale(.9)"/><text x="173" y="80" font-family="sans-serif" font-size="20" font-weight="800" fill="#fff" text-anchor="middle">1</text><circle cx="36" cy="82" r="9" fill="var(--accent)"/><path d="M36 91 v10" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/></svg>',
+    career: '<svg viewBox="0 0 200 130" aria-hidden="true"><rect x="20" y="46" width="78" height="58" rx="10" fill="var(--accent-2-soft)" stroke="var(--accent-2)" stroke-width="4"/><path d="M44 46 v-10 a6 6 0 0 1 6-6 h18 a6 6 0 0 1 6 6 v10" fill="none" stroke="var(--accent-2)" stroke-width="4"/><path d="M20 70 h78" stroke="var(--accent-2)" stroke-width="4"/><polyline points="112,104 136,82 154,90 186,52" fill="none" stroke="var(--good)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M174 50 l13 1 l-2 13" fill="none" stroke="var(--good)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="136" cy="82" r="5" fill="var(--good)"/><circle cx="154" cy="90" r="5" fill="var(--good)"/></svg>'
+  };
+  var PERSONAS = [
+    { k: 'stu', t: 'Student', s: '1st – 3rd year', ic: '🎓', g: 'grow', h: 'Build strong basics and a head start on your career',
+      pts: [['📘', 'Master subjects and labs', 'Unit-wise tests and viva questions for every semester, with instant explanations.'], ['🎯', 'Track your dream companies', 'See the skills, software and interview questions they ask today.'], ['📈', 'Follow skill trends', 'Know which software is rising in real job posts for your branch.'], ['🛠️', 'Internships and hackathons', 'Build projects, prepare for hackathons and make a resume that gets shortlisted.']],
+      cta: [['Practise my subjects', '#practice'], ['Explore a company', '/career']] },
+    { k: 'fin', t: 'Final year', s: 'Placements', ic: '🚀', g: 'target', h: 'Get placement-ready for the companies you want',
+      pts: [['🏢', 'Company-wise plan', 'Topics, software and technical and HR questions for your target company and role.'], ['🧮', 'Aptitude and reasoning', 'Unlimited fresh practice for the written rounds.'], ['📄', 'A resume for every company', 'Duplicate your resume, tune keywords and check the job-post match.'], ['🎤', 'Questions from seniors', 'Real interview questions shared by recently placed students.']],
+      cta: [['Build my placement plan', '/career'], ['Make my resume', '/resume']] },
+    { k: 'exam', t: 'GATE, PSU & govt.', s: 'Competitive exams', ic: '🏆', g: 'ladder', h: 'Climb the rank list with focused practice',
+      pts: [['📚', 'GATE, ESE, PSU and SSC JE style practice', 'Topic-wise and full-length papers from the competitive track.'], ['🔎', 'Find your weak units', 'Unit-wise result analysis shows exactly where marks are lost.'], ['⚡', 'Rapid revision', 'Rapid-fire rounds to revise a whole unit in minutes.'], ['🏛️', 'PSU interview ready', 'A resume with your GATE score, plus company profiles for PSU interviews.']],
+      cta: [['Open competitive exams', '#practice'], ['Plan for a PSU', '/career']] },
+    { k: 'pro', t: 'Working professional', s: 'Switch or grow', ic: '💼', g: 'career', h: 'Move to a better role with clarity',
+      pts: [['🧭', 'Know what the new role needs', 'Software and skills the target company is asking for right now.'], ['♻️', 'Refresh core concepts', 'Short topic tests to brush up before interviews.'], ['🎯', 'Tailor your resume', 'Paste the job description to see your % match and missing keywords.'], ['🧑‍💼', 'Experienced-level prep', 'Plans and interview questions for 2–4 and 5+ years of experience.']],
+      cta: [['Plan my switch', '/career'], ['Tailor my resume', '/resume']] }
+  ];
+  function personasHtml() {
+    return '<section class="hs who rv"><p class="eyebrow center">Built for every stage</p><h2 class="hs-h center">How VKV Sir Test Lab helps you</h2><p class="muted center hs-sub" style="margin:0 auto">Choose where you are today. We show what matters for your next step.</p>' +
+      '<div class="who-tabs" role="tablist">' + PERSONAS.map(function (p, i) { return '<button type="button" role="tab" class="' + (i ? '' : 'on') + '" data-who="' + p.k + '"><span>' + p.ic + '</span><b>' + p.t + '</b><small>' + p.s + '</small></button>'; }).join('') + '</div>' +
+      PERSONAS.map(function (p, i) {
+        return '<div class="who-p" data-who="' + p.k + '"' + (i ? ' hidden' : '') + '><div class="who-art">' + PERSONA_SVG[p.g] + '</div><div class="who-c"><h3>' + p.h + '</h3><div class="who-g">' +
+          p.pts.map(function (x) { return '<div class="who-i"><span>' + x[0] + '</span><div><b>' + x[1] + '</b><p>' + x[2] + '</p></div></div>'; }).join('') + '</div>' +
+          '<div class="who-cta">' + p.cta.map(function (c, j) { return '<a class="btn' + (j ? ' ghost' : '') + '" href="' + c[1] + '"' + (c[1].charAt(0) === '/' ? ' data-link' : '') + '>' + c[0] + ' →</a>'; }).join('') + '</div></div></div>';
+      }).join('') + '</section>';
+  }
+
   /* ---------- homepage: four sample image questions ---------- */
   var HERO_Q = [
     { dom: 'Mechanical', c: 'm', img: '/img/milling-cutters-3d.webp', q: 'Figure 3 shows which milling cutter?', o: ['Side and face', 'Double angle', 'End mill', 'Plain (slab)'], a: 1, x: 'Two toothed conical faces meet in a V: a double angle cutter.' },
@@ -1693,7 +1754,7 @@
     return '<div class="hq-head"><div><b>Try a real question</b><span>Image-based questions from 4 domains · tap an answer<span class="hz-mouse"> · hover a picture to enlarge</span></span></div><span class="hq-swipe" aria-hidden="true">Swipe <i>→</i></span></div><div class="hq-grid">' +
       HERO_Q.map(function (s, n) {
         return '<div class="hq hq-' + s.c + '" data-n="' + n + '"><span class="hq-dom">' + s.dom + '</span>' +
-          '<figure class="qzw hq-fig"><img class="qimg" alt="Question figure" loading="lazy" src="' + s.img + '"><img class="qzoom" alt="" aria-hidden="true" src="' + s.img + '"></figure>' +
+          '<figure class="qzw hq-fig"><img class="qimg" alt="Question figure" src="' + s.img + '"><img class="qzoom" alt="" aria-hidden="true" src="' + s.img + '"></figure>' +
           '<p class="hq-q">' + esc(s.q) + '</p><div class="hq-o">' +
           s.o.map(function (o, k) { return '<button type="button" data-k="' + k + '"><i>' + 'ABCD'[k] + '</i>' + esc(o) + '</button>'; }).join('') +
           '</div><p class="hq-x" hidden></p></div>';
@@ -1802,7 +1863,7 @@
                 document.body.appendChild(m);
               }).catch(function (e) { toast(errMsg(e)); });
             }
-            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=7'; s.onload = show; document.head.appendChild(s); }
+            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=8'; s.onload = show; document.head.appendChild(s); }
           };
         });
       }).catch(function (e) { box.innerHTML = '<div class="card"><p>' + esc(errMsg(e)) + '</p></div>'; });

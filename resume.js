@@ -556,10 +556,11 @@
       '<details class="softinfo"><summary>Why this builder is different</summary><ul><li><b>Free and unlimited:</b> download PDF and Word as often as you like. No subscription, no watermark.</li><li><b>Readable by ATS:</b> real text, one column and standard headings.</li><li><b>Real keywords:</b> skills and software from current job posts, including your target company’s.</li><li><b>Job-post match:</b> paste any job description and see the exact keywords you are missing.</li></ul></details></div>' +
       '<div class="rb-ring" id="rb-mini" title="Live ATS score"></div></div>' +
       '<div class="rb-tbar"><div class="rb-tname-w"><span class="rb-doc">📄</span><div class="rb-tn"><b id="rb-tname">' + esc(titleNow()) + '</b><small id="rb-saved">' + (V.session ? 'Saves to your account automatically' : 'Saved on this device · <a href="/login?next=/resume" data-link>sign in</a> to keep it') + '</small></div></div>' +
-      '<div class="rb-tact"><span id="rb-pickw"></span><details class="rb-menu"><summary class="btn ghost small">⋯ Manage</summary><div class="rb-menu-p">' +
+      '<div class="rb-tact"><span id="rb-pickw"></span><button type="button" class="btn ghost small" id="rb-gal">🗂 My resumes</button><details class="rb-menu"><summary class="btn ghost small">⋯ Manage</summary><div class="rb-menu-p">' +
         '<button type="button" id="rb-ren">✏️ Rename</button><button type="button" id="rb-dup">⧉ Duplicate for another job</button><button type="button" id="rb-new">＋ New (keep my details)</button><button type="button" id="rb-blank">＋ Blank resume</button><button type="button" id="rb-del" class="rb-delb">🗑 Delete this resume</button></div></details></div></div>' +
       '<nav class="rb-steps" id="rb-steps" aria-label="Steps"></nav><div class="rb-body"><div class="card rb-form" id="rb-form"></div><aside class="rb-side" id="rb-side"><div class="rb-ptitle"><b>Live preview</b><span class="small muted">A4 · one column</span><button type="button" class="rb-pvx" id="rb-pvx" aria-label="Close preview">✕</button></div><div id="rb-prev"></div></aside></div>' +
       '<button type="button" class="rb-pvbtn" id="rb-pvbtn">👁 Preview</button></div>');
+    document.getElementById('rb-gal').onclick = gallery;
     document.getElementById('rb-pvbtn').onclick = function () { document.body.classList.add('rb-pv-open'); };
     document.getElementById('rb-pvx').onclick = function () { document.body.classList.remove('rb-pv-open'); };
     Array.prototype.forEach.call(document.querySelectorAll('.rb-menu-p button'), function (b) { b.addEventListener('click', function () { var m = b.closest('details'); if (m) m.open = false; }); });
@@ -612,6 +613,41 @@
     if (LIST.length < 2) { w.innerHTML = LIST.length ? '<span class="small muted">1 saved resume</span>' : ''; return; }
     w.innerHTML = '<select class="in" id="rb-pick" aria-label="Open a saved resume">' + LIST.map(function (r) { return '<option value="' + r.id + '"' + (r.id === rid ? ' selected' : '') + '>' + esc(r.title || 'Resume') + (r.score != null ? ' · ' + r.score + '/100' : '') + '</option>'; }).join('') + '</select>';
     document.getElementById('rb-pick').onchange = function () { var v = this.value, r = LIST.filter(function (x) { return x.id === v; })[0]; if (r) { rid = r.id; d = Object.assign(blank(), r.data); if (d.autoT == null) d.autoT = false; step = 0; document.getElementById('rb-tname').textContent = titleNow(); loadKw(); render(); } };
+  }
+  /* gallery of saved resumes with live mini previews + side-by-side compare */
+  function gallery() {
+    var all = LIST.length ? LIST : [{ id: rid || 'cur', title: d.title, data: d, score: score().total }];
+    var keepD = d, pick = [];
+    function prev(data) { var k = d; d = Object.assign(blank(), data); var hh = previewHtml(); d = k; return hh; }
+    var m = document.createElement('div'); m.className = 'rbg-wrap'; m.setAttribute('role', 'dialog');
+    m.innerHTML = '<div class="rbg"><div class="rbg-h"><div><b>My resumes</b><small>' + all.length + ' saved · tick two to compare</small></div><button type="button" class="btn small" id="rbg-cmp" disabled>Compare</button><button type="button" class="rbg-x" aria-label="Close">✕</button></div>' +
+      '<div class="rbg-g">' + all.map(function (r, i) {
+        return '<div class="rbg-c' + (r.id === rid ? ' cur' : '') + '" data-i="' + i + '"><div class="rbg-th"><div class="rbg-sc">' + prev(r.data) + '</div></div>' +
+          '<div class="rbg-m"><label class="rbg-ck"><input type="checkbox" data-i="' + i + '"><span></span></label><div class="rbg-t"><b>' + esc(r.title || 'Resume') + '</b><small>ATS ' + (r.score == null ? '–' : r.score) + '/100' + (r.id === rid ? ' · open now' : '') + '</small></div><button type="button" class="btn ghost small" data-open="' + i + '">Open</button></div></div>';
+      }).join('') + '</div></div>';
+    document.body.appendChild(m); document.body.classList.add('noscroll');
+    function close() { m.remove(); document.body.classList.remove('noscroll'); }
+    m.querySelector('.rbg-x').onclick = close;
+    m.onclick = function (e) {
+      if (e.target === m) return close();
+      var o = e.target.closest('[data-open]');
+      if (o) { var r = all[+o.dataset.open]; close(); if (r.id !== rid) { rid = r.id; d = Object.assign(blank(), r.data); if (d.autoT == null) d.autoT = false; step = 0; document.getElementById('rb-tname').textContent = titleNow(); pickerHtml(); loadKw(); render(); } return; }
+    };
+    m.querySelectorAll('.rbg-ck input').forEach(function (c) { c.onchange = function () {
+      var i = +c.dataset.i; if (c.checked) pick.push(i); else pick = pick.filter(function (x) { return x !== i; });
+      if (pick.length > 2) { var drop = pick.shift(); m.querySelector('.rbg-ck input[data-i="' + drop + '"]').checked = false; }
+      m.querySelector('#rbg-cmp').disabled = pick.length !== 2;
+    }; });
+    m.querySelector('#rbg-cmp').onclick = function () {
+      var a = all[pick[0]], b = all[pick[1]], z = 100;
+      var box = m.querySelector('.rbg');
+      box.innerHTML = '<div class="rbg-h"><div><b>Compare resumes</b><small>Pinch or use the zoom to read details</small></div><div class="rbg-zoom"><button type="button" data-z="-1">−</button><span id="rbg-z">100%</span><button type="button" data-z="1">+</button></div><button type="button" class="rbg-x" aria-label="Close">✕</button></div>' +
+        '<div class="rbg-tabs"><button type="button" class="on" data-s="0">A · ' + esc(a.title) + '</button><button type="button" data-s="1">B · ' + esc(b.title) + '</button></div>' +
+        '<div class="rbg-cmp">' + [a, b].map(function (r, k) { return '<div class="rbg-col' + (k ? ' alt' : ' on') + '"><div class="rbg-ct"><b>' + 'AB'[k] + ' · ' + esc(r.title) + '</b><span class="pill">ATS ' + (r.score == null ? '–' : r.score) + '</span></div><div class="rbg-pz"><div class="rbg-zz">' + prev(r.data) + '</div></div></div>'; }).join('') + '</div>';
+      box.querySelector('.rbg-x').onclick = close;
+      box.querySelector('.rbg-zoom').onclick = function (e) { var t = e.target.closest('[data-z]'); if (!t) return; z = Math.max(60, Math.min(180, z + 20 * +t.dataset.z)); box.querySelector('#rbg-z').textContent = z + '%'; box.querySelectorAll('.rbg-zz').forEach(function (el) { el.style.zoom = z / 100; }); };
+      box.querySelector('.rbg-tabs').onclick = function (e) { var t = e.target.closest('[data-s]'); if (!t) return; box.querySelectorAll('.rbg-tabs button').forEach(function (x) { x.classList.toggle('on', x === t); }); box.querySelectorAll('.rbg-col').forEach(function (c, k) { c.classList.toggle('on', k === +t.dataset.s); }); };
+    };
   }
   function countDl() { if (rid && V.session) V.rpc('rb_count_download', { p_id: rid }).catch(function () {}); }
   window.RB = {
