@@ -223,6 +223,7 @@
     if (p === '/admin/iq-reports') return viewIqReportsAdmin();
     if (p === '/drill') return viewDrill();
     if (p === '/exams') return viewExams();
+    if (p === '/leaderboard') return viewLeaderboard();
     if (p === '/practice') return viewHub('practice');
     if (p === '/test' || p === '/tests') return viewHub('test');
     if ((m = p.match(/^\/practice\/([0-9a-f-]{36})$/))) return viewPractice(m[1]);
@@ -283,7 +284,88 @@
     { k: 'competitive', ic: icon('trophy', 'ic-lg'), t: 'Competitive exams', d: 'GATE, ESE, PSU, ISRO, RTO/MVI, SSC, aptitude, reasoning and more, by level and domain.' },
     { k: 'career', ic: icon('career', 'ic-lg'), t: 'Interview & career', d: 'Company-wise prep, job-profile plan, placement mock tests, aptitude, branch core and HR for freshers to experienced.' }
   ];
+
+  /* ---------- Home (Stage 4): introduce the four places, continue, today's test, leaderboard ---------- */
+  var COMPANY_STRIP = ['TCS', 'Infosys', 'L&T', 'Tata Motors', 'Shri Bhagwati Machines', 'NTPC', 'BHEL', 'JK Tyre', 'Maruti Suzuki', 'Wipro', 'Bosch', 'Siemens', 'UltraTech', 'Tata Steel', 'Accenture', 'Mahindra', 'IOCL', 'ABB'];
   function viewHome() {
+    setNav('home'); loading();
+    Promise.all([rpc('catalog').catch(function () { return []; }), rpc('list_tests').catch(function () { return []; }),
+      rpc('exam_list').catch(function () { return []; }), rpc('leaderboard_page', { p_days: 30, p_subject: null }).catch(function () { return null; })]).then(function (r) {
+      var cat = r[0] || [], tests = r[1] || [], exams = r[2] || [], lb = r[3] || { top: [] };
+      var nQ = cat.reduce(function (a, x) { return a + (x.count || 0); }, 0), nS = cat.filter(function (x) { return (x.count || 0) >= READY; }).length;
+      var fmtN = function (n) { return Number(n || 0).toLocaleString('en-IN'); };
+      var day = Math.floor(Date.now() / 864e5), today = tests.length ? tests[day % tests.length] : null;
+      var fam = {}; exams.forEach(function (e) { var f = e.family || e.org; if (!fam[f]) fam[f] = { n: 0, k: e.kind }; fam[f].n++; });
+      var doors = [
+        ['practice', 'Practice', 'Learn topic by topic. See the right answer and explanation after every question.', '/practice', 'Start practice'],
+        ['test', 'Test', 'Timed like a real exam. Score, explanations and your rank at the end.', '/test', 'Take a test'],
+        ['exams', 'Exams', 'GATE, ESE, SSC, PSU, railways, state exams and B.Tech syllabus, section by section.', '/exams?k=competitive', 'Find your exam'],
+        ['career', 'Career', 'A company-wise plan, interview questions and an ATS-ready resume.', '/career', 'Plan for a job']
+      ];
+      var sample = { q: 'In rolling, the point where roll speed equals strip speed is called the:', o: ['Entry point', 'Neutral point', 'Exit point', 'Bite point'], a: 1, e: 'At the neutral point there is no slip between roll and strip; before it the strip moves slower, after it faster.' };
+      var top5 = (lb.top || []).slice(0, 5);
+      h('<div class="hm">' +
+        '<section class="hm-hero"><div class="hm-copy"><p class="eyebrow">Free for every student</p><h1>Practise. Test. <em>Get placed.</em></h1>' +
+          '<p class="hm-lead">' + fmtN(nQ) + ' questions for semester exams, GATE, SSC, PSU and placements, with every answer explained.</p>' +
+          '<div class="hm-cta"><a class="btn" href="/practice" data-link>' + icon('practice') + ' Start practice</a><a class="btn ghost" href="/test" data-link>' + icon('test') + ' Take a test</a></div>' +
+          '<dl class="hm-stats"><div><dt>Questions</dt><dd>' + fmtN(nQ) + '</dd></div><div><dt>Subjects</dt><dd>' + nS + '</dd></div><div><dt>Exams</dt><dd>' + exams.length + '</dd></div><div><dt>Ready tests</dt><dd>' + tests.length + '</dd></div></dl></div>' +
+          '<div class="hm-try card" aria-label="Try a question"><p class="hm-try-h">' + icon('practice') + ' Try one · Manufacturing</p><p class="hm-q">' + esc(sample.q) + '</p><div class="hm-opts">' +
+            sample.o.map(function (o, i) { return '<button type="button" class="opt" data-i="' + i + '"><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(o) + '</span></button>'; }).join('') +
+          '</div><p class="hm-exp" id="hm-exp" hidden></p></div></section>' +
+        continueCard() +
+        '<section class="hm-doors">' + doors.map(function (d) {
+          return '<a class="door card door-' + d[0] + '" href="' + d[3] + '" data-link><span class="door-i">' + icon(d[0], 'ic-lg') + '</span><b>' + d[1] + '</b><span class="muted">' + d[2] + '</span><span class="door-go">' + d[4] + ' ' + icon('chevron') + '</span></a>'; }).join('') + '</section>' +
+        '<section class="hm-two">' +
+          (today ? '<a class="card hm-today" href="/t/' + esc(today.slug) + '" data-link><p class="eyebrow">Today\'s test</p><h2>' + esc(today.title) + '</h2><p class="muted">' + esc(today.description || today.subject || '') + '</p><span class="tmeta">' + icon('test') + ' ' + esc((today.durations || []).join(' / ')) + ' min · counts on the leaderboard</span></a>' : '') +
+          '<div class="card hm-board"><div class="spread"><h2>Top this month</h2><a href="/leaderboard" data-link>Full leaderboard ' + icon('chevron') + '</a></div>' +
+            (top5.length ? '<ol class="board">' + top5.map(function (b) { return '<li><span class="bd-r">' + b.rank + '</span><span class="bd-n"><b>' + esc(b.name) + '</b>' + (b.college ? '<span class="bd-c">' + esc(b.college) + '</span>' : '') + '</span><span class="mono">' + b.pct + '%</span></li>'; }).join('') + '</ol>'
+              : '<p class="muted">Be the first: take any test this month to appear here.</p>') + '</div></section>' +
+        '<section class="hm-strip"><h2>Exams covered</h2><div class="chips">' + Object.keys(fam).map(function (f) { return '<a class="chip" href="/exams?k=' + fam[f].k + '" data-link>' + esc(f) + ' <small class="muted">' + fam[f].n + '</small></a>'; }).join('') + '</div></section>' +
+        '<section class="hm-strip"><h2>Prepare for companies like</h2><div class="marq"><div class="marq-in">' + COMPANY_STRIP.concat(COMPANY_STRIP).map(function (c, i) { return '<a class="chip" href="/career?company=' + encodeURIComponent(c) + '" data-link' + (i >= COMPANY_STRIP.length ? ' aria-hidden="true" tabindex="-1"' : '') + '>' + esc(c) + '</a>'; }).join('') + '</div></div></section>' +
+        '<section class="hm-how"><h2>How it works</h2><ol class="steps3">' +
+          '<li><b>Pick your branch and subject</b><span class="muted">We remember it, so your subjects come first every time.</span></li>' +
+          '<li><b>Practise with explanations</b><span class="muted">Learn from every answer, at your own pace.</span></li>' +
+          '<li><b>Test and track your rank</b><span class="muted">Timed papers, topic-wise results and a fair leaderboard.</span></li></ol>' +
+          '<p class="center"><a href="/why" data-link>Why VKV Sir Test Lab ' + icon('chevron') + '</a></p></section>' +
+        '<section class="hm-follow card"><div><h2>Stay updated</h2><p class="muted">New tests, openings and results on WhatsApp and social media.</p></div><div class="ff" id="ff2"></div></section>' +
+        '</div>');
+      var ff = q('#ff2'); if (ff) ff.innerHTML = FOLLOW.map(function (f) { return '<a href="' + f[1] + '" target="_blank" rel="noopener" title="' + f[0] + '" aria-label="' + f[0] + '" class="fi ' + f[2] + '">' + f[3] + '</a>'; }).join('');
+      var opts = q('.hm-opts');
+      if (opts) opts.addEventListener('click', function (e) {
+        var b = e.target.closest('.opt'); if (!b || opts.classList.contains('done')) return; opts.classList.add('done');
+        var i = +b.getAttribute('data-i');
+        opts.querySelectorAll('.opt').forEach(function (o) { var k = +o.getAttribute('data-i'); o.disabled = true; if (k === sample.a) o.classList.add('ok'); else if (k === i) o.classList.add('bad'); });
+        var ex = q('#hm-exp'); ex.hidden = false; ex.innerHTML = '<b>' + (i === sample.a ? 'Correct.' : 'Not quite.') + '</b> ' + esc(sample.e) + ' <a href="/p/mp" data-link>Practise this subject ' + icon('chevron') + '</a>';
+      });
+    }).catch(function (e) { h('<div class="narrow card center"><p>' + esc(errMsg(e)) + '</p><button class="btn" onclick="location.reload()">Try again</button></div>'); });
+  }
+
+  /* ---------- Leaderboard page ---------- */
+  function viewLeaderboard() {
+    setNav('me'); loading();
+    var prm = new URLSearchParams(location.search), days = +(prm.get('d') || 30), subj = prm.get('s') || '';
+    Promise.all([rpc('leaderboard_page', { p_days: days, p_subject: subj || null }), rpc('catalog').catch(function () { return []; })]).then(function (r) {
+      var lb = r[0] || { top: [] }, cat = r[1] || [], top = lb.top || [];
+      var url = function (d, s2) { return '/leaderboard?d=' + d + (s2 ? '&s=' + s2 : ''); };
+      var pod = top.slice(0, 3), rest = top.slice(3);
+      var podHtml = pod.length ? '<div class="podium">' + [1, 0, 2].filter(function (i) { return pod[i]; }).map(function (i) { var b = pod[i];
+        return '<div class="pod pod-' + (i + 1) + (b.me ? ' me' : '') + '"><span class="pod-m">' + (i + 1) + '</span><b>' + esc(b.name) + '</b><small>' + esc(b.college || '') + '</small><span class="pod-s">' + b.pct + '%</span><small class="muted">' + b.tests + ' test' + (b.tests > 1 ? 's' : '') + '</small></div>'; }).join('') + '</div>' : '';
+      var me = lb.me;
+      h('<div class="hub stack">' + crumbBar([['Home', '/'], ['Leaderboard', '']]) +
+        '<div><p class="eyebrow">Leaderboard</p><h1>Top students</h1><p class="muted">' + fmtNum(lb.total || 0) + ' students ranked · first attempt of each test · at least 20 questions.</p></div>' +
+        '<div class="lb-f"><div class="seg mini" role="group" aria-label="Period">' + [[7, 'This week'], [30, 'This month'], [365, 'This year']].map(function (d) { return '<a class="chip" href="' + url(d[0], subj) + '" data-link aria-pressed="' + (days === d[0]) + '">' + d[1] + '</a>'; }).join('') + '</div>' +
+          '<label class="lb-sel"><span class="small muted">Subject</span><select class="in" id="lb-s"><option value="">All subjects</option>' + cat.filter(function (x) { return (x.count || 0) >= READY; }).map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === subj ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') + '</select></label></div>' +
+        (top.length ? podHtml + '<ol class="board lb-list" start="4">' + rest.map(function (b) { return '<li class="' + (b.me ? 'me' : '') + '"><span class="bd-r">' + b.rank + '</span><span class="bd-n"><b>' + esc(b.name) + (b.me ? ' (you)' : '') + '</b>' + (b.college ? '<span class="bd-c">' + esc(b.college) + '</span>' : '') + '</span><span class="mono">' + b.pct + '%</span></li>'; }).join('') + '</ol>'
+          : '<div class="card center"><p>No ranked students for this choice yet.</p><a class="btn" href="/test" data-link>Take a test</a></div>') +
+        (me ? '<div class="lb-me mine card"><span>Your rank</span><b>#' + me.rank + '</b><span class="mono">' + me.pct + '%</span><span class="muted small">' + me.tests + ' tests · ' + me.qs + ' questions</span></div>'
+          : (session && !isGuest() ? '<div class="lb-me card"><span class="muted">Answer 20+ questions in tests this period to get your rank.</span><a class="btn small" href="/test" data-link>Take a test</a></div>'
+            : '<div class="lb-me card"><span class="muted">Sign in and take tests to see your rank here.</span><a class="btn small" href="/login" data-link>Sign in</a></div>')) +
+        '<p class="small muted">Scores are smoothed so one lucky short test cannot top the board. Practice sessions do not count.</p></div>');
+      var sel = document.getElementById('lb-s'); if (sel) sel.onchange = function () { go(url(days, sel.value)); };
+    }).catch(function (e) { h('<div class="narrow card center"><p>' + esc(errMsg(e)) + '</p><button class="btn" onclick="location.reload()">Try again</button></div>'); });
+  }
+  function fmtNum(n) { return Number(n || 0).toLocaleString('en-IN'); }
+  function viewHomeClassic() {
     setNav('home'); loading();
     Promise.all([rpc('catalog').catch(function () { return []; }), rpc('list_tests').catch(function () { return []; }),
       sb.from('catalog').select('track,grp,subgrp,title,description,subject_id,status,url,sort').eq('active', true).order('sort').then(function (r) { return r.data || []; }, function () { return []; }),
@@ -670,7 +752,7 @@
         var n = Math.min(t.available, Math.floor(d * 60 / t.sec_per_q));
         return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + n + ' questions</span></button>';
       }).join('');
-      h('<div class="narrow stack">' + crumbBar([['Test', '/test'], [t.title, '']]) + '<div><div class="row"><span class="pill accent">' + esc(t.subject) + '</span><span class="pill">' + (t.mode === 'exam' ? 'Mock test' : 'Test') + '</span></div>' +
+      h('<div class="narrow stack tpage">' + crumbBar([['Test', '/test'], [t.title, '']]) + '<div><div class="row"><span class="pill accent">' + esc(t.subject) + '</span><span class="pill">' + (t.mode === 'exam' ? 'Mock test' : 'Test') + '</span></div>' +
         '<h1 style="margin-top:12px">' + esc(t.title) + '</h1>' + (function (d) { d = String(d || '').replace(/^practice:\s*/i, '').trim(); return d && t.title.toLowerCase().indexOf(d.toLowerCase()) < 0 ? '<p class="muted">' + esc(d) + '</p>' : ''; })(t.description) + '</div>' +
         '<div class="card stack">' +
         (t.active_attempt ? '<div class="note">You have an unfinished attempt. Continue where you left off.</div><a class="btn block" href="/exam/' + t.active_attempt + '" data-link>Resume test</a>' :
