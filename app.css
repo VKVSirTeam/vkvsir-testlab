@@ -316,13 +316,13 @@ body.modal-open{overflow:hidden}
 .fi:hover{transform:translateY(-2px)}.fi.wa{border-color:rgba(37,211,102,.6)}
 /* guided tour */
 .tour{position:absolute;inset:0 0 auto 0;z-index:90;pointer-events:none}
-.tour-tip{position:absolute;width:300px;pointer-events:auto;background:#10261f;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 18px 44px rgba(0,0,0,.3);animation:gpop .3s ease}
+.tour-tip{position:absolute;z-index:95;opacity:1;width:300px;pointer-events:auto;background:#10261f;color:#fff;border-radius:14px;padding:14px 16px;box-shadow:0 18px 44px rgba(0,0,0,.3);animation:gpop .3s ease}
 .tour-tip small{color:#d8b25a;font-weight:700;letter-spacing:.04em}.tour-tip b{display:block;font-size:16px;margin:2px 0 4px}.tour-tip p{margin:0 0 10px;font-size:14px;color:#cfe0d9;line-height:1.45}
 .tour-b{display:flex;justify-content:space-between;align-items:center}.tour-tip .linkbtn{color:#cfe0d9}
 .tour-ar{position:absolute;left:22px;width:0;height:0;border:9px solid transparent}.tour-ar.up{top:-18px;border-bottom-color:#10261f}.tour-ar.down{bottom:-18px;border-top-color:#10261f}
 .tour-on{position:relative;z-index:85;box-shadow:0 0 0 4px rgba(216,178,90,.85),0 0 0 9999px rgba(0,0,0,.35)!important;border-radius:14px;transition:box-shadow .3s}
 @media(max-width:820px){.hx{grid-template-columns:1fr}.hx-r{display:none}.modes{grid-template-columns:1fr 1fr}.ask{grid-template-columns:1fr}}
-@media(max-width:560px){.steps3{grid-template-columns:1fr}.modes{grid-template-columns:1fr 1fr;gap:8px}.mode{padding:12px}.mode p{font-size:13.5px}.hx h1{font-size:28px}.tour-tip{width:min(300px,calc(100vw - 24px))}}
+@media(max-width:560px){.steps3{grid-template-columns:1fr}.modes{grid-template-columns:1fr 1fr;gap:8px}.mode{padding:12px}.mode p{font-size:13.5px}.hx h1{font-size:28px}.tour-tip{position:fixed!important;top:auto!important;bottom:calc(12px + env(safe-area-inset-bottom,0px))!important;left:12px!important;right:12px;width:auto;transform:none!important;animation:none}.tour-ar{display:none}}
 
 /* job prep */
 .jp-hero h1{margin-bottom:8px}
@@ -440,8 +440,8 @@ table{max-width:100%}
 /* ===== ProPeers-style polish ===== */
 .bar{transition:box-shadow .2s,background .2s;backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px)}
 .bar.scrolled{box-shadow:0 6px 20px rgba(0,0,0,.07)}
-.rv{opacity:0;transform:translateY(14px)}
-.rv.rv-in{opacity:1;transform:none;transition:opacity .5s ease,transform .5s ease}
+.rv{opacity:1;transform:translateY(10px)}
+.rv.rv-in{transform:none;transition:transform .45s ease}
 .tr-item{transition:transform .18s ease,box-shadow .18s ease,border-color .18s}
 .tr-item:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(0,0,0,.08)}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:26px 0 8px}
@@ -918,7 +918,7 @@ body.noscroll{overflow:hidden}
 .faq-l summary::-webkit-details-marker{display:none}.faq-l summary:after{content:"+";font-weight:700;color:var(--accent);font-size:20px;line-height:1}
 .faq-l details[open] summary:after{content:"−"}.faq-l p{margin:10px 0 0;color:var(--muted)}
 /* reveal on scroll */
-.rv{opacity:0;transform:translateY(18px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.rv{opacity:1;transform:translateY(10px);transition:transform .45s var(--ease)}
 .rv.rv-in{opacity:1;transform:none}
 /* responsive */
 @media(max-width:900px){.split{grid-template-columns:1fr;gap:24px}.split.rev .split-v{order:2}.trio-g{grid-template-columns:1fr}.flow{grid-template-columns:1fr 1fr}.flow-s:after{display:none}.pd-g{grid-template-columns:1fr}.hs{padding-top:40px;padding-bottom:40px}}
@@ -1349,3 +1349,13 @@ a.nx-i:hover{border-color:var(--accent)}
 .opt.ok .otr,.opt.bad .otr{color:inherit;opacity:.85}
 .trnote{margin:0 0 12px}
 .exam.has-img .qtr{font-size:15px;margin:-4px 0 6px}
+/* Phase 0: keep the footer out of view until the page content has loaded */
+.view{min-height:70vh}
+.view:empty~.sitefoot,.view:has(>.spinner:only-child)~.sitefoot{display:none}
+/* Phase 0: comfortable touch targets on phones (44px minimum) */
+@media (max-width:560px){
+  .nav a,.nav button,.sf-col a,.linkbtn,.chip,.fi,.bar .btn{min-height:44px;display:inline-flex;align-items:center}
+  .sf-col a{display:flex}
+  .fi{min-width:44px;justify-content:center}
+}
+body.touring .tipc{display:none}

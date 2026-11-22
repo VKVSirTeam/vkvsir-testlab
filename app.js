@@ -201,8 +201,9 @@
   function tour(steps, key) {
     try { if (localStorage.getItem(key)) return; } catch (e) { return; }
     steps = steps.filter(function (x) { return document.querySelector(x[0]); }); if (!steps.length) return;
+    if (document.querySelector('.gm-wrap')) return; document.body.classList.add('touring');
     var i = 0, ov = document.createElement('div'); ov.className = 'tour'; document.body.appendChild(ov);
-    function done() { try { localStorage.setItem(key, '1'); } catch (e) {} ov.remove(); document.querySelectorAll('.tour-on').forEach(function (x) { x.classList.remove('tour-on'); }); }
+    function done() { try { localStorage.setItem(key, '1'); } catch (e) {} ov.remove(); document.body.classList.remove('touring'); document.querySelectorAll('.tour-on').forEach(function (x) { x.classList.remove('tour-on'); }); }
     function show() {
       document.querySelectorAll('.tour-on').forEach(function (x) { x.classList.remove('tour-on'); });
       var el = document.querySelector(steps[i][0]); el.classList.add('tour-on'); el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1386,7 +1387,7 @@
     'Ratio': function () { var a = ri(1, 7), b = ri(1, 9); if (a === b) b++; var k = ri(5, 30), T = (a + b) * k;
       return { q: '₹' + T + ' is divided in the ratio ' + a + ':' + b + '. The larger share is:', ans: Math.max(a, b) * k, w: [Math.min(a, b) * k, T / 2, Math.max(a, b) * k + k], e: 'One part = ' + T + '/' + (a + b) + ' = ' + k + '.', fmt: function (v) { return '₹' + v; } }; },
     'Number system': function () { var b = pick([2, 3, 7, 8]), e = ri(11, 99), cyc = { 2: [2, 4, 8, 6], 3: [3, 9, 7, 1], 7: [7, 9, 3, 1], 8: [8, 4, 2, 6] }[b], ans = cyc[(e - 1) % 4];
-      return { q: 'Unit digit of ' + b + '^' + e + ' is:', ans: ans, w: cyc.filter(function (x) { return x !== ans; }), e: 'Cycle of ' + b + ': ' + cyc.join(', ') + '; ' + e + ' mod 4 = ' + (e % 4) + '.' }; },
+      return { q: 'Unit digit of $' + b + '^{' + e + '}$ is:', ans: ans, w: cyc.filter(function (x) { return x !== ans; }), e: 'Cycle of ' + b + ': ' + cyc.join(', ') + '; ' + e + ' mod 4 = ' + (e % 4) + '.' }; },
     'Clock angle': function () { var h = ri(1, 11), m = pick([0, 10, 15, 20, 30, 40, 45, 50]), d = Math.abs(30 * h - 5.5 * m); if (d > 180) d = 360 - d;
       return { q: 'Angle between the hands of a clock at ' + h + ':' + (m < 10 ? '0' : '') + m + '?', ans: d, w: [Math.abs(30 * h - 6 * m) % 360, d + 15, Math.abs(180 - d) || 90], e: '|30H − 5.5M| = ' + d + '°.', fmt: function (v) { return v + '°'; } }; },
     'Mensuration': function () { var r = pick([7, 14, 21, 3.5]), A = Math.round(22 / 7 * r * r * 100) / 100;
@@ -1403,7 +1404,7 @@
     function next() {
       var t = pick(chosen), g = GEN[t](), s = shuffleOpts(g.ans, g.w, g.fmt); cur = { g: g, s: s, t: t };
       q('#dq').innerHTML = '<p class="pill accent">' + esc(t) + '</p><h2 style="margin:10px 0 14px">' + esc(g.q) + '</h2><div class="opts">' +
-        s.opts.map(function (o, i) { return '<button class="opt" data-i="' + i + '">' + esc(o) + '</button>'; }).join('') + '</div><div id="dx"></div>';
+        s.opts.map(function (o, i) { return '<button class="opt" data-i="' + i + '">' + esc(o) + '</button>'; }).join('') + '</div><div id="dx"></div>'; renderMath(q('#dq'));
       q('#dq .opts').onclick = function (e) {
         var b = e.target.closest('button'); if (!b || cur.done) return; cur.done = true; var i = +b.getAttribute('data-i'); total++;
         var ok = i === cur.s.correct; if (ok) score++;
@@ -2281,7 +2282,7 @@
     if (!opened || away) {
       try { sessionStorage.setItem('vkv-opened', '1'); } catch (e) {}
       s.seen = now; if (away) s.last = now; nudgeSave(s);
-      setTimeout(function () { if (!document.querySelector('.gm-wrap')) gate(away && s.acts ? 'back' : 'open'); }, 1500);
+      if (s.acts > 0) setTimeout(function () { if (!document.querySelector('.gm-wrap, .tour-tip')) gate(away ? 'back' : 'open'); }, 1500);
     }
   }
   function gateErr(m, next) {
