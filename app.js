@@ -12,7 +12,14 @@
 
   /* ---------- helpers ---------- */
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function h(html) { $view.innerHTML = html; $view.focus({ preventScroll: true }); window.scrollTo(0, 0); }
+  var pendingY = null;
+  function h(html) {
+    $view.innerHTML = html; $view.focus({ preventScroll: true });
+    var busy = html.indexOf('class="spinner"') >= 0;
+    if (!busy) { $view.classList.remove('pv'); void $view.offsetWidth; $view.classList.add('pv'); }
+    if (pendingY !== null) { if (!busy) { var y = pendingY; pendingY = null; requestAnimationFrame(function () { window.scrollTo(0, y); }); } }
+    else window.scrollTo(0, 0);
+  }
   function q(sel) { return $view.querySelector(sel); }
   function toast(msg) { var t = document.getElementById('toast'); t.textContent = msg; t.hidden = false; clearTimeout(t._t); t._t = setTimeout(function () { t.hidden = true; }, 3500); }
   function loading() { h('<div class="spinner" aria-label="Loading"></div>'); }
@@ -39,12 +46,17 @@
       throw e;
     });
   }
-  function go(path, replace) { if (replace) history.replaceState({}, '', path); else history.pushState({}, '', path); route(); }
+  function go(path, replace) {
+    if (replace) history.replaceState({}, '', path);
+    else { try { history.replaceState(Object.assign({}, history.state, { y: window.scrollY }), ''); } catch (e) {} history.pushState({}, '', path); }
+    pendingY = null; route();
+  }
+  try { history.scrollRestoration = 'manual'; } catch (e) {}
   document.addEventListener('click', function (e) {
     var a = e.target.closest('a[data-link]');
     if (a && a.origin === location.origin && !e.metaKey && !e.ctrlKey) { e.preventDefault(); go(a.pathname + a.search); }
   });
-  window.addEventListener('popstate', route);
+  window.addEventListener('popstate', function (e) { pendingY = e.state && typeof e.state.y === 'number' ? e.state.y : 0; route(); });
 
   var navActive = '';
   /* line icons (Lucide, ISC licence) */
@@ -62,7 +74,11 @@
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
     moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
     auto: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>',
-    user: '<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>'
+    user: '<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+    home: '<path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    chevron: '<path d="m9 18 6-6-6-6"/>',
+    play: '<path d="M6 3l14 9-14 9V3z"/>'
   };
   function icon(n, cls) { return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[n] || '') + '</svg>'; }
   /* theme: Light / Dark / System (stored per device) */
@@ -76,7 +92,11 @@
   function setNav(active) {
     if (active !== undefined) navActive = active;
     active = navActive;
-    var items = [['home', '/', 'Practice & Tests', icon('practice'), 'Learn with practice, then take a test', 'Practice'], ['career', '/career', 'Job Prep', icon('career'), 'Company-wise plan, software & interviews', 'Job Prep'], ['resume', '/resume', 'Resume Builder', icon('resume'), 'ATS-ready resume, PDF & Word', 'Resume']];
+    var items = [['practice', '/practice', 'Practice', icon('practice'), 'Learn topic by topic with answers explained', 'Practice'],
+      ['test', '/test', 'Test', icon('test'), 'Timed tests and mock papers', 'Test'],
+      ['exams', '/exams', 'Exams', icon('exams'), 'GATE, SSC, PSU, university syllabus', 'Exams'],
+      ['career', '/career', 'Job Prep', icon('career'), 'Company-wise plan, software & interviews', 'Job Prep'],
+      ['resume', '/resume', 'Resume', icon('resume'), 'ATS-ready resume, PDF & Word', 'Resume']];
     if (session && !isGuest()) items.push(['me', '/me', 'Dashboard', icon('chart'), 'Your results and progress', 'My tests']);
     if (session && profile && profile.is_admin) items.push(['admin', '/admin', 'Admin', icon('admin'), 'Control room', 'Admin']);
     var ini = ((profile && (profile.full_name || profile.email)) || '?').charAt(0).toUpperCase();
@@ -100,6 +120,14 @@
     dr.onclick = function (e) { if (e.target.closest('[data-close]') || e.target.closest('a')) openD(false); };
     if (!window._drawerEsc) { window._drawerEsc = 1; document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { var d = document.getElementById('drawer'); if (d && d.classList.contains('open')) { d.classList.remove('open'); document.body.classList.remove('noscroll'); } } }); }
     $bar.classList.toggle('exam-mode', active === 'exam');
+    var tb = document.getElementById('tabbar');
+    if (!tb) { tb = document.createElement('nav'); tb.id = 'tabbar'; tb.className = 'tabbar'; tb.setAttribute('aria-label', 'Main'); document.body.appendChild(tb); }
+    var signed = session && !isGuest();
+    tb.innerHTML = [['home', '/', 'Home', 'home'], ['practice', '/practice', 'Practice', 'practice'], ['test', '/test', 'Test', 'test'], ['exams', '/exams', 'Exams', 'exams'], ['me', signed ? '/me' : '/login', signed ? 'Me' : 'Sign in', 'user']].map(function (x) {
+      var on = active === x[0] || (x[0] === 'me' && active === 'login');
+      return '<a href="' + x[1] + '" data-link class="' + (on ? 'on' : '') + '"' + (on ? ' aria-current="page"' : '') + '>' + icon(x[3]) + '<span>' + x[2] + '</span></a>'; }).join('');
+    tb.hidden = active === 'exam';
+    document.body.classList.toggle('has-tabbar', active !== 'exam');
   }
 
   function loadProfile() {
@@ -195,6 +223,8 @@
     if (p === '/admin/iq-reports') return viewIqReportsAdmin();
     if (p === '/drill') return viewDrill();
     if (p === '/exams') return viewExams();
+    if (p === '/practice') return viewHub('practice');
+    if (p === '/test' || p === '/tests') return viewHub('test');
     if ((m = p.match(/^\/practice\/([0-9a-f-]{36})$/))) return viewPractice(m[1]);
     if ((m = p.match(/^\/q\/([0-9a-z]{6,12})$/i))) return viewShared(m[1]);
     if ((m = p.match(/^\/e\/([a-z0-9-]+)$/))) return viewExamIndex(m[1]);
@@ -211,7 +241,7 @@
     if ((m = p.match(/^\/result\/([0-9a-f-]{36})$/))) return viewResult(m[1]);
     setNav('');
     h('<div class="nf narrow stack"><div class="card center stack"><p class="eyebrow">Error 404</p><h1>Page not found</h1><p class="muted">The link may be old or mistyped. Try one of these instead.</p></div>' +
-      '<div class="nf-doors">' + [[icon('practice', 'ic-lg'), 'Practice', 'Subjects, units and topics', '/exams?k=university'], [icon('test', 'ic-lg'), 'Tests', 'Timed papers and mock tests', '/exams?k=competitive'], [icon('exams', 'ic-lg'), 'Exams', 'GATE, SSC, PSU and more', '/exams?k=competitive'], [icon('career', 'ic-lg'), 'Job Prep', 'Company-wise plan', '/career']].map(function (d) {
+      '<div class="nf-doors">' + [[icon('practice', 'ic-lg'), 'Practice', 'Subjects, units and topics', '/practice'], [icon('test', 'ic-lg'), 'Tests', 'Timed papers and mock tests', '/test'], [icon('exams', 'ic-lg'), 'Exams', 'GATE, SSC, PSU and more', '/exams?k=competitive'], [icon('career', 'ic-lg'), 'Job Prep', 'Company-wise plan', '/career']].map(function (d) {
         return '<a class="card nf-d" href="' + d[3] + '" data-link><span class="nf-i" aria-hidden="true">' + d[0] + '</span><b>' + d[1] + '</b><span class="small muted">' + d[2] + '</span></a>'; }).join('') + '</div>' +
       '<p class="center"><a class="btn" href="/" data-link>Go to home</a></p></div>');
   }
@@ -629,7 +659,7 @@
 
   /* ---------- test landing ---------- */
   function viewTest(slug) {
-    setNav('home'); loading();
+    setNav('test'); loading();
     rpc('test_info', { p_slug: slug }).then(function (t) {
       if (t) setTimeout(function () { rpc('leaderboard', { p_subject: null, p_test: slug }).then(function (b) { var n = q('.narrow'); if (n && b && b.length) n.insertAdjacentHTML('beforeend', boardCard(b, 'Top performers in this test')); }).catch(function () {}); }, 600);
       if (!t) { h('<div class="narrow card center"><h2>Test not found</h2><p class="muted">It may have been closed.</p><a class="btn" href="/" data-link>See all tests</a></div>'); return; }
@@ -640,7 +670,7 @@
         var n = Math.min(t.available, Math.floor(d * 60 / t.sec_per_q));
         return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + n + ' questions</span></button>';
       }).join('');
-      h('<div class="narrow stack"><div><div class="row"><span class="pill accent">' + esc(t.subject) + '</span><span class="pill">' + (t.mode === 'exam' ? 'Mock test' : 'Test') + '</span></div>' +
+      h('<div class="narrow stack">' + crumbBar([['Test', '/test'], [t.title, '']]) + '<div><div class="row"><span class="pill accent">' + esc(t.subject) + '</span><span class="pill">' + (t.mode === 'exam' ? 'Mock test' : 'Test') + '</span></div>' +
         '<h1 style="margin-top:12px">' + esc(t.title) + '</h1>' + (function (d) { d = String(d || '').replace(/^practice:\s*/i, '').trim(); return d && t.title.toLowerCase().indexOf(d.toLowerCase()) < 0 ? '<p class="muted">' + esc(d) + '</p>' : ''; })(t.description) + '</div>' +
         '<div class="card stack">' +
         (t.active_attempt ? '<div class="note">You have an unfinished attempt. Continue where you left off.</div><a class="btn block" href="/exam/' + t.active_attempt + '" data-link>Resume test</a>' :
@@ -708,7 +738,7 @@
 
   /* ---------- focused practice page (shared / YouTube links) ---------- */
   function viewFocus(subjId, unitNo, topicId) {
-    setNav('home'); loading();
+    setNav('practice'); loading();
     rpc('catalog').then(function (cat) {
       var n = findNode(cat || [], subjId, unitNo, topicId);
       if (!n) { h('<div class="narrow card center"><h2>This practice link is not active yet</h2><p class="muted">Explore what is available instead.</p><a class="btn" href="/" data-link>See all tests</a></div>'); return; }
@@ -720,7 +750,12 @@
       var mode = new URLSearchParams(location.search).get('m') === 'quiz' ? 'quiz' : 'practice', pdur = 15;
       var cnt = node.count || 0;
       var args = { p_subject: n.subj.id, p_unit: n.unit ? n.unit.unit : null, p_topic: n.topic ? n.topic.id : null };
-      h('<div class="narrow stack focus"><div class="card center stack">' +
+      var quizMode = new URLSearchParams(location.search).get('m') === 'quiz', hubName = quizMode ? 'Test' : 'Practice', hubUrl = quizMode ? '/test' : '/practice', qs = quizMode ? '?m=quiz' : '';
+      var cr = [[hubName, hubUrl]];
+      if (n.unit || n.topic) cr.push([n.subj.name, '/p/' + n.subj.id.toLowerCase() + qs]);
+      if (n.topic) cr.push(['Unit ' + n.unit.unit, '/p/' + n.subj.id.toLowerCase() + '/' + n.unit.unit + qs]);
+      cr.push([n.topic ? n.topic.name : n.unit ? 'Unit ' + n.unit.unit : n.subj.name, '']);
+      h('<div class="narrow stack focus">' + crumbBar(cr) + '<div class="card center stack">' +
         '<p class="eyebrow">' + (exam ? 'Exam-level paper · ' + esc(exam.toUpperCase().replace(/-/g, ' ')) : 'Free practice & tests') + '</p><h1>' + esc(title) + '</h1>' + (crumbs && crumbs !== title ? '<p class="muted" style="margin:0">' + esc(crumbs) + '</p>' : '') +
         (cnt >= READY ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>' + icon('practice') + ' Practice</b><span>No pressure: see the right answer and explanation after each question</span></button>' +
           '<button type="button" data-m="quiz" aria-pressed="' + (mode === 'quiz') + '"><b>' + icon('test') + ' Test</b><span>Timed like an exam: score at the end, counts on the leaderboard</span></button></div>' +
@@ -769,8 +804,96 @@
     if (n < 100) return '<span class="xb grow">' + n + ' Qs · growing daily</span>';
     return '<span class="xb ok">' + n.toLocaleString('en-IN') + ' Qs</span>';
   }
+
+  /* ---------- Practice and Test hubs: one subject browser, clustered by branch ---------- */
+  var BRANCHES = [['all', 'All'], ['me', 'Mechanical'], ['ce', 'Civil'], ['ee', 'Electrical'], ['ec', 'Electronics'], ['cs', 'CS & IT'], ['in', 'Instrumentation']];
+  var SUBJ_GROUPS = [
+    ['me', 'Mechanical engineering', ['TD', 'FM', 'HT', 'SOM', 'TOM', 'MD', 'MP', 'EMT', 'ENM', 'ICE', 'RAC', 'PP', 'MET', 'IE', 'AE', 'MEC']],
+    ['ce', 'Civil engineering', ['CVC']], ['ee', 'Electrical engineering', ['EEC']], ['ec', 'Electronics engineering', ['ECC']],
+    ['cs', 'Computer science & IT', ['CSF']], ['in', 'Instrumentation engineering', ['INC']],
+    ['common', 'Maths & common subjects', ['EM', 'ED', 'CAD']],
+    ['apt', 'Aptitude & reasoning', ['QA', 'LR', 'VA']],
+    ['gs', 'General studies', ['GKS', 'GSC', 'GHI', 'GGE', 'GPO', 'GEC', 'CA']],
+    ['rto', 'Transport & RTO exams', ['MVL', 'RTO']]
+  ];
+  var BRANCH_KEYS = ['me', 'ce', 'ee', 'ec', 'cs', 'in'];
+  function branchGet() { try { return localStorage.getItem('vkv-branch') || 'all'; } catch (e) { return 'all'; } }
+  function branchSet(b) { try { localStorage.setItem('vkv-branch', b); } catch (e) {} }
+  function lastGet() { try { return JSON.parse(localStorage.getItem('vkv-last') || 'null'); } catch (e) { return null; } }
+  function continueCard() {
+    var l = lastGet(); if (!l || !l.u || Date.now() - (l.at || 0) > 30 * 864e5) return '';
+    return '<a class="cont card" href="' + esc(l.u) + '" data-link>' + icon('play', 'ic-lg') + '<span><small>Continue where you left off</small><b>' + esc(l.t || 'Your last topic') + '</b></span>' + icon('chevron') + '</a>';
+  }
+  function crumbBar(list) {
+    return '<nav class="crumbs" aria-label="Breadcrumb">' + list.map(function (c, i) {
+      return i < list.length - 1 ? '<a href="' + c[1] + '" data-link>' + esc(c[0]) + '</a><span aria-hidden="true">›</span>' : '<span aria-current="page">' + esc(c[0]) + '</span>';
+    }).join('') + '</nav>';
+  }
+  function subjectBrowser(cat, mode) {
+    var bySid = {}; cat.forEach(function (x) { bySid[x.id] = x; });
+    var br = branchGet();
+    function link(id, u, t) { return practiceLink(id, u, t).replace(location.origin, '') + (mode === 'test' ? '?m=quiz' : ''); }
+    var act = mode === 'test' ? 'Test' : 'Practise';
+    function subjHtml(x) {
+      return '<details class="sj" data-s="' + esc(x.id) + '"><summary><span class="sj-t"><b>' + esc(x.name) + '</b><small>' + (x.units || []).length + ' units · ' + Number(x.count || 0).toLocaleString('en-IN') + ' questions</small></span>' + icon('chevron', 'sj-c') + '</summary><div class="sj-b"></div></details>';
+    }
+    function unitsHtml(x) {
+      return '<div class="sj-whole"><a class="btn small" href="' + link(x.id) + '" data-link>' + act + ' whole subject</a></div><ul class="un">' + (x.units || []).map(function (u) {
+        var ok = (u.count || 0) >= READY;
+        var tops = (u.topics || []).filter(function (t) { return (t.count || 0) >= READY; });
+        return '<li><div class="un-r"><span><b>Unit ' + u.unit + '</b> ' + esc(u.name) + ' <small class="muted">· ' + (u.count || 0) + ' Q</small></span>' +
+          (ok ? '<a class="btn ghost small" href="' + link(x.id, u.unit) + '" data-link>' + act + '</a>' : '<span class="pill">Coming soon</span>') + '</div>' +
+          (tops.length > 1 ? '<div class="tp">' + tops.map(function (t) { return '<a class="chip" href="' + link(x.id, u.unit, t.id) + '" data-link>' + esc(t.name) + '</a>'; }).join('') + '</div>' : '') + '</li>';
+      }).join('') + '</ul>';
+    }
+    function render() {
+      var box = document.getElementById('sb-list'); if (!box) return;
+      var term = ((document.getElementById('sb-q') || {}).value || '').trim().toLowerCase();
+      var rank = function (g) { return g[0] === br ? 0 : BRANCH_KEYS.indexOf(g[0]) >= 0 ? 2 : 1; };
+      var groups = SUBJ_GROUPS.slice();
+      if (br !== 'all') groups.sort(function (a, b) { return rank(a) - rank(b); });
+      var html = groups.map(function (g) {
+        var subs = g[2].map(function (id) { return bySid[id]; }).filter(function (x) { return x && (x.count || 0) >= READY; });
+        if (term) subs = subs.filter(function (x) { return (x.name + ' ' + (x.units || []).map(function (u) { return u.name + ' ' + (u.topics || []).map(function (t) { return t.name; }).join(' '); }).join(' ')).toLowerCase().indexOf(term) >= 0; });
+        if (!subs.length) return '';
+        var other = br !== 'all' && BRANCH_KEYS.indexOf(g[0]) >= 0 && g[0] !== br;
+        return '<details class="grp"' + (other && !term ? '' : ' open') + '><summary><b>' + esc(g[1]) + '</b><small>' + subs.length + ' subject' + (subs.length > 1 ? 's' : '') + '</small>' + icon('chevron', 'sj-c') + '</summary><div class="grp-b">' + subs.map(subjHtml).join('') + '</div></details>';
+      }).join('');
+      box.innerHTML = html || '<p class="muted center">No subject or topic matches “' + esc(term) + '”.</p>';
+      box.querySelectorAll('details.sj').forEach(function (d) {
+        d.addEventListener('toggle', function () { if (d.open) { var b = d.querySelector('.sj-b'); if (!b.innerHTML) b.innerHTML = unitsHtml(bySid[d.getAttribute('data-s')]); } });
+        if (term) d.open = true;
+      });
+    }
+    var html = '<div class="sb"><div class="sb-tools"><label class="sb-s">' + icon('search') + '<input id="sb-q" class="in" type="search" placeholder="Search a subject, unit or topic" autocomplete="off" aria-label="Search subjects and topics"></label>' +
+      '<div class="chips sb-br" role="group" aria-label="Your branch">' + BRANCHES.map(function (b) { return '<button type="button" class="chip" data-b="' + b[0] + '" aria-pressed="' + (b[0] === br) + '">' + esc(b[1]) + '</button>'; }).join('') + '</div></div><div id="sb-list"></div></div>';
+    return { html: html, mount: function () {
+      document.querySelectorAll('.sb-br .chip').forEach(function (c) { c.onclick = function () { br = c.getAttribute('data-b'); branchSet(br); document.querySelectorAll('.sb-br .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === c); }); render(); }; });
+      var t; document.getElementById('sb-q').addEventListener('input', function () { clearTimeout(t); t = setTimeout(render, 150); });
+      render();
+    } };
+  }
+  function viewHub(mode) {
+    setNav(mode); loading();
+    Promise.all([rpc('catalog').catch(function () { return []; }), mode === 'test' ? rpc('list_tests').catch(function () { return []; }) : Promise.resolve([])]).then(function (r) {
+      var cat = r[0] || [], tests = r[1] || [], sb = subjectBrowser(cat, mode);
+      var head = mode === 'test'
+        ? '<p class="eyebrow">Test</p><h1>Take a test</h1><p class="muted">Timed like a real exam. Your score and explanations come at the end, and it counts on the leaderboard.</p>'
+        : '<p class="eyebrow">Practice</p><h1>What do you want to practise?</h1><p class="muted">No timer pressure: you see the right answer and explanation after every question.</p>';
+      var mocks = '';
+      if (mode === 'test' && tests.length) {
+        var g = {}; tests.forEach(function (t) { (g[t.grp] = g[t.grp] || []).push(t); });
+        mocks = '<section class="stack"><h2>Ready-made tests</h2>' + Object.keys(g).map(function (k) {
+          return '<details class="grp" open><summary><b>' + esc(k) + '</b><small>' + g[k].length + ' test' + (g[k].length > 1 ? 's' : '') + '</small>' + icon('chevron', 'sj-c') + '</summary><div class="grp-b tcards">' + g[k].map(function (t) {
+            return '<a class="tcard card" href="/t/' + esc(t.slug) + '" data-link><b>' + esc(t.title) + '</b><small class="muted">' + esc(t.description || t.subject || '') + '</small><span class="tmeta">' + icon('test') + ' ' + esc((t.durations || []).join(' / ')) + ' min</span></a>'; }).join('') + '</div></details>';
+        }).join('') + '</section><h2>Make a test from any subject</h2>';
+      }
+      h('<div class="hub stack">' + crumbBar([['Home', '/'], [mode === 'test' ? 'Test' : 'Practice', '']]) + '<div>' + head + '</div>' + continueCard() + mocks + sb.html + '</div>');
+      sb.mount();
+    }).catch(function (e) { h('<div class="narrow card center"><p>' + esc(errMsg(e)) + '</p><button class="btn" onclick="location.reload()">Try again</button></div>'); });
+  }
   function viewExams() {
-    setNav('home'); loading();
+    setNav('exams'); loading();
     var kind = new URLSearchParams(location.search).get('k') === 'university' ? 'university' : 'competitive';
     rpc('exam_list').then(function (list) {
       list = list || [];
@@ -779,11 +902,15 @@
       var bsel = new URLSearchParams(location.search).get('b') || '';
       function brKey(b) { return String(b || '').split(/[·(]/)[0].trim(); }
       var branches = mine.map(function (e) { return brKey(e.branch); }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
-      mine.forEach(function (e) { if (bsel && brKey(e.branch) !== bsel && !/^All/.test(e.branch || '')) return; var g = e.family || e.org; if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(e); });
+      var BMAP = { me: 'Mechanical', ce: 'Civil', ee: 'Electrical', ec: 'Electronics & Communication', cs: 'Computer Science & IT', 'in': 'Instrumentation' };
+      var qsB = new URLSearchParams(location.search);
+      if (!qsB.has('b')) { var rb = BMAP[branchGet()]; if (rb && branches.indexOf(rb) >= 0) bsel = rb; }
+      else { var code = Object.keys(BMAP).filter(function (k) { return BMAP[k] === bsel; })[0]; branchSet(bsel ? (code || branchGet()) : 'all'); }
+      mine.forEach(function (e) { if (bsel && e.branch && brKey(e.branch) !== bsel && !/^(All|General)/i.test(e.branch)) return; var g = e.family || e.org; if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(e); });
       h('<div class="stack xw"><div class="xhead"><p class="eyebrow">Explore by your goal</p><h1>' + (kind === 'university' ? 'University &amp; college syllabus' : 'Competitive exams') + '</h1>' +
         '<p class="muted">' + (kind === 'university' ? 'Choose your course and branch. Subjects follow a common syllabus: topics from different universities are merged into one well-organised set, so whichever college you study in, everything is covered.' : 'Choose your exam, then your branch. Sections and topics follow that exam\'s own syllabus, at its level of difficulty. The same question bank powers every exam, so practice in one helps in all.') + '</p>' +
         '<div class="xtabs"><a href="/exams?k=university" data-link class="' + (kind === 'university' ? 'on' : '') + '">🎓 University / College</a><a href="/exams?k=competitive" data-link class="' + (kind === 'competitive' ? 'on' : '') + '">🏆 Competitive exams</a><a href="/career" data-link>🚀 Interview &amp; career</a></div>' +
-        (branches.length > 1 ? '<div class="xtabs xbr"><span class="small muted">Branch:</span><a href="/exams?k=' + kind + '" data-link class="' + (!bsel ? 'on' : '') + '">All</a>' + branches.filter(function (b) { return !/^All/.test(b); }).map(function (b) { return '<a href="/exams?k=' + kind + '&b=' + encodeURIComponent(b) + '" data-link class="' + (bsel === b ? 'on' : '') + '">' + esc(b) + '</a>'; }).join('') + '</div>' : '') + '</div>' +
+        (branches.length > 1 ? '<div class="xtabs xbr"><span class="small muted">Branch:</span><a href="/exams?k=' + kind + '&b=" data-link class="' + (!bsel ? 'on' : '') + '">All</a>' + branches.filter(function (b) { return !/^All/.test(b); }).map(function (b) { return '<a href="/exams?k=' + kind + '&b=' + encodeURIComponent(b) + '" data-link class="' + (bsel === b ? 'on' : '') + '">' + esc(b) + '</a>'; }).join('') + '</div>' : '') + '</div>' +
         (order.length ? order.map(function (g) {
           return '<section class="xgrp"><h2 class="sh2">' + esc(g) + ' <span class="small muted">· ' + groups[g].length + ' option' + (groups[g].length > 1 ? 's' : '') + '</span></h2><div class="xcards">' + groups[g].map(function (e) {
             var coming = e.status !== 'live' || !e.items;
@@ -798,7 +925,7 @@
   }
   function viewExamIndex(id) {
     if (id === 'btu-me') return go('/e/btech-me', true);
-    setNav('home'); loading();
+    setNav('exams'); loading();
     Promise.all([rpc('exam_index', { p_exam: id }), rpc('catalog').catch(function () { return []; })]).then(function (r) {
       var x = r[0], cat = r[1] || [];
       if (!x || !x.exam) { h('<div class="narrow card center"><h2>This exam is not listed yet</h2><a class="btn" href="/exams" data-link>See all exams</a></div>'); return; }
@@ -1487,6 +1614,7 @@
     var h1 = $view.querySelector('h1'), t = h1 ? h1.textContent.replace(/\s+/g, ' ').trim() : '';
     var want = location.pathname === '/' || !t ? 'VKV Sir Test Lab: free practice, tests and job prep' : t.slice(0, 70) + ' · VKV Sir Test Lab';
     if (document.title !== want) document.title = want;
+    if (/^\/(p|t)\//.test(location.pathname) && t) { try { localStorage.setItem('vkv-last', JSON.stringify({ u: location.pathname + location.search, t: t.slice(0, 90), at: Date.now() })); } catch (e) {} }
   }
   new MutationObserver(function () { clearTimeout(animateIn.t); animateIn.t = setTimeout(function () { animateIn(); pageTitle(); }, 60); }).observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
   window.addEventListener('scroll', function () { var b = document.getElementById('bar'); if (b) b.classList.toggle('scrolled', scrollY > 8); }, { passive: true });
