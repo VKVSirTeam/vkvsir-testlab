@@ -51,7 +51,7 @@ const total = cat.reduce((a, s) => a + (s.count || 0), 0);
 const urls = ['/'];
 const fixed = [
   ['/exams', 'Exams and syllabus', `Browse ${exams.length} exams and university syllabi by branch: GATE, ESE, PSU, SSC, RTO/MVI and B.Tech subjects, with topic-wise practice.`],
-  ['/practice', 'Practice', `Practise ${fmt(total)} questions subject by subject, grouped by branch: answers and explanations after every question.`],
+  ['/practice', 'Practice', 'Practise subject by subject, grouped by branch, with answers and explanations after every question.'],
   ['/test', 'Take a test', 'Timed tests and mock papers for GATE, SSC, placements and university exams, with scores, explanations and a leaderboard.'],
   ['/leaderboard', 'Leaderboard', 'Top students and colleges on VKV Sir Test Lab this week, month and year: full name, college and score, with fair ranking rules.'],
   ['/career', 'Job Prep', 'A company-wise plan for your target job: key subjects, software to learn, likely interview questions and one-tap practice.'],
@@ -64,7 +64,7 @@ const fixed = [
 for (const [p, t, d] of fixed) urls.push(page(p, t, d));
 
 for (const e of exams) {
-  const d = clip(`${e.title}: ${e.description || ''} ${fmt(e.questions)} practice questions mapped to the syllabus, section by section.`, 160);
+  const d = clip(`${e.title}: ${e.description || ''} Practice and tests mapped to the full syllabus, section by section.`, 160);
   urls.push(page('/e/' + e.id, e.title, d));
 }
 for (const t of tests) {
@@ -73,7 +73,7 @@ for (const t of tests) {
 }
 for (const s of cat) {
   if ((s.count || 0) < 18) continue;
-  urls.push(page('/p/' + s.id.toLowerCase(), s.name, clip(`Practise ${s.name} unit by unit: ${fmt(s.count)} questions with answers and explanations, plus timed tests.`, 160)));
+  urls.push(page('/p/' + s.id.toLowerCase(), s.name, clip(`Practise ${s.name} unit by unit with answers and explanations, plus timed tests.`, 160)));
 }
 
 const today = new Date().toISOString().slice(0, 10);

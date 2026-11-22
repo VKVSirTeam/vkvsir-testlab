@@ -1714,3 +1714,54 @@ details[open]>summary>.sj-c{transform:rotate(90deg)}
 .cls-h{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
 .cls-h li{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
 .cls-h .pill.bad{background:var(--bad-soft);color:var(--bad);flex:none}
+/* ===== Round 7 ===== */
+/* How it works: own list, no inherited circle styles */
+.hm-steps{list-style:none;counter-reset:st;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.hm-steps li{counter-increment:st;display:flex;flex-direction:column;gap:6px;padding:18px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);min-width:0}
+.hm-steps li::before{content:counter(st);width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:800}
+.hm-steps li b{font-size:var(--fs-18);line-height:1.3}
+.hm-steps li span{font-size:var(--fs-14);line-height:1.5;color:var(--muted);display:block;width:auto;height:auto;background:none;border-radius:0;margin:0}
+@media(max-width:720px){.hm-steps{grid-template-columns:1fr}.hm-steps li{flex-direction:row;flex-wrap:wrap;align-items:center;column-gap:12px}.hm-steps li span{flex-basis:100%}}
+/* perfect circles everywhere */
+.avatar,.nav .avatar,.nav-right .avatar{width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important;max-height:38px;aspect-ratio:1;flex:none;padding:0!important;border-radius:50%!important;display:grid!important;place-items:center;line-height:1}
+.opt .k,.pod-m,.jp-step span,.nx-n,.sp-b.cur{aspect-ratio:1;flex:none}
+.opt .k{display:grid;place-items:center}
+/* Me history on phones: score never squeezed */
+.list>a,.list>div{gap:10px}
+.list>a>span:first-child,.list>div>span:first-child{min-width:0;flex:1 1 auto;overflow-wrap:anywhere}
+.list>a>.mono,.list>a>.pill,.list>div>.mono{flex:none;white-space:nowrap}
+@media(max-width:560px){.list>a,.list>div{padding:12px 4px}.list>a b{font-size:var(--fs-14)}.list .mono{font-size:var(--fs-14);font-weight:700;background:var(--soft);border-radius:var(--r-sm);padding:4px 8px}}
+/* pickers fill even rows (3 x 2, 2 x 2 ...) */
+.seg:not(.mini){display:flex!important;flex-wrap:wrap;gap:8px}
+.seg:not(.mini)>button{flex:1 1 calc(100% / var(--cols, 3) - 8px);min-width:0}
+/* exams block on Test page */
+.ex-tabs{display:flex;gap:8px}
+.ex-tabs .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+a.sj.ex-row{display:flex;align-items:center;gap:10px;padding:12px 14px;text-decoration:none;color:var(--ink)}
+a.sj.ex-row:hover{border-color:var(--accent);text-decoration:none}
+.xi-act{display:inline-flex;gap:6px;flex:none}
+.crumb-auto{max-width:1120px;margin:0 auto;padding:14px clamp(16px,4vw,32px) 0}
+/* dark mode: boxes stand apart (lifted, alternating shades) and text has colour */
+:root[data-theme="dark"]{--card:#1A2338;--soft:#232D47;--line:#2E3A5A;--paper:#0B1020;--muted:#A9B6D3;--shadow-1:0 0 0 1px rgba(255,255,255,.05),0 10px 26px rgba(0,0,0,.55),0 0 22px rgba(120,150,255,.05)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--card:#1A2338;--soft:#232D47;--line:#2E3A5A;--paper:#0B1020;--muted:#A9B6D3;--shadow-1:0 0 0 1px rgba(255,255,255,.05),0 10px 26px rgba(0,0,0,.55),0 0 22px rgba(120,150,255,.05)}}
+:root[data-theme="dark"] :is(.card,.grp,.door,.tcard,.pod,.hm-steps li,.qa-i,.ib,.dr-stats>div){box-shadow:var(--shadow-1)}
+:root[data-theme="dark"] :is(.grp .sj,.card .card,.card .tile,.card .opt){background:#141B2D}
+:root[data-theme="dark"] h1{color:#F2F5FF}
+:root[data-theme="dark"] :is(h2,h3){color:#C8D4FF}
+:root[data-theme="dark"] .eyebrow{color:#FFB37A}
+:root[data-theme="dark"] :is(b,strong){color:#E9EEFF}
+:root[data-theme="dark"] a:not(.btn):not(.chip){color:#9DB1FF}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) :is(.card,.grp,.door,.tcard,.pod,.hm-steps li,.qa-i,.ib,.dr-stats>div){box-shadow:var(--shadow-1)}
+  :root:not([data-theme="light"]) :is(.grp .sj,.card .card,.card .tile,.card .opt){background:#141B2D}
+  :root:not([data-theme="light"]) h1{color:#F2F5FF}
+  :root:not([data-theme="light"]) :is(h2,h3){color:#C8D4FF}
+  :root:not([data-theme="light"]) .eyebrow{color:#FFB37A}
+  :root:not([data-theme="light"]) :is(b,strong){color:#E9EEFF}
+  :root:not([data-theme="light"]) a:not(.btn):not(.chip){color:#9DB1FF}
+}
+.hm-steps li{display:grid!important;grid-template-columns:34px minmax(0,1fr);column-gap:12px;row-gap:4px;align-items:start}
+.hm-steps li::before{grid-row:1 / span 2}
+.hm-steps li b{grid-column:2;align-self:center}
+.hm-steps li span{grid-column:2;flex-basis:auto}
+@media(max-width:560px){.qa-i:last-child:nth-child(odd){grid-column:1 / -1}}
