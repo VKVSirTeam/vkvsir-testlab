@@ -301,7 +301,7 @@
         tipHtml('home') + '<div class="twoway"><div class="tw2 tw-p"><b>📘 Practice &amp; learn</b><ul><li>Read at your own pace: no timer on any question</li><li>See the right answer and the explanation or solution right after you answer</li><li>Choose no timer, or a session of 5 min to 3 hours</li><li>For building your base. Not on the leaderboard</li></ul></div>' +
           '<div class="tw2 tw-t"><b>📝 Test yourself (quiz)</b><ul><li>Timed: about 45 seconds per question, like a real exam</li><li>Next question opens as soon as you answer</li><li>Score, answers and explanations at the end</li><li>Counts on the leaderboard. Due after every 3 practice sessions</li></ul></div></div>' +
           '<div class="goalbar"><p class="f">🧭 Explore by your goal</p><div class="goal-g">' +
-          '<a href="/exams?k=university" data-link><span>🎓</span><b>My university syllabus</b><small>BTU and more: subject → unit → topic, in syllabus order</small></a>' +
+          '<a href="/exams?k=university" data-link><span>🎓</span><b>My university syllabus</b><small>B.Tech / B.E. by branch: subject → unit → topic, common to all universities</small></a>' +
           '<a href="/exams?k=competitive" data-link><span>🏆</span><b>Competitive exams</b><small>GATE, JEN, RTO/MVI…: exam-wise sections at the right level</small></a>' +
           '<a href="/career" data-link><span>🚀</span><b>Interview &amp; career</b><small>Company-wise plan, aptitude and branch core</small></a></div></div>' +
         '<h2 class="sh2" id="tracks-h">Choose what to practise</h2><p class="muted hs-sub">Open a track, tick a subject, units or single topics, then pick your time and start.</p><div class="tracks">' + tracksHtml + '</div>' +
@@ -743,14 +743,18 @@
       list = list || [];
       var mine = list.filter(function (e) { return e.kind === kind; });
       var groups = {}, order = [];
-      mine.forEach(function (e) { var g = kind === 'university' ? e.org : (e.branch || 'All branches'); if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(e); });
+      var bsel = new URLSearchParams(location.search).get('b') || '';
+      function brKey(b) { return String(b || '').split(/[·(]/)[0].trim(); }
+      var branches = mine.map(function (e) { return brKey(e.branch); }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+      mine.forEach(function (e) { if (bsel && brKey(e.branch) !== bsel && !/^All/.test(e.branch || '')) return; var g = e.family || e.org; if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(e); });
       h('<div class="stack xw"><div class="xhead"><p class="eyebrow">Explore by your goal</p><h1>' + (kind === 'university' ? 'University &amp; college syllabus' : 'Competitive exams') + '</h1>' +
-        '<p class="muted">' + (kind === 'university' ? 'Choose your university and branch. Subjects, units and topics follow your syllabus order.' : 'Choose your exam. Sections and topics follow that exam\'s own syllabus, at its level of difficulty.') + '</p>' +
-        '<div class="xtabs"><a href="/exams?k=university" data-link class="' + (kind === 'university' ? 'on' : '') + '">🎓 University / College</a><a href="/exams?k=competitive" data-link class="' + (kind === 'competitive' ? 'on' : '') + '">🏆 Competitive exams</a><a href="/career" data-link>🚀 Interview &amp; career</a></div></div>' +
+        '<p class="muted">' + (kind === 'university' ? 'Choose your course and branch. Subjects follow a common syllabus: topics from different universities are merged into one well-organised set, so whichever college you study in, everything is covered.' : 'Choose your exam, then your branch. Sections and topics follow that exam\'s own syllabus, at its level of difficulty. The same question bank powers every exam, so practice in one helps in all.') + '</p>' +
+        '<div class="xtabs"><a href="/exams?k=university" data-link class="' + (kind === 'university' ? 'on' : '') + '">🎓 University / College</a><a href="/exams?k=competitive" data-link class="' + (kind === 'competitive' ? 'on' : '') + '">🏆 Competitive exams</a><a href="/career" data-link>🚀 Interview &amp; career</a></div>' +
+        (branches.length > 1 ? '<div class="xtabs xbr"><span class="small muted">Branch:</span><a href="/exams?k=' + kind + '" data-link class="' + (!bsel ? 'on' : '') + '">All</a>' + branches.filter(function (b) { return !/^All/.test(b); }).map(function (b) { return '<a href="/exams?k=' + kind + '&b=' + encodeURIComponent(b) + '" data-link class="' + (bsel === b ? 'on' : '') + '">' + esc(b) + '</a>'; }).join('') + '</div>' : '') + '</div>' +
         (order.length ? order.map(function (g) {
-          return '<section class="xgrp"><h2 class="sh2">' + esc(g) + '</h2><div class="xcards">' + groups[g].map(function (e) {
+          return '<section class="xgrp"><h2 class="sh2">' + esc(g) + ' <span class="small muted">· ' + groups[g].length + ' option' + (groups[g].length > 1 ? 's' : '') + '</span></h2><div class="xcards">' + groups[g].map(function (e) {
             var coming = e.status !== 'live' || !e.items;
-            return '<a class="xcard' + (coming ? ' dim' : '') + '" href="/e/' + esc(e.id) + '" data-link><span class="xorg">' + esc(e.org) + '</span><b>' + esc(e.title) + '</b>' +
+            return '<a class="xcard' + (coming ? ' dim' : '') + '" href="/e/' + esc(e.id) + '" data-link><span class="xorg">' + esc(e.family || e.org) + ' · ' + esc(e.branch || '') + '</span><b>' + esc(e.title) + '</b>' +
               '<span class="small muted">' + esc(e.description || '') + '</span>' +
               '<span class="xmeta">' + (coming ? '<span class="xb soon">Syllabus mapping · coming soon</span>' : '<span class="xb ok">' + e.ready + ' of ' + e.items + ' topics ready</span>') +
               (e.level_note ? '<span class="xb lvl">Level: ' + esc(e.level_note) + '</span>' : '') + '</span></a>';
@@ -760,6 +764,7 @@
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
   function viewExamIndex(id) {
+    if (id === 'btu-me') return go('/e/btech-me', true);
     setNav('home'); loading();
     Promise.all([rpc('exam_index', { p_exam: id }), rpc('catalog').catch(function () { return []; })]).then(function (r) {
       var x = r[0], cat = r[1] || [];
