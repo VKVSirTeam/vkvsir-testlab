@@ -1852,7 +1852,7 @@
     return 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
   }
 
-  var GMAP = { state: 'attempt_state', begin: 'begin_attempt', answer: 'answer_question', finish: 'finish_attempt', leave: 'report_leave', result: 'attempt_result', feedback: 'result_feedback' };
+  var GMAP = { state: 'attempt_state', begin: 'begin_attempt', answer: 'answer_question', finish: 'finish_attempt', leave: 'report_leave', result: 'attempt_result', feedback: 'result_feedback', go: 'sim_go', submit: 'sim_submit' };
   function examApi(tok) {
     return function (fn, a) {
       if (tok) return rpc('g_call', { p_token: tok, p_fn: fn, p_id: a.p_id, p_idx: a.p_idx != null ? a.p_idx : (a.p_no != null ? a.p_no : null), p_choice: a.p_choice != null ? a.p_choice : null, p_rating: a.p_rating != null ? a.p_rating : null, p_flags: a.p_flags || null, p_ms: a.p_ms != null ? a.p_ms : null });
@@ -1890,6 +1890,7 @@
       if (v.phase === 'done') { inQ = false; clearInterval(ticker); return go(base + '/result/' + id, true); }
       if (v.phase === 'instructions') return renderInstructions(v);
       if (v.phase === 'locked') return renderLocked(v);
+      if (v.nav) return renderSim(v);
       renderQuestion(v);
     }
     function fail(e) {
@@ -1923,8 +1924,11 @@
       h('<div class="exam narrow stack"><div><p class="eyebrow">Your paper is ready</p><h1>' + esc(v.title) + '</h1></div>' +
         '<div class="card"><h3>Read before you begin</h3><ul class="rules">' +
         '<li><b>' + v.n + ' questions</b> in <b>' + v.duration + ' minutes</b>, ' + v.sec_per_q + ' seconds each.</li>' +
-        '<li>One question at a time. You cannot go back.</li>' +
-        '<li>Select an option to move ahead. When a question\'s time ends, the next one opens.</li>' +
+        (v.nav ? '<li>Exam simulation: move freely between questions with <b>Previous</b>, <b>Save &amp; next</b> or the question palette.</li>' +
+          '<li>Use <b>Mark for review</b> to come back later. You can change or clear an answer any time before you submit.</li>' +
+          '<li>One overall timer. Unanswered questions score zero; the paper submits itself when time ends.</li>'
+        : '<li>One question at a time. You cannot go back.</li>' +
+        '<li>Select an option to move ahead. When a question\'s time ends, the next one opens.</li>') +
         '<li>The paper submits itself when the total time ends.</li>' +
         '<li>Tap &#128077; or &#128078; under a question to rate it. &#128078; lets you report what is wrong. Optional.</li></ul>' +
         (v.penalty ? '<div class="notice" style="margin-top:14px"><b>Stay on this screen during the test.</b><ul>' +
@@ -1982,6 +1986,79 @@
       clearInterval(ticker); ticker = setInterval(tick, 250); tick();
     }
 
+
+    /* exam simulation: palette, free navigation, mark for review, overall timer */
+    function renderSim(v) {
+      inQ = true; clearInterval(ticker);
+      var cur = v.chosen == null ? null : v.chosen, mark = !!v.marked, pal = v.palette || [];
+      tEnd = now() + v.total_left_ms;
+      var counts = function () { var c = { a: 0, m: 0, u: 0 }; pal.forEach(function (x, i) { var st = i === v.idx ? (cur !== null ? 1 : 0) + (mark ? 2 : 0) : x; if (st & 1) c.a++; else c.u++; if (st & 2) c.m++; }); return c; };
+      var palHtml = function () { return pal.map(function (x, i) { var st = i === v.idx ? (cur !== null ? 1 : 0) + (mark ? 2 : 0) : x;
+        return '<button type="button" class="sp-b s' + st + (i === v.idx ? ' cur' : '') + '" data-go="' + i + '" aria-label="Question ' + (i + 1) + ', ' + ['not answered', 'answered', 'marked, not answered', 'answered and marked'][st] + '">' + (i + 1) + '</button>'; }).join(''); };
+      h('<div class="wm-layer" style="background-image:' + watermark() + '"></div><div class="sim">' +
+        '<div class="sim-top"><div class="sim-t"><b>' + esc(v.title) + '</b><span class="small muted" id="sim-c"></span></div>' +
+          '<div class="sim-r"><span class="tleft mono" id="tl"></span><button type="button" class="btn ghost small sim-pal-btn" id="palbtn" aria-expanded="false">Questions</button></div></div>' +
+        '<div class="sim-body"><section class="sim-q">' +
+          '<p class="qcount">Question ' + (v.idx + 1) + ' of ' + v.n + (mark ? ' <span class="pill sim-mk">Marked for review</span>' : '') + '</p>' +
+          (v.image ? zimg(v.image, '', 'Figure for this question') : '') +
+          '<div class="qbody" id="qb">' + esc(v.body) + '</div>' +
+          '<div class="opts" role="radiogroup" aria-labelledby="qb" id="opts">' + v.options.map(function (o, k) { return '<button type="button" class="opt" role="radio" aria-checked="' + (cur === k) + '" data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') + '</div>' +
+          '<div class="sim-act"><button type="button" class="btn ghost small" id="clr"' + (cur === null ? ' disabled' : '') + '>Clear answer</button>' +
+            '<button type="button" class="btn ghost small" id="mk" aria-pressed="' + mark + '">' + (mark ? 'Unmark' : 'Mark for review') + '</button></div>' +
+          '<div class="note" id="leave" hidden>Leaving the exam screen is recorded.</div>' +
+          '<div class="sim-nav"><button type="button" class="btn ghost" id="pv"' + (v.idx === 0 ? ' disabled' : '') + '>Previous</button>' +
+            (v.idx + 1 < v.n ? '<button type="button" class="btn" id="nx">Save &amp; next</button>' : '<button type="button" class="btn" id="sub2">Review &amp; submit</button>') + '</div>' +
+        '</section><aside class="sim-pal" id="pal"><div class="sp-h"><b>Questions</b><button type="button" class="icon-btn sp-x" id="palx" aria-label="Close question list">✕</button></div>' +
+          '<div class="sp-leg"><span><i class="s1"></i>Answered</span><span><i class="s0"></i>Not answered</span><span><i class="s2"></i>Marked</span><span><i class="s3"></i>Answered &amp; marked</span></div>' +
+          '<div class="sp-grid" id="spg">' + palHtml() + '</div><button type="button" class="btn block" id="sub">Submit paper</button></aside></div></div>');
+      renderMath($view); addTranslation(id, v.idx);
+      function refresh() {
+        var c = counts(); q('#sim-c').textContent = c.a + ' answered · ' + c.m + ' marked · ' + c.u + ' left';
+        q('#spg').innerHTML = palHtml(); q('#clr').disabled = cur === null;
+      }
+      refresh();
+      function move(to, after) {
+        if (busy) return; busy = true;
+        A('go', { p_id: id, p_from: v.idx, p_choice: cur === null ? -1 : cur, p_mark: mark, p_to: to }).then(after || render).catch(fail);
+      }
+      function submitPaper() {
+        var c = counts();
+        var m = modal('<h2>Submit your paper?</h2><div class="sim-sum"><div><b>' + c.a + '</b><span>Answered</span></div><div><b>' + c.u + '</b><span>Not answered</span></div><div><b>' + c.m + '</b><span>Marked</span></div></div>' +
+          (c.u ? '<p class="muted">You still have ' + c.u + ' unanswered question' + (c.u > 1 ? 's' : '') + ' and ' + mmss(Math.max(0, tEnd - now())) + ' left.</p>' : '<p class="muted">All questions answered.</p>') +
+          '<div class="row"><button type="button" class="btn ghost" data-close>Keep working</button><button type="button" class="btn" id="subok">Submit now</button></div>', { sticky: true });
+        m.querySelector('#subok').onclick = function () { m.querySelector('[data-close]').click(); finalSubmit(); };
+      }
+      function finalSubmit() {
+        if (busy) return; busy = true; clearInterval(ticker); inQ = false;
+        A('submit', { p_id: id, p_from: v.idx, p_choice: cur === null ? -1 : cur, p_mark: mark }).then(render).catch(fail);
+      }
+      q('#opts').addEventListener('click', function (e) {
+        var b = e.target.closest('.opt'); if (!b || busy) return;
+        cur = +b.getAttribute('data-k');
+        Array.prototype.forEach.call(this.children, function (c) { c.setAttribute('aria-checked', c === b); });
+        refresh();
+      });
+      q('#clr').onclick = function () { cur = null; q('#opts').querySelectorAll('.opt').forEach(function (c) { c.setAttribute('aria-checked', false); }); refresh(); };
+      q('#mk').onclick = function () { mark = !mark; this.setAttribute('aria-pressed', mark); this.textContent = mark ? 'Unmark' : 'Mark for review'; refresh(); };
+      var pv = q('#pv'); if (pv) pv.onclick = function () { move(v.idx - 1); };
+      var nx = q('#nx'); if (nx) nx.onclick = function () { move(v.idx + 1); };
+      var s2 = q('#sub2'); if (s2) s2.onclick = function () { move(v.idx, function (nv) { busy = false; render(nv); setTimeout(submitPaper, 50); }); };
+      q('#sub').onclick = function () { move(v.idx, function (nv) { busy = false; render(nv); setTimeout(submitPaper, 50); }); };
+      q('#spg').addEventListener('click', function (e) { var b = e.target.closest('[data-go]'); if (!b) return; document.body.classList.remove('pal-open'); move(+b.getAttribute('data-go')); });
+      q('#palbtn').onclick = function () { var o = document.body.classList.toggle('pal-open'); this.setAttribute('aria-expanded', o); };
+      q('#palx').onclick = function () { document.body.classList.remove('pal-open'); q('#palbtn').setAttribute('aria-expanded', false); };
+      document.onkeydown = function (e) {
+        if (!document.querySelector('.sim') || (e.target && e.target.closest && e.target.closest('input,textarea,select')) || document.querySelector('.modal') || e.ctrlKey || e.metaKey || e.altKey) return;
+        var k = e.key.toLowerCase(), i = 'abcd'.indexOf(k); if (i < 0 && '1234'.indexOf(k) >= 0) i = +k - 1;
+        if (i >= 0 && i < v.options.length) { var o = q('#opts').children[i]; if (o) o.click(); }
+        else if (k === 'n' && nx) nx.click(); else if (k === 'p' && pv && !pv.disabled) pv.click(); else if (k === 'm') q('#mk').click();
+      };
+      ticker = setInterval(function () {
+        var tl = Math.max(0, tEnd - now()), el = q('#tl'); if (!el) return;
+        el.textContent = mmss(tl) + ' left'; el.classList.toggle('low', tl <= 300000);
+        if (tl <= 0 && !busy) finalSubmit();
+      }, 250);
+    }
     function tick() {
       if (!st || st.phase !== 'question') return;
       var t = now(), ql = Math.max(0, qEnd - t), tl = Math.max(0, tEnd - t);

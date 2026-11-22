@@ -1630,3 +1630,44 @@ details[open]>summary>.sj-c{transform:rotate(90deg)}
 @media(max-width:880px){.qa{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
 @media(max-width:560px){.qa{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 .px{scroll-margin-bottom:110px}
+/* ===== Stage 4: exam simulation ===== */
+.sim{max-width:1180px;margin:0 auto;padding:12px clamp(12px,3vw,24px) 24px;position:relative;z-index:1}
+.sim-top{position:sticky;top:0;z-index:6;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;background:var(--paper);border-bottom:1px solid var(--line)}
+.sim-t{display:flex;flex-direction:column;min-width:0}
+.sim-t b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sim-r{display:flex;align-items:center;gap:10px}
+.sim-r .tleft{font-size:var(--fs-18);font-weight:700}
+.sim-r .tleft.low{color:var(--bad)}
+.sim-body{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start;margin-top:16px}
+.sim-q .qbody{font-size:var(--fs-18);margin:8px 0 16px}
+.sim-mk{background:var(--warn-soft);color:var(--warn)}
+.sim-act{display:flex;gap:8px;margin:14px 0}
+.sim-act #mk[aria-pressed="true"]{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.sim-nav{display:flex;justify-content:space-between;gap:12px;position:sticky;bottom:0;padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));background:var(--paper)}
+.sim-nav .btn{flex:1}
+.sim-pal{position:sticky;top:72px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:14px;display:flex;flex-direction:column;gap:12px}
+.sp-h{display:flex;justify-content:space-between;align-items:center}
+.sp-x{display:none}
+.sp-leg{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:var(--fs-12);color:var(--muted)}
+.sp-leg span{display:flex;align-items:center;gap:6px}
+.sp-leg i{width:14px;height:14px;border-radius:4px;display:inline-block;border:1px solid var(--line)}
+.sp-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;max-height:50vh;overflow:auto}
+.sp-b{min-height:40px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--card);color:var(--ink);font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums}
+.s1,.sp-b.s1{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.s2,.sp-b.s2{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.s3,.sp-b.s3{background:var(--violet-soft);border-color:var(--violet);color:var(--violet)}
+.sp-b.cur{outline:2px solid var(--accent);outline-offset:1px}
+.sim-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.sim-sum div{display:flex;flex-direction:column;align-items:center;padding:12px;border:1px solid var(--line);border-radius:var(--r-md)}
+.sim-sum b{font:800 var(--fs-28)/1 var(--display)}
+.sim-sum span{font-size:var(--fs-12);color:var(--muted)}
+.sim-pal-btn{display:none}
+@media(max-width:900px){
+  .sim-body{grid-template-columns:1fr}
+  .sim-pal-btn{display:inline-flex}
+  .sim-pal{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:50;border-radius:var(--r-xl) var(--r-xl) 0 0;max-height:80vh;transform:translateY(105%);transition:transform .22s ease;box-shadow:var(--shadow-2);padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+  body.pal-open .sim-pal{transform:none}
+  .sp-x{display:inline-flex}
+  .sp-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+}
+.view.pv>.sim,.view.pv>.exam,.view.pv>.wm-layer{animation:none}
