@@ -167,6 +167,7 @@
     if (p === '/drill') return viewDrill();
     if (p === '/exams') return viewExams();
     if ((m = p.match(/^\/practice\/([0-9a-f-]{36})$/))) return viewPractice(m[1]);
+    if ((m = p.match(/^\/q\/([0-9a-z]{6,12})$/i))) return viewShared(m[1]);
     if ((m = p.match(/^\/e\/([a-z0-9-]+)$/))) return viewExamIndex(m[1]);
     if (p === '/admin/about') return viewAboutAdmin();
     if (p === '/admin/companies') return viewCompaniesAdmin();
@@ -297,7 +298,9 @@
               ['cot φ − cot θ = w / l', 'cot φ + cot θ = w / l', 'tan φ − tan θ = w / l', 'sin φ − sin θ = w / l'].map(function (o, i) { return '<button class="sqo" data-ok="' + (i === 0) + '">' + 'ABCD'[i] + '&nbsp; ' + o + '</button>'; }).join('') +
           
               '<p class="small muted sqx" hidden>✓ <b>cot φ − cot θ = w / l</b>, where φ and θ are the outer and inner wheel angles, w the kingpin centre distance and l the wheelbase. Want more like this? Open <b>Fundamentals → Automobile Engineering</b>.</p></div></div></div></div>' +
-        tipHtml('home') + '<div class="goalbar"><p class="f">🧭 Explore by your goal</p><div class="goal-g">' +
+        tipHtml('home') + '<div class="twoway"><div class="tw2 tw-p"><b>📘 Practice &amp; learn</b><ul><li>Read at your own pace: no timer on any question</li><li>See the right answer and the explanation or solution right after you answer</li><li>Choose no timer, or a session of 5 min to 3 hours</li><li>For building your base. Not on the leaderboard</li></ul></div>' +
+          '<div class="tw2 tw-t"><b>📝 Test yourself (quiz)</b><ul><li>Timed: about 45 seconds per question, like a real exam</li><li>Next question opens as soon as you answer</li><li>Score, answers and explanations at the end</li><li>Counts on the leaderboard. Due after every 3 practice sessions</li></ul></div></div>' +
+          '<div class="goalbar"><p class="f">🧭 Explore by your goal</p><div class="goal-g">' +
           '<a href="/exams?k=university" data-link><span>🎓</span><b>My university syllabus</b><small>BTU and more: subject → unit → topic, in syllabus order</small></a>' +
           '<a href="/exams?k=competitive" data-link><span>🏆</span><b>Competitive exams</b><small>GATE, JEN, RTO/MVI…: exam-wise sections at the right level</small></a>' +
           '<a href="/career" data-link><span>🚀</span><b>Interview &amp; career</b><small>Company-wise plan, aptitude and branch core</small></a></div></div>' +
@@ -347,9 +350,9 @@
           ].map(function (r) { return '<div class="req"><span>' + r[0] + '</span>"' + r[1] + '"</div>'; }).join('') + '</div></section>' +
         '<section class="follow"><h2 class="sh2">Follow VKV Sir</h2><div class="fl">' + FOLLOW.map(function (f) { return '<a href="' + f[1] + '" target="_blank" rel="noopener" class="fbtn ' + f[2] + '">' + f[3] + '<span>' + f[0] + '</span></a>'; }).join('') + '</div></section>' +
         '<div class="startbar" id="sbar" hidden><div class="sbtop"><b id="sn"></b><button type="button" class="linkbtn" id="sclr">Clear all</button></div><div class="snames" id="sd"></div>' +
-        '<div class="sbrow"><div class="seg mini" id="smode"><button type="button" data-m="fixed" aria-pressed="true">📝 Fixed paper</button><button type="button" data-m="rapid" aria-pressed="false">⚡ Rapid fire</button></div>' +
-        '<div class="seg mini" id="sdur">' + [5, 10, 15, 30].map(function (d, k) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (k === 1) + '">' + d + ' min</button>'; }).join('') + '</div>' +
-        '<button class="btn" id="sgo">' + (session ? 'Start test' : 'Sign in to start') + '</button></div><p class="small muted" id="smi">Fixed paper: a set number of questions with fair time for each.</p><div class="err" id="se" role="alert"></div></div>' +
+        '<div class="sbrow"><div class="seg mini" id="smode"><button type="button" data-m="practice" aria-pressed="true">📘 Practice &amp; learn</button><button type="button" data-m="fixed" aria-pressed="false">📝 Test yourself</button><button type="button" data-m="rapid" aria-pressed="false">⚡ Rapid fire</button></div>' +
+        '<div class="seg mini" id="sdur"></div>' +
+        '<button class="btn" id="sgo"></button></div><p class="small muted" id="smi"></p><div class="err" id="se" role="alert"></div></div>' +
         shareBar(location.origin + '/', 'Free practice quizzes with instant results by VKV Sir:', 'Invite friends:') + boardCard(board, 'Top performers') + '<div id="about"></div>');
       mountAbout(q('#about'));
       var qg = q('#qgo');
@@ -358,7 +361,18 @@
         try { localStorage.setItem('jp_last', JSON.stringify(inp)); } catch (e) {}
         go('/career?auto=1');
       };
-      var dur = 10, mode = 'fixed', hint1 = false, hint2 = false;
+      var dur = 15, mode = 'practice', hint1 = false, hint2 = false;
+      var SDUR = { practice: [[0, 'No timer'], [5, '5 min'], [15, '15 min'], [60, '1 hour'], [180, '3 hours']], fixed: [[5, '5 min'], [10, '10 min'], [15, '15 min'], [30, '30 min']], rapid: [[5, '5 min'], [10, '10 min'], [30, '30 min']] };
+      var SMI = { practice: '📘 <b>Practice &amp; learn:</b> no timer per question. Answer at your own pace and see the correct answer with its explanation or solution straight away, then tap Next. Pick one subject, unit or topic. Not counted on the leaderboard.',
+        fixed: '📝 <b>Test yourself:</b> a timed quiz, about 45 seconds per question. The next question opens when you answer or when its time ends. Score, correct answers and explanations at the end. Counts on the leaderboard.',
+        rapid: '⚡ <b>Rapid fire:</b> questions come one after another until time runs out. Pick one whole unit or subject; it unlocks after you have practised all its topics.' };
+      function drawMode() {
+        var ds = SDUR[mode]; if (!ds.some(function (x) { return x[0] === dur; })) dur = ds[Math.min(2, ds.length - 1)][0];
+        q('#sdur').innerHTML = ds.map(function (x) { return '<button type="button" data-d="' + x[0] + '" aria-pressed="' + (x[0] === dur) + '">' + x[1] + '</button>'; }).join('');
+        q('#smi').innerHTML = SMI[mode];
+        q('#sgo').textContent = !session ? 'Sign in to start' : mode === 'practice' ? '📘 Start practice' : mode === 'rapid' ? '⚡ Start rapid fire' : '📝 Start test';
+      }
+      drawMode();
       function selection() {
         var out = [], keys = Object.keys(sel);
         keys.forEach(function (k) {
@@ -374,7 +388,7 @@
         bar.hidden = !s.length;
         q('#sn').textContent = s.length ? 'Your selection (' + s.length + ')' : '';
         q('#sd').innerHTML = s.map(function (x) { var k = [x.s, x.u, x.t].filter(function (v) { return v != null; }).join('|'); return '<span class="snm">' + esc(NAMES[k] || k) + '</span>'; }).join('');
-        if (s.length && !hint2) { hint2 = true; guide(q('#smode'), 'Choose Fixed paper or Rapid fire, pick your time, then Start'); }
+        if (s.length && !hint2) { hint2 = true; guide(q('#smode'), 'Choose Practice & learn (answers shown after each question) or Test yourself (timed quiz), pick your time, then Start'); }
       }
       if ($view._treeBound) { $view.removeEventListener('change', $view._treeChange); $view.removeEventListener('click', $view._treeClick, true); }
       $view._treeBound = true;
@@ -394,20 +408,21 @@
       }, true);
       q('#sclr').onclick = function () { sel = {}; $view.querySelectorAll('.tchk input').forEach(function (x) { x.checked = false; }); refresh(); };
       $view.querySelectorAll('.trk .tn').forEach(function (d) { d.addEventListener('toggle', function () { if (d.open && !hint1) { hint1 = true; guide(d.querySelector('.tk .tchk') || d.querySelector('summary'), 'Tick the units or topics you want in your quiz'); } }); });
-      q('#smode').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; mode = b.getAttribute('data-m'); this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
-        q('#smi').innerHTML = mode === 'rapid' ? '⚡ <b>Rapid fire:</b> questions come one after another until time runs out, so you rehearse more in less time. Pick <b>one whole unit or subject</b>; it unlocks after you have practised all its topics. Two rounds per unit per day; each round uses fresh questions.' : 'Fixed paper: a set number of questions with fair time for each.';
-        q('#sdur').querySelectorAll('button').forEach(function (x) { x.hidden = mode === 'rapid' && x.getAttribute('data-d') === '15'; }); if (mode === 'rapid' && dur === 15) dur = 10; };
+      q('#smode').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; mode = b.getAttribute('data-m'); this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); q('#se').textContent = ''; drawMode(); };
       q('#sdur').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; dur = +b.getAttribute('data-d'); this.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); };
       q('#sgo').onclick = function () {
         if (!requireAuth(location.pathname, function () { q('#sgo').click(); })) return;
         var g = this, s = selection(); g.disabled = true; g.textContent = 'Preparing your paper…'; q('#se').textContent = '';
-        var call;
-        if (mode === 'rapid') {
-          if (s.length !== 1 || s[0].t) { q('#se').textContent = 'For Rapid fire, tick exactly one whole unit or one whole subject.'; g.disabled = false; g.textContent = 'Start practice'; return; }
-          call = rpc('start_rapid', { p_subject: s[0].s, p_unit: s[0].u == null ? null : s[0].u, p_duration: dur });
-        } else call = rpc('start_multi', { p_sel: s, p_duration: dur });
-        call.then(function (v) { go('/exam/' + v.attempt); })
-          .catch(function (e) { var m = errMsg(e); if (gateErr(m, location.pathname)) m = ''; q('#se').textContent = lockText(m); g.disabled = false; g.textContent = 'Start practice'; });
+        var call, back = function () { g.disabled = false; drawMode(); };
+        track(mode === 'practice' ? 'start_practice' : 'start_quiz', { from: 'home' });
+        if (mode === 'practice') {
+          if (s.length !== 1) { q('#se').textContent = 'Practice works on one subject, one unit or one topic at a time. Tick just one, or choose “Test yourself” for a mixed paper.'; back(); return; }
+          call = rpc('start_practice', { p_subject: s[0].s, p_unit: s[0].u == null ? null : s[0].u, p_topic: s[0].t || null, p_duration: dur || null, p_exam: null }).then(function (v) { go('/practice/' + v.attempt); });
+        } else if (mode === 'rapid') {
+          if (s.length !== 1 || s[0].t) { q('#se').textContent = 'For Rapid fire, tick exactly one whole unit or one whole subject.'; back(); return; }
+          call = rpc('start_rapid', { p_subject: s[0].s, p_unit: s[0].u == null ? null : s[0].u, p_duration: dur }).then(function (v) { go('/exam/' + v.attempt); });
+        } else call = rpc('start_multi', { p_sel: s, p_duration: dur }).then(function (v) { go('/exam/' + v.attempt); });
+        call.catch(function (e) { var m = errMsg(e); if (gateErr(m, location.pathname)) m = ''; q('#se').textContent = lockText(m.replace(/^QUIZ_DUE:/, '🧪 ').replace(/^LOCKED:\d+$/, m)); back(); });
       };
       q('#go-start').onclick = function () { var t = q('#tr0'); t.open = true; t.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
       var gs2 = q('#go-start2'); if (gs2) gs2.onclick = q('#go-start').onclick;
@@ -676,8 +691,8 @@
         '<p class="eyebrow">' + (exam ? 'Exam-level paper · ' + esc(exam.toUpperCase().replace(/-/g, ' ')) : 'Free practice & tests') + '</p><h1>' + esc(title) + '</h1>' + (crumbs && crumbs !== title ? '<p class="muted" style="margin:0">' + esc(crumbs) + '</p>' : '') +
         (cnt >= READY ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>📘 Practice &amp; learn</b><span>Answer, then see the right answer and explanation at once</span></button>' +
           '<button type="button" data-m="quiz" aria-pressed="' + (mode === 'quiz') + '"><b>📝 Test yourself</b><span>Timed quiz, score at the end, counts on the leaderboard</span></button></div>' +
-          '<div id="pm"><p class="f">Do you want a timer?</p><div class="seg" id="pd">' + [[0, 'No timer', 'Up to 30 Qs · learn at your pace'], [10, '10 min', 'up to 26 Qs'], [15, '15 min', 'up to 40 Qs'], [30, '30 min', 'up to 80 Qs']].map(function (d) { return '<button type="button" data-d="' + d[0] + '" aria-pressed="' + (d[0] === pdur) + '"><b>' + d[1] + '</b><span>' + d[2] + '</span></button>'; }).join('') + '</div>' +
-          '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>Rushing through questions without reading is detected: you get two warnings, then the session slows down and pauses.</li><li>After <b>3 practice sessions</b> in a unit, take a short <b>Test yourself</b> quiz to check what stuck and unlock more practice.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
+          '<div id="pm"><p class="f">Do you want a timer?</p><div class="seg" id="pd">' + [[0, 'No timer', 'Learn at your own pace'], [5, '5 min', 'Quick revision'], [15, '15 min', 'Short session'], [60, '1 hour', 'Deep practice'], [180, '3 hours', 'Full study session']].map(function (d) { return '<button type="button" data-d="' + d[0] + '" aria-pressed="' + (d[0] === pdur) + '"><b>' + d[1] + '</b><span>' + d[2] + '</span></button>'; }).join('') + '</div>' +
+          '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Rushing through questions without reading is detected: a warning, then short pauses of 1–2 minutes. Repeating it on the same day locks all practice and quizzes for 10 minutes.</li><li>After <b>3 practice sessions</b> in a unit, take a short <b>Test yourself</b> quiz to check what stuck and unlock more practice.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
           '<div id="qm" hidden>' + (ds.length ? '<p class="f">How much time do you have?</p><div class="seg" id="fd">' + ds.map(function (d) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + Math.floor(d * 60 / 45) + ' questions</span></button>'; }).join('') + '</div>' +
             '<ul class="rules small" style="text-align:left"><li>A fresh, balanced paper every time.</li><li>One question at a time, 45 seconds each.</li><li>Score, correct answers and explanations at the end. Counts on the leaderboard.</li></ul>' : '<p class="muted small">Not enough questions for a quiz here yet. Use Practice for now.</p>') + '</div>' +
           '<div class="err" id="fe" role="alert"></div><button class="btn block" id="fgo"></button>' +
@@ -1692,8 +1707,9 @@
         '<button type="button" class="icon-btn" id="dn" aria-pressed="false" aria-label="Problem with this question">' + THUMB_DN + '</button></div>' +
         '<div id="chips" hidden><p class="small" style="margin:12px 0 0">What is wrong? Tap all that apply:</p><div class="chips">' + FLAGS.map(function (f) { return '<button type="button" class="chip" aria-pressed="false" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div></div>' +
         '<div class="note" id="leave" hidden>Leaving the exam screen is recorded.</div>' +
-        '<div class="exam-foot"><button class="btn block" id="nx" disabled>' + (last ? 'Submit paper' : 'Next question') + '</button></div></div>');
+        '<div class="exam-foot"><button class="btn block" id="nx" disabled>' + (last ? 'Submit paper' : 'Next question') + '</button></div>' + (tok ? '' : '<button type="button" class="qshare" id="qsh" aria-label="Save this question to WhatsApp">📸<span>Save &amp; share</span><small id="qshn"></small></button>') + '</div>');
       renderMath($view);
+      if (!tok) { shareQuota(id, q('#qshn')); q('#qsh').onclick = function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); }; }
       q('#opts').addEventListener('click', function (e) {
         var b = e.target.closest('.opt'); if (!b || busy) return;
         sel = +b.getAttribute('data-k');
@@ -1738,9 +1754,10 @@
 
   /* ---------- practice & learn: answer → instant answer + explanation ---------- */
   var WARN_TXT = [null,
-    ['⚠️ Please slow down', 'It seems you are not reading the questions and are answering randomly. Read each question fully and attempt it wisely. If this continues, the app will slow you down and then pause your practice.'],
-    ['⚠️ Second warning', 'You are still moving faster than anyone can read these questions. From now on, the <b>Next</b> button waits until you have had time to read. One more time and your practice will pause for a few minutes.'],
-    ['⏸️ Practice paused', 'You kept rushing through questions, so practice is paused for a few minutes. Use the time to revise the explanations you just saw.']];
+    ['⚠️ Please slow down', 'It seems you are not reading the questions and are answering randomly. Read each question fully and attempt it wisely. If this continues, the app will pause your practice.'],
+    ['⏸️ Paused for 90 seconds', 'You are still moving faster than anyone can read these questions. Practice is paused for 90 seconds. After this, the <b>Next</b> button waits until you have had time to read.'],
+    ['⏸️ Paused for 2 minutes', 'Please attempt practice sessions when you have time to read the questions, not to hunt for answers or guess. Our system notices this pattern. <b>If it happens again today, all practice and quizzes will lock for 10 minutes.</b>'],
+    ['🔒 Locked for 10 minutes', 'You rushed through questions again today, so practice and quizzes are locked for 10 minutes. After that you can resume this session exactly where you left it. Please read each question before answering.']];
   function viewPractice(id) {
     setNav('exam');
     if (!session) return go('/login?next=' + encodeURIComponent('/practice/' + id), true);
@@ -1768,8 +1785,9 @@
     }
     function renderPaused(v) {
       inQ = false; var end = now() + v.seconds * 1000;
-      h('<div class="narrow card center stack"><div class="big">⏸️</div><h1>Practice paused</h1><p>You were answering faster than the questions can be read. Practice resumes in:</p><div class="big mono" id="pz"></div>' +
-        '<p class="small muted">Tip: open your previous results and read the explanations meanwhile.</p><a class="btn ghost" href="/me" data-link>My dashboard</a></div>');
+      h('<div class="narrow card center stack"><div class="big">' + (v.global ? '🔒' : '⏸️') + '</div><h1>' + (v.global ? 'Practice and quizzes locked' : 'Practice paused') + '</h1>' +
+        '<p>' + (v.global ? 'You rushed through questions again today. Please attempt questions only when you have time to read them. You can resume this session exactly where you left it in:' : (v.warns >= 3 ? 'Please attempt practice when you have time to read the questions, not to hunt and guess. If it happens again today, everything locks for 10 minutes. Resumes in:' : 'You were answering faster than the questions can be read. Practice resumes in:')) + '</p><div class="big mono" id="pz"></div>' +
+        '<p class="small muted">Tip: meanwhile, read the explanations of your earlier answers in your dashboard.</p><a class="btn ghost" href="/me" data-link>My dashboard</a></div>');
       ticker = setInterval(function () { var l = Math.max(0, end - now()), el = q('#pz'); if (!el) return; el.textContent = mmss(l); if (l <= 0) { clearInterval(ticker); load(); } }, 500);
     }
     function renderQ(v) {
@@ -1786,9 +1804,10 @@
         }).join('') + '</div>' +
         (r ? '<div class="px ' + (r.chosen === r.correct ? 'good' : 'bad') + '"><b>' + (r.chosen == null ? 'Answer shown' : r.chosen === r.correct ? '✅ Correct!' : '❌ Not quite') + '</b>' + (r.explanation ? '<p>' + esc(r.explanation) + '</p>' : '') + '</div>' : '') +
         '<div class="exam-foot prow">' + (r ? '<button class="btn block" id="nx">Next question →</button>' : '<button class="btn ghost" id="sk" type="button">🤔 Show answer</button>') +
-        '<button class="linkbtn" id="end" type="button">End practice &amp; see summary</button></div>' +
+        '<button class="linkbtn" id="end" type="button">End practice &amp; see summary</button></div>' + '<button type="button" class="qshare" id="qsh" aria-label="Save this question to WhatsApp">📸<span>Save &amp; share</span><small id="qshn"></small></button>' +
         (v.slow && !r ? '<p class="small muted center" id="slowmsg">Take your time: read the question fully before answering.</p>' : '') + '</div>');
       renderMath($view);
+      shareQuota(id, q('#qshn')); q('#qsh').onclick = function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); };
       if (!r) {
         q('#opts').addEventListener('click', function (e) { var b = e.target.closest('.opt'); if (b) answer(+b.getAttribute('data-k')); });
         q('#sk').onclick = function () { answer(-1); };
@@ -1806,6 +1825,107 @@
       rpc('practice_answer', { p_id: id, p_idx: st.idx, p_choice: k }).then(render).catch(fail);
     }
     load();
+  }
+
+  /* ---------- save & share one question (limited): image card + short link for WhatsApp ---------- */
+  var GREEK = { alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', Delta: 'Δ', epsilon: 'ε', varepsilon: 'ε', eta: 'η', theta: 'θ', lambda: 'λ', mu: 'μ', nu: 'ν', pi: 'π', rho: 'ρ', sigma: 'σ', tau: 'τ', phi: 'φ', omega: 'ω', Omega: 'Ω', infty: '∞', times: '×', cdot: '·', approx: '≈', le: '≤', ge: '≥', leq: '≤', geq: '≥', ne: '≠', partial: '∂', nabla: '∇', sqrt: '√', pm: '±', to: '→', propto: '∝', circ: '°' };
+  function mathPlain(t) {
+    return String(t || '').replace(/\$\$?/g, '').replace(/\\(text|mathrm|mathbf|operatorname)\{([^}]*)\}/g, '$2').replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, '($1)/($2)')
+      .replace(/\\([A-Za-z]+)/g, function (m, w) { return GREEK[w] || w; }).replace(/\^\{([^}]*)\}/g, '^$1').replace(/_\{([^}]*)\}/g, '_$1').replace(/[{}]/g, '').replace(/\s+/g, ' ').trim();
+  }
+  function canvasLines(ctx, text, maxW) {
+    var words = text.split(' '), out = [], cur = '';
+    words.forEach(function (w) { var t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width > maxW && cur) { out.push(cur); cur = w; } else cur = t; });
+    if (cur) out.push(cur); return out;
+  }
+  function questionImage(x) {
+    return new Promise(function (resolve) {
+      var W = 1080, P = 56, c = document.createElement('canvas'), ctx = c.getContext('2d');
+      function layout(draw) {
+        var y = 0; function L(t, font, color, lh, x0, maxW) { ctx.font = font; var ls = canvasLines(ctx, t, maxW || (W - 2 * P)); ls.forEach(function (l) { if (draw) { ctx.fillStyle = color; ctx.fillText(l, x0 || P, y); } y += lh; }); }
+        if (draw) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, c.height); ctx.fillStyle = '#2952E3'; ctx.fillRect(0, 0, W, 120); }
+        y = 52; L('VKV Sir Test Lab', 'bold 38px Arial', '#fff', 46); L(mathPlain((x.subject || '') + (x.topic ? ' · ' + x.topic : '')), '26px Arial', '#dfe6ff', 34);
+        y = 180; L(mathPlain(x.body), 'bold 36px Arial', '#0F172A', 48);
+        if (x._img) { var iw = Math.min(W - 2 * P, x._img.width), ih = x._img.height * iw / x._img.width; if (draw) ctx.drawImage(x._img, P, y, iw, ih); y += ih + 20; }
+        y += 10;
+        (x.options || []).forEach(function (o, k) {
+          ctx.font = '32px Arial'; var ls = canvasLines(ctx, mathPlain(o), W - 2 * P - 90), h = ls.length * 42 + 30;
+          var ok = x.correct === k, bad = x.chosen === k && x.correct !== k && x.correct != null;
+          if (draw) { ctx.fillStyle = ok ? '#E3F5EE' : bad ? '#FDECEC' : '#F4F7FC'; ctx.strokeStyle = ok ? '#12805C' : bad ? '#C62E2E' : '#E2E8F0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.rect(P, y, W - 2 * P, h); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#5B6576'; ctx.font = 'bold 30px Arial'; ctx.fillText('ABCD'[k] + '.', P + 22, y + 46); ctx.fillStyle = '#0F172A'; ctx.font = '32px Arial'; ls.forEach(function (l, i) { ctx.fillText(l, P + 80, y + 46 + i * 42); }); if (ok) { ctx.fillStyle = '#12805C'; ctx.font = 'bold 34px Arial'; ctx.fillText('✓', W - P - 46, y + 46); } }
+          y += h + 14;
+        });
+        if (x.explanation) { y += 10; L('Explanation', 'bold 30px Arial', '#12805C', 40); L(mathPlain(x.explanation), '29px Arial', '#1f2937', 40); }
+        else if (x.correct == null) { y += 6; L('Can you answer it? Open the link to try and see the solution.', 'italic 29px Arial', '#5B6576', 40); }
+        y += 24; if (draw) { ctx.fillStyle = '#0F172A'; ctx.fillRect(0, y, W, 170); }
+        y += 58; L('Try it: ' + x.link.replace(/^https?:\/\//, ''), 'bold 34px Arial', '#fff', 46);
+        L('Free practice · Quizzes · Job prep · Resume builder', '28px Arial', '#c7d2fe', 40);
+        return y + 40;
+      }
+      c.width = W; c.height = 2000; var H = layout(false); c.height = Math.min(4000, H); layout(true);
+      c.toBlob(function (b) { resolve(b); }, 'image/png');
+    }).then(function (b) { return b; });
+  }
+  function withImg(x) {
+    if (!x.image) return Promise.resolve(x);
+    return new Promise(function (ok) { var im = new Image(); im.crossOrigin = 'anonymous'; im.onload = function () { x._img = im; ok(x); }; im.onerror = function () { ok(x); }; im.src = x.image; });
+  }
+  function shareQuota(attemptId, el) {
+    if (!el) return; rpc('share_quota', { p_id: attemptId }).then(function (r) { el.textContent = r.left + ' left'; el.parentNode.disabled = r.left <= 0; el.parentNode.title = r.left + ' saves left in this session (max ' + r.per_session + ' per session, ' + r.per_day + ' per day)'; }).catch(function () {});
+  }
+  function shareFlow(attemptId, idx, onDone) {
+    var wa = ''; try { wa = localStorage.getItem('vkv-wa') || ''; } catch (e) {}
+    if (!wa && profile && profile.mobile) wa = String(profile.mobile).replace(/[^\d+]/g, '');
+    var g = gmodal('<div class="gm-ic">📸</div><h2>Save this question to WhatsApp</h2><p class="gm-lead">Save only questions you found <b>hard</b>, got <b>wrong</b>, or want to <b>discuss with a friend or teacher</b>. You can save up to 20% of a session’s questions and 10 per day.</p>' +
+      '<label class="f" for="wa-n">Your WhatsApp number</label><input class="in" id="wa-n" inputmode="tel" placeholder="+91 98XXXXXXXX" value="' + esc(wa) + '"><p class="small muted" style="margin:6px 0 12px">Asked once. On a phone you can pick any chat or group to send it to.</p>' +
+      '<div class="err" id="wa-e"></div><button type="button" class="btn block" id="wa-go">Save &amp; open WhatsApp</button><button type="button" class="link-btn" id="wa-x" style="margin-top:8px">Cancel</button>');
+    g.el.querySelector('#wa-x').onclick = function () { g.close(); };
+    g.el.querySelector('#wa-go').onclick = function () {
+      var b = this, n = g.el.querySelector('#wa-n').value.replace(/[^\d+]/g, '');
+      if (n.replace(/\D/g, '').length < 10) { g.el.querySelector('#wa-e').textContent = 'Please enter your WhatsApp number with country code.'; return; }
+      if (n.charAt(0) !== '+' && n.length === 10) n = '+91' + n;
+      try { localStorage.setItem('vkv-wa', n); } catch (e) {}
+      b.disabled = true; b.textContent = 'Preparing image…';
+      rpc('share_question', { p_id: attemptId, p_idx: idx }).then(function (x) {
+        x.link = location.origin + '/q/' + x.code;
+        var cap = '🤔 Can you solve this ' + (x.subject || '') + ' question? I am practising on VKV Sir Test Lab (free practice, quizzes, job prep and resume builder). Try it here 👉 ' + x.link;
+        track('share_q', { code: x.code });
+        return withImg(x).then(questionImage).then(function (blob) {
+          var file = new File([blob], 'VKV-Sir-question-' + x.code + '.png', { type: 'image/png' });
+          g.close();
+          if (navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file], text: cap }).catch(function () {});
+          var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 3000);
+          window.open('https://wa.me/' + n.replace(/\D/g, '') + '?text=' + encodeURIComponent(cap), '_blank', 'noopener');
+          toast('Image saved to your downloads. Attach it in WhatsApp with the message.');
+        }).then(function () { if (onDone) onDone(x); });
+      }).catch(function (e) { var m = errMsg(e).replace(/^SHARE_LIMIT:/, ''); g.el.querySelector('#wa-e').textContent = m; b.disabled = false; b.textContent = 'Save & open WhatsApp'; });
+    };
+  }
+  function viewShared(code) {
+    setNav('home'); loading(); track('shared_open', { code: code });
+    rpc('shared_question', { p_code: code }).then(function (x) {
+      if (!x) { h('<div class="narrow card center"><h2>This question link has expired</h2><a class="btn" href="/" data-link>Explore free practice</a></div>'); return; }
+      var topicLink = '/p/' + String(x.subject_id).toLowerCase() + '/' + x.unit + '/' + x.topic_id;
+      h('<div class="narrow stack"><div class="card"><p class="eyebrow">A question shared with you · ' + esc(x.subject) + '</p><p class="small muted" style="margin:0 0 10px">' + esc(x.topic) + '</p>' +
+        (x.image ? zimg(x.image, '', 'Figure') : '') + '<div class="qbody" id="qb">' + esc(x.body) + '</div><div class="opts practice" id="opts">' +
+        x.options.map(function (o, k) { return '<button type="button" class="opt" data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') + '</div><div id="sx"></div></div>' +
+        '<div class="card center stack"><b>VKV Sir Test Lab</b><p class="muted small" style="margin:0">Free topic-wise practice with explanations, timed quizzes, exam-wise preparation (GATE, JEN, university), job prep and an ATS resume builder.</p><div class="row" style="justify-content:center;gap:8px"><a class="btn" href="' + topicLink + '" data-link>📘 Practise this topic</a><a class="btn ghost" href="/exams" data-link>Explore exams</a></div></div></div>');
+      renderMath($view);
+      q('#opts').onclick = function (e) {
+        var b = e.target.closest('.opt'); if (!b || b.disabled) return; var k = +b.getAttribute('data-k');
+        $view.querySelectorAll('.opt').forEach(function (o) { o.disabled = true; });
+        rpc('shared_answer', { p_code: code, p_choice: k }).then(function (r) {
+          $view.querySelectorAll('.opt').forEach(function (o, i) { o.classList.add(i === r.correct ? 'ok' : (i === k ? 'bad' : 'dim')); if (i === r.correct) o.insertAdjacentHTML('beforeend', '<span class="tick">✓</span>'); });
+          q('#sx').innerHTML = '<div class="px ' + (k === r.correct ? 'good' : 'bad') + '"><b>' + (k === r.correct ? '✅ Correct!' : '❌ Not quite') + '</b>' + (r.explanation ? '<p>' + esc(r.explanation) + '</p>' : '') + '</div>';
+          renderMath(q('#sx'));
+          setTimeout(function () {
+            var g = gmodal('<div class="gm-ic">🚀</div><h2>' + (k === r.correct ? 'Nice! Want to try more?' : 'Want to master this topic?') + '</h2><p class="gm-lead">Practise more <b>' + esc(x.topic) + '</b> questions with instant explanations, free. Or explore GATE, JEN and university syllabus-wise practice.</p>' +
+              '<a class="btn block" href="' + topicLink + '" data-link>📘 Practise this topic</a><a class="btn ghost block" href="/exams" data-link style="margin-top:8px">🧭 Explore all exams</a><button type="button" class="link-btn" style="margin-top:8px">Not now</button>');
+            g.el.querySelectorAll('a,button').forEach(function (a) { a.addEventListener('click', function () { g.close(); }); });
+          }, 1800);
+        }).catch(function (er) { toast(errMsg(er)); });
+      };
+    }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
 
   /* ---------- charts ---------- */
@@ -1881,13 +2001,14 @@
         '<div class="res-tiles"><div><b class="g">' + r.score + '</b><span>Correct</span></div><div><b class="b">' + wrong + '</b><span>Wrong</span></div><div><b class="w">' + skip + '</b><span>Not answered</span></div><div><b>' + acc + '%</b><span>Accuracy</span></div><div><b>' + att + '%</b><span>Attempted</span></div></div>' +
         (tip ? '<div class="res-tip">💡 ' + tip + '</div>' : '') +
         '<div class="row res-act">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/" data-link>Practise again</a><a class="btn ghost" href="/me" data-link>My dashboard</a>') + '</div></div>' +
+        (rev ? '<div class="res-rv"><div class="spread res-rvh"><div><h2>Learn from your mistakes</h2><p class="small muted">Questions you missed, with the right answer and explanation. Read these first.</p></div>' +
+          '<div class="tabs" id="rvf"><button type="button" class="on" data-f="all">All</button><button type="button" data-f="no">Wrong · ' + wrong + '</button><button type="button" data-f="skip">Not answered · ' + skip + '</button></div></div>' + rev + '</div>'
+          : '<div class="card center"><h2>Perfect score! 🎉</h2><p class="muted">Every answer was correct.</p></div>') +
         (units.length ? '<div class="card"><h2>Unit-wise analysis</h2><p class="small muted" style="margin-top:-6px">Sorted from weakest to strongest. Practise the red ones first.</p><div class="ua">' +
           units.map(function (x) { return '<div class="ua-i ' + x.band + '"><div class="ua-t"><b>' + esc(x.u.name) + '</b><span class="pill">' + (x.band === 'strong' ? 'Strong' : x.band === 'mid' ? 'Improve' : 'Focus') + '</span></div><div class="ua-bar"><i style="width:' + x.p + '%"></i></div><div class="ua-m"><span>' + x.u.ok + ' / ' + x.u.n + ' correct · ' + x.p + '%</span>' + (!tok && x.band !== 'strong' && x.u.subject ? '<a href="' + ulink(x.u) + '" data-link>Practise this unit →</a>' : '') + '</div></div>'; }).join('') + '</div>' +
           (topics.length ? '<p class="f" style="margin-top:14px">Topics to revise</p><div class="chips">' + topics.map(function (t) { return '<span class="chip">' + esc(t) + (tcount[t] > 1 ? ' · ' + tcount[t] : '') + '</span>'; }).join('') + '</div>' : '') + '</div>' : '') +
         '<div class="card"><h2>Your next steps</h2><div class="nx">' + steps.map(function (s, k) { return (s[3] && !tok ? '<a class="nx-i" href="' + s[3] + '" data-link>' : '<div class="nx-i">') + '<span class="nx-n">' + (k + 1) + '</span><span class="nx-e">' + s[0] + '</span><div><b>' + s[1] + '</b><p>' + s[2] + '</p></div>' + (s[3] && !tok ? '</a>' : '</div>'); }).join('') + '</div></div>' +
-        (rev ? '<div class="res-rv"><div class="spread res-rvh"><div><h2>Learn from your mistakes</h2><p class="small muted">Questions you missed, with the right answer and explanation.</p></div>' +
-          '<div class="tabs" id="rvf"><button type="button" class="on" data-f="all">All</button><button type="button" data-f="no">Wrong · ' + wrong + '</button><button type="button" data-f="skip">Not answered · ' + skip + '</button></div></div>' + rev + '</div>'
-          : '<div class="card center"><h2>Perfect score! 🎉</h2><p class="muted">Every answer was correct.</p></div>') + '</div>');
+        '</div>');
       var rvf = q('#rvf'); if (rvf) rvf.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; rvf.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); var f = b.dataset.f; $view.querySelectorAll('.review').forEach(function (rw) { rw.hidden = f !== 'all' && !rw.classList.contains(f); }); };
       var rv = q('.res'); if (rv) rv.insertAdjacentHTML('beforeend', '<p class="small muted" style="text-align:center;margin:4px 0 0">Questions are expert-prepared and double-checked. Although every answer is carefully reviewed, if you find any ambiguity in an answer or in the wording, use 🚩 <b>Report</b> on that question; our team reviews every report. <a href="/disclaimer" data-link>Terms of use</a></p>' + suggestBox());
       renderMath($view);

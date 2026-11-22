@@ -1322,3 +1322,16 @@ a.nx-i:hover{border-color:var(--accent)}
 .rbt-m small{font-size:13px;color:var(--muted)} .rbt-m .btn{margin-top:auto}
 .rbi{max-width:560px} .rbi-b{padding:16px;overflow:auto;max-height:calc(100vh - 140px)}
 .rbi-s{display:flex;align-items:baseline;gap:8px;margin-bottom:8px} .rbi-s b{font-size:36px;color:var(--accent)}
+
+/* ---------- practice vs test explainer ---------- */
+.twoway{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0 18px}
+.tw2{border-radius:var(--r);padding:14px 16px;border:1.5px solid var(--line);background:var(--card)}
+.tw2 b{font-size:17px} .tw2 ul{margin:8px 0 0;padding-left:18px;font-size:14px;line-height:1.55;color:var(--ink)}
+.tw-p{border-color:var(--good);background:var(--good-soft)} .tw-t{border-color:var(--accent);background:var(--accent-soft)}
+@media (max-width:620px){.twoway{grid-template-columns:1fr}}
+/* ---------- save & share button ---------- */
+.qshare{position:fixed;right:12px;top:50%;transform:translateY(-50%);z-index:40;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 8px;border-radius:14px;border:1.5px solid #25D366;background:var(--card);color:var(--ink);box-shadow:var(--shadow);cursor:pointer;font-size:20px;width:78px}
+.qshare span{font-size:11px;font-weight:700;line-height:1.2;text-align:center}
+.qshare small{font-size:11px;color:#128C4A;font-weight:700}
+.qshare[disabled]{opacity:.45;cursor:not-allowed}
+@media (max-width:700px){.qshare{top:auto;bottom:86px;transform:none;flex-direction:row;width:auto;padding:8px 12px;gap:6px;font-size:16px}}
