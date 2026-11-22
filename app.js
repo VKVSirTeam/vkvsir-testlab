@@ -1768,6 +1768,7 @@
     ['gu', 'ગુજરાતી (Gujarati)'], ['kn', 'ಕನ್ನಡ (Kannada)'], ['ml', 'മലയാളം (Malayalam)'], ['pa', 'ਪੰਜਾਬੀ (Punjabi)'], ['or', 'ଓଡ଼ିଆ (Odia)'], ['as', 'অসমীয়া (Assamese)'],
     ['ur', 'اردو (Urdu)'], ['ne', 'नेपाली (Nepali)'], ['es', 'Español'], ['fr', 'Français'], ['de', 'Deutsch'], ['ar', 'العربية (Arabic)'], ['ru', 'Русский'], ['pt', 'Português'], ['zh-Hans', '中文'], ['ja', '日本語']];
   function trLang() { try { return localStorage.getItem('vkv-lang') || ''; } catch (e) { return ''; } }
+  var TR_MEM = {}; // translations already fetched in this visit: re-drawn screens (e.g. after answering) show them instantly
   function addTranslation(att, idx) {
     var qb = q('#qb'); if (!qb) return;
     var cur = trLang(), bar = document.createElement('div');
@@ -1777,9 +1778,11 @@
     qb.parentNode.insertBefore(bar, qb);
     function clear() { Array.prototype.forEach.call($view.querySelectorAll('.qtr,.otr,.trnote'), function (e) { e.remove(); }); }
     function load(lang) {
+      var key = att + '|' + idx + '|' + lang;
       var note = document.createElement('div'); note.className = 'trnote small muted'; note.textContent = 'Translating…'; qb.after(note);
-      fetch(SB_URL + '/functions/v1/translate', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY }, body: JSON.stringify({ attempt: att, idx: idx, lang: lang }) })
-        .then(function (r) { return r.json(); }).then(function (t) {
+      (TR_MEM[key] ? Promise.resolve(TR_MEM[key]) : fetch(SB_URL + '/functions/v1/translate', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY }, body: JSON.stringify({ attempt: att, idx: idx, lang: lang }) })
+        .then(function (r) { return r.json(); }).then(function (t) { if (t.ok) TR_MEM[key] = t; return t; }))
+        .then(function (t) {
           if (!document.body.contains(qb) || trLang() !== lang) return;
           if (!t.ok) { note.textContent = t.enabled === false ? 'Translation is available for GK subjects for now; more subjects soon.' : 'Translation is not available right now.'; return; }
           note.remove();
@@ -1793,6 +1796,7 @@
           d.after(f);
           f.querySelector('#trbad').onclick = function () {
             rpc('report_translation', { p_attempt: att, p_idx: idx, p_lang: lang }).catch(function () {});
+            delete TR_MEM[key];
             d.remove(); Array.prototype.forEach.call($view.querySelectorAll('.otr'), function (e) { e.remove(); });
             f.textContent = '✓ Thank you. This translation is hidden and will be redone.';
           };
