@@ -35,21 +35,40 @@ const unesc = (s: string) => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").repla
 
 const PROTECT = new RegExp([
   String.raw`\$\$[\s\S]+?\$\$`, String.raw`\$[^$]+\$`,
+  // whole plain-text equations: P = 2πNT/60, x + 1/x = 5, a × b ÷ c, A ≥ B
+  String.raw`[\p{L}\p{N}₀-₉⁰-⁹()'.]+(?:\s*(?:[=+×÷/<>≤≥≈∝^]|\s[-−]\s)\s*[\p{L}\p{N}₀-₉⁰-⁹()'.]+)+`,
+  // function-style terms: sin(θ), printf(), f(x) — but not plural markers like line(s)
+  String.raw`\b[A-Za-z_]\w*\((?!s\)|es\))[^)]*\)\s*;?`,
+  // quoted code/strings: "%d", '\n'
+  String.raw`"[^"\s]*%[^"]*"|'\\?.'`,
+  // single-letter variables (h, x, W, L) — except the words "a", "A", "I"
+  String.raw`(?<![\p{L}\p{N}'’])(?<!\p{L}\()(?![aAI](?![\p{L}\p{N}]))[A-Za-z](?![\p{L}\p{N}'’])`,
+  // any token carrying math characters: WL³/3EI, πd⁴/64, T₁, m·s⁻¹
+  String.raw`[^\s,;:!?"“”()]*[²³⁴⁰¹⁵⁶⁷⁸⁹⁻⁺₀-₉√∝∠·^][^\s,;:!?"“”()]*`,
   String.raw`₹\s?[\d,]+(?:\.\d+)?(?:\s?(?:lakh|crore|thousand))?`,
-  String.raw`\b\d[\d,]*(?:\.\d+)?(?:\s?(?:%|°C|°F|°|km\/h|m\/s²|m\/s|kWh|kW|MW|GW|km²|m²|m³|cm³|cm²|kg|km|cm|mm|nm|μm|m|g|mg|L|ml|W|V|A|Ω|Hz|kHz|MHz|N|J|Pa|kPa|MPa|bar|K|MeV|eV|D|s|min|h))?(?![\w])`,
+  String.raw`\b\d[\d,]*(?:\.\d+)?(?:\s?(?:%|°C|°F|°|km\/h|kmph|kWh|kW|MW|GW|kVA|MVA|kV|mV|mA|μA|μF|kN|MN|kJ|MJ|GJ|kcal|cal|GPa|TPa|MPa|kPa|Pa|rpm|rps|TR|dB|mol|lux|Wb|kg|km|cm|mm|nm|μm|mg|ml|Hz|kHz|MHz|GHz|MeV|eV|bar|atm|min|m|g|L|W|V|A|Ω|N|J|K|D|s|h|T|H|F|C)(?:[·\/](?:kg|km|cm|mm|min|m|s|h|K|N|J|W|kW|mol|rev|L)[²³⁴]?(?:⁻¹)?)*[²³⁴]?)?(?![\w])`,
   String.raw`\b(?:[A-Z][a-z]?[₀-₉0-9]*){2,}\b`,
   String.raw`[≤≥≠≈±×÷√∞∑∫πΩθαβγδλμσφω→←↑↓∴∵°]+`,
 ].join("|"), "gu");
 
-function prepare(text: string, terms: { re: RegExp; out: string }[], common: { re: RegExp; out: string }[]): string {
+// words: technical terms (transliterated) and approved common words, merged and applied longest-first,
+// so "square-threaded screw" wins over the common word "square".
+function prepare(text: string, words: { re: RegExp; out: string }[]): string {
   const keeps: string[] = [];
   let t = text;
   t = t.replace(PROTECT, (m) => { keeps.push(m); return `\u0000${keeps.length - 1}\u0000`; });
-  for (const c of common) t = t.replace(c.re, () => { keeps.push(c.out); return `\u0000${keeps.length - 1}\u0000`; });
-  for (const k of terms) t = t.replace(k.re, () => { keeps.push(k.out); return `\u0000${keeps.length - 1}\u0000`; });
+  for (const w of words) t = t.replace(w.re, () => { keeps.push(w.out); return `\u0000${keeps.length - 1}\u0000`; });
   return esc(t).replace(/\u0000(\d+)\u0000/g, (_, i) => `<span class="notranslate">${esc(keeps[+i])}</span>`);
 }
-const finish = (s: string) => unesc(s.replace(/<span class="notranslate">([\s\S]*?)<\/span>/g, "$1")).replace(/\s+/g, " ").trim();
+// Translators often drop the space between a protected span and the translated word ("9 kNउठाता").
+// Re-insert a space only where Latin letters/digits touch Indian-script or Arabic letters; never inside symbols.
+const NATIVE = "\\u0900-\\u0DFF\\u0600-\\u06FF";
+const finish = (s: string) => unesc(s
+  .replace(new RegExp(`<span class="notranslate">([^<]*[${NATIVE}][^<]*)<\\/span>`, "g"), " $1 ") // transliterated terms: keep word gaps
+  .replace(/<span class="notranslate">([\s\S]*?)<\/span>/g, "$1"))
+  .replace(new RegExp(`([A-Za-z0-9%°²³⁴)\\]$\\u0370-\\u03FF])(?=[${NATIVE}])`, "g"), "$1 ")
+  .replace(new RegExp(`([${NATIVE}])(?=[A-Za-z0-9(₹$\\[\\u0370-\\u03FF])`, "g"), "$1 ")
+  .replace(/\s+/g, " ").trim();
 
 async function msTranslate(texts: string[], to: string): Promise<string[]> {
   const r = await fetch(`https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&from=en&to=${to}&textType=html`, {
@@ -133,7 +152,7 @@ Deno.serve(async (req) => {
     const { data: q } = await sb.from("questions").select("id,subject_id,body,options,version,exam_ref").eq("id", it.q).maybeSingle();
     if (!q) return json({ ok: false, error: "not found" }, 404);
     const { data: en } = await sb.from("tr_subjects").select("enabled").eq("subject_id", q.subject_id).maybeSingle();
-    if (!en?.enabled) return json({ ok: false, enabled: false });
+    if (!en?.enabled && !debug) return json({ ok: false, enabled: false });
 
     const reorder = (opts: string[]) => order.map((k) => opts[k]);
 
@@ -147,21 +166,25 @@ Deno.serve(async (req) => {
 
     // Word lists: technical terms (pre-transliterated) and approved common words.
     const [{ data: termRows }, { data: commonRows }] = await Promise.all([
-      sb.from("tr_terms").select("term"), sb.from("tr_common").select("term,translation").eq("lang", lang),
+      sb.from("tr_terms").select("term,subjects"), sb.from("tr_common").select("term,translation").eq("lang", lang),
     ]);
     const reEsc = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const present = (termRows || []).map((r: { term: string }) => r.term)
-      .filter((t: string) => texts.some((x) => new RegExp(`\\b${reEsc(t)}\\b`, "i").test(x)))
+    // A term with a subject list (e.g. "column" for SOM/ENM) applies only to those subjects.
+    const present = (termRows || []).filter((r: { subjects: string[] | null }) => !r.subjects || r.subjects.includes(q.subject_id))
+      .map((r: { term: string }) => r.term)
+      .filter((t: string) => texts.some((x) => new RegExp(`\\b${reEsc(t)}(?:s|es)?\\b`, "i").test(x)))
       .sort((a: string, b: string) => b.length - a.length);
     const translit = L.script && L.script !== "Latn" ? await msTransliterate(present, lang, L.script) : present;
-    const terms = present.map((t: string, i: number) => ({ re: new RegExp(`\\b${reEsc(t)}\\b`, "gi"), out: translit[i] }));
-    const common = (commonRows || []).sort((a: { term: string }, b: { term: string }) => b.term.length - a.term.length)
-      .map((r: { term: string; translation: string }) => ({ re: new RegExp(`\\b${reEsc(r.term)}(?:s|es)?\\b`, "gi"), out: r.translation }));
+    const words = [
+      ...present.map((t: string, i: number) => ({ term: t, out: translit[i] })),
+      ...(commonRows || []).map((r: { term: string; translation: string }) => ({ term: r.term, out: r.translation })),
+    ].sort((a, b) => b.term.length - a.term.length)
+      .map((w) => ({ re: new RegExp(`\\b${reEsc(w.term)}(?:s|es)?\\b`, "gi"), out: w.out }));
 
     // 1) Microsoft draft with protected spans; a line that lost a number/formula falls back to English.
-    const draft = (await msTranslate(texts.map((t) => prepare(t, terms, common)), lang)).map(finish)
+    const draft = (await msTranslate(texts.map((t) => prepare(t, words)), lang)).map(finish)
       .map((s, i) => (keepsFixed(texts[i], s) ? s : texts[i]));
-    const save = (lines: string[], eng: string) => sb.from("q_translations").upsert(
+    const save = (lines: string[], eng: string) => debug ? Promise.resolve() : sb.from("q_translations").upsert(
       { question_id: q.id, lang, version: q.version, body: lines[0], options: lines.slice(1), engine: eng, status: "auto", reports: 0, updated_at: new Date().toISOString() },
       { onConflict: "question_id,lang" });
     await save(draft, "microsoft");
@@ -172,7 +195,7 @@ Deno.serve(async (req) => {
 Rules:
 1. Use simple, everyday ${L.name} that a school student understands. Avoid heavy literary or Sanskritised words.
 2. Technical terms, scheme names, acronyms and proper nouns must NOT be translated. Write them phonetically in the ${L.name} script as given in this glossary: ${glossary || "(none)"}. Acronyms like GDP, ISRO, NaCl stay in English letters.
-3. Never change numbers, units, symbols, formulas, dates, ₹ amounts or anything between $ signs. Copy them exactly, using the same digits 0-9.
+3. Never change numbers, units, symbols, formulas, equations, variable letters, dates, ₹ amounts or anything between $ signs. Copy them exactly, using the same digits 0-9.
 4. Keep the meaning exactly; do not add or remove information. Keep the same number of options in the same order.
 5. Return JSON only: {"body": "...", "options": ["...","...","...","..."]}.
 English question: ${JSON.stringify(body)}
@@ -191,8 +214,8 @@ Machine draft (may contain mistakes): ${JSON.stringify({ body: draft[0], options
       } catch (e) { return { applied: false, why: "json " + String(e).slice(0, 80) }; }
     };
     if (debug) {
-      const r = await review();
-      return json({ ok: true, lang, draft, review: r, models: discovered, cached: false });
+      const r = debug === "draft" ? null : await review();
+      return json({ ok: true, lang, english: texts, draft, review: r, models: discovered, cached: false });
     }
     // deno-lint-ignore no-explicit-any
     (globalThis as any).EdgeRuntime?.waitUntil(review());
