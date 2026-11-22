@@ -53,6 +53,7 @@ const fixed = [
   ['/exams', 'Exams and syllabus', `Browse ${exams.length} exams and university syllabi by branch: GATE, ESE, PSU, SSC, RTO/MVI and B.Tech subjects, with topic-wise practice.`],
   ['/practice', 'Practice', `Practise ${fmt(total)} questions subject by subject, grouped by branch: answers and explanations after every question.`],
   ['/test', 'Take a test', 'Timed tests and mock papers for GATE, SSC, placements and university exams, with scores, explanations and a leaderboard.'],
+  ['/leaderboard', 'Leaderboard', 'Top students and colleges on VKV Sir Test Lab this week, month and year: full name, college and score, with fair ranking rules.'],
   ['/career', 'Job Prep', 'A company-wise plan for your target job: key subjects, software to learn, likely interview questions and one-tap practice.'],
   ['/resume', 'Resume builder', 'Build an ATS-friendly resume with keywords from real job posts. Free PDF and Word downloads.'],
   ['/drill', 'Aptitude speed drill', 'Unlimited aptitude practice with fresh numbers every time: percentages, ratios, time and work, interest and more.'],

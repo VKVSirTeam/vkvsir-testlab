@@ -63,7 +63,7 @@ if (process.argv.includes('--live')) {
   if (vers(live) === want) ok('live home serves ' + want); else warn('live home serves ' + vers(live) + ' (local ' + want + '); GitHub may still be publishing');
   for (const u of ['/practice', '/test', '/exams', '/e/gate-cs', '/p/mec', '/t/mock-qa', '/t/daily', '/leaderboard', '/sitemap.xml', '/sw.js']) {
     const r = await fetch(SITE + u, { redirect: 'manual' });
-    const expect = u === '/leaderboard' ? [200, 404] : [200];
+    const expect = [200];
     if (expect.includes(r.status)) ok(u + ' ' + r.status); else bad(u + ' answered ' + r.status);
   }
 }
