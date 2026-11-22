@@ -1876,7 +1876,7 @@
   function shareFlow(attemptId, idx, onDone) {
     var wa = ''; try { wa = localStorage.getItem('vkv-wa') || ''; } catch (e) {}
     if (!wa && profile && profile.mobile) wa = String(profile.mobile).replace(/[^\d+]/g, '');
-    var g = gmodal('<div class="gm-ic">📸</div><h2>Save this question to WhatsApp</h2><p class="gm-lead">Save only questions you found <b>hard</b>, got <b>wrong</b>, or want to <b>discuss with a friend or teacher</b>. You can save up to 20% of a session’s questions and 10 per day.</p>' +
+    var g = gmodal('<div class="gm-ic">📸</div><h2>Save this question to WhatsApp</h2><p class="gm-lead">Save only questions you found <b>hard</b>, got <b>wrong</b>, or want to <b>discuss with a friend or teacher</b>. You can save up to 20% of a session’s questions and 10 per day. The image shows the question and options only; whoever opens the link can try it and then see the answer and explanation.</p>' +
       '<label class="f" for="wa-n">Your WhatsApp number</label><input class="in" id="wa-n" inputmode="tel" placeholder="+91 98XXXXXXXX" value="' + esc(wa) + '"><p class="small muted" style="margin:6px 0 12px">Asked once. On a phone you can pick any chat or group to send it to.</p>' +
       '<div class="err" id="wa-e"></div><button type="button" class="btn block" id="wa-go">Save &amp; open WhatsApp</button><button type="button" class="link-btn" id="wa-x" style="margin-top:8px">Cancel</button>');
     g.el.querySelector('#wa-x').onclick = function () { g.close(); };
@@ -1888,6 +1888,7 @@
       b.disabled = true; b.textContent = 'Preparing image…';
       rpc('share_question', { p_id: attemptId, p_idx: idx }).then(function (x) {
         x.link = location.origin + '/q/' + x.code;
+        x.correct = null; x.chosen = null; x.explanation = null; // the friend must try it first
         var cap = '🤔 Can you solve this ' + (x.subject || '') + ' question? I am practising on VKV Sir Test Lab (free practice, quizzes, job prep and resume builder). Try it here 👉 ' + x.link;
         track('share_q', { code: x.code });
         return withImg(x).then(questionImage).then(function (blob) {
@@ -1903,28 +1904,69 @@
   }
   function viewShared(code) {
     setNav('home'); loading(); track('shared_open', { code: code });
+    var KEY = 'vkv-sq-' + code, saved = {}; try { saved = JSON.parse(sessionStorage.getItem(KEY) || '{}'); } catch (e) {}
+    function keep(o) { try { sessionStorage.setItem(KEY, JSON.stringify(Object.assign(saved, o))); } catch (e) {} }
     rpc('shared_question', { p_code: code }).then(function (x) {
       if (!x) { h('<div class="narrow card center"><h2>This question link has expired</h2><a class="btn" href="/" data-link>Explore free practice</a></div>'); return; }
       var topicLink = '/p/' + String(x.subject_id).toLowerCase() + '/' + x.unit + '/' + x.topic_id;
-      h('<div class="narrow stack"><div class="card"><p class="eyebrow">A question shared with you · ' + esc(x.subject) + '</p><p class="small muted" style="margin:0 0 10px">' + esc(x.topic) + '</p>' +
+      var signed = session && !isGuest();
+      h('<div class="narrow stack"><div class="card"><p class="eyebrow">A friend shared this question with you · ' + esc(x.subject) + '</p><p class="small muted" style="margin:0 0 10px">' + esc(x.topic) + ' · Choose an option to see the answer and explanation.</p>' +
         (x.image ? zimg(x.image, '', 'Figure') : '') + '<div class="qbody" id="qb">' + esc(x.body) + '</div><div class="opts practice" id="opts">' +
-        x.options.map(function (o, k) { return '<button type="button" class="opt" data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') + '</div><div id="sx"></div></div>' +
-        '<div class="card center stack"><b>VKV Sir Test Lab</b><p class="muted small" style="margin:0">Free topic-wise practice with explanations, timed quizzes, exam-wise preparation (GATE, JEN, university), job prep and an ATS resume builder.</p><div class="row" style="justify-content:center;gap:8px"><a class="btn" href="' + topicLink + '" data-link>📘 Practise this topic</a><a class="btn ghost" href="/exams" data-link>Explore exams</a></div></div></div>');
+        x.options.map(function (o, k) { return '<button type="button" class="opt" data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') + '</div><div id="sx"></div><div id="sfb"></div></div>' +
+        '<div class="card center stack"><b>VKV Sir Test Lab</b><p class="muted small" style="margin:0">Free topic-wise practice with explanations, timed quizzes, exam-wise preparation (GATE, JEN, university), job prep and an ATS resume builder.</p><div class="row" style="justify-content:center;gap:8px"><button type="button" class="btn" id="more1">📘 Practise more like this</button><a class="btn ghost" href="/exams" data-link>Explore exams</a></div></div></div>');
       renderMath($view);
-      q('#opts').onclick = function (e) {
-        var b = e.target.closest('.opt'); if (!b || b.disabled) return; var k = +b.getAttribute('data-k');
+      function goMore() {
+        track('shared_more', { code: code });
+        if (session && !isGuest()) return go(topicLink);
+        var g = gmodal('<div class="gm-ic">📘</div><h2>Practise more ' + esc(x.topic) + '</h2><p class="gm-lead">Sign in with Gmail (10 seconds, free) and you will land on this topic, ready to choose your time and start a practice session or a quiz.</p><button type="button" class="btn block" id="gm-g">' + G_ICON + ' Continue with Google</button><button type="button" class="link-btn" id="gm-n" style="margin-top:8px">Not now</button>');
+        g.el.querySelector('#gm-g').onclick = function () { googleSignIn(topicLink); };
+        g.el.querySelector('#gm-n').onclick = function () { g.close(); };
+      }
+      q('#more1').onclick = goMore;
+      function feedbackBox(choice) {
+        var box = q('#sfb'), rating = null, flags = [];
+        box.innerHTML = '<div class="rfb"><span class="small muted">Is this question and answer right?</span><button type="button" class="icon-btn" data-r="1" aria-label="Looks right">' + THUMB_UP + '</button><button type="button" class="icon-btn" data-r="-1" aria-label="I see a problem">' + THUMB_DN + '</button>' +
+          '<div class="chips" hidden>' + FLAGS.map(function (f) { return '<button type="button" class="chip" aria-pressed="false" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '<button type="button" class="btn small" id="sfb-go">Send report</button></div></div>';
+        var chips = box.querySelector('.chips');
+        function send() {
+          rpc('shared_feedback', { p_code: code, p_choice: choice, p_rating: rating, p_flags: flags.length ? flags : null })
+            .then(function () { keep({ fb: 0 }); box.innerHTML = '<p class="small" style="color:var(--good)">✓ Thank you! Our team reviews every report.</p>'; })
+            .catch(function (e) { toast(errMsg(e)); });
+        }
+        box.querySelectorAll('[data-r]').forEach(function (b) { b.onclick = function () {
+          rating = +b.getAttribute('data-r'); box.querySelectorAll('[data-r]').forEach(function (z) { z.setAttribute('aria-pressed', z === b); });
+          if (!(session && !isGuest())) {
+            keep({ choice: choice, fb: rating });
+            var g = gmodal('<div class="gm-ic">🔐</div><h2>Sign in to send feedback</h2><p class="gm-lead">To keep reports genuine, we ask you to sign in with Gmail once. You will come straight back to this question to finish your report.</p><button type="button" class="btn block" id="gm-g">' + G_ICON + ' Continue with Google</button><button type="button" class="link-btn" id="gm-n" style="margin-top:8px">Cancel</button>');
+            g.el.querySelector('#gm-g').onclick = function () { googleSignIn('/q/' + code); };
+            g.el.querySelector('#gm-n').onclick = function () { g.close(); };
+            return;
+          }
+          if (rating === 1) send(); else chips.hidden = false;
+        }; });
+        chips.addEventListener('click', function (e) {
+          var c = e.target.closest('.chip'); if (c) { var f = c.getAttribute('data-f'), i = flags.indexOf(f); if (i >= 0) flags.splice(i, 1); else flags.push(f); c.setAttribute('aria-pressed', i < 0); return; }
+          if (e.target.closest('#sfb-go')) { if (!flags.length) { toast('Tap what is wrong first.'); return; } send(); }
+        });
+        if (saved.fb && session && !isGuest()) { var b0 = box.querySelector('[data-r="' + saved.fb + '"]'); if (b0) b0.click(); }
+      }
+      function reveal(k, invite) {
         $view.querySelectorAll('.opt').forEach(function (o) { o.disabled = true; });
-        rpc('shared_answer', { p_code: code, p_choice: k }).then(function (r) {
+        return rpc('shared_answer', { p_code: code, p_choice: k }).then(function (r) {
           $view.querySelectorAll('.opt').forEach(function (o, i) { o.classList.add(i === r.correct ? 'ok' : (i === k ? 'bad' : 'dim')); if (i === r.correct) o.insertAdjacentHTML('beforeend', '<span class="tick">✓</span>'); });
           q('#sx').innerHTML = '<div class="px ' + (k === r.correct ? 'good' : 'bad') + '"><b>' + (k === r.correct ? '✅ Correct!' : '❌ Not quite') + '</b>' + (r.explanation ? '<p>' + esc(r.explanation) + '</p>' : '') + '</div>';
-          renderMath(q('#sx'));
-          setTimeout(function () {
-            var g = gmodal('<div class="gm-ic">🚀</div><h2>' + (k === r.correct ? 'Nice! Want to try more?' : 'Want to master this topic?') + '</h2><p class="gm-lead">Practise more <b>' + esc(x.topic) + '</b> questions with instant explanations, free. Or explore GATE, JEN and university syllabus-wise practice.</p>' +
-              '<a class="btn block" href="' + topicLink + '" data-link>📘 Practise this topic</a><a class="btn ghost block" href="/exams" data-link style="margin-top:8px">🧭 Explore all exams</a><button type="button" class="link-btn" style="margin-top:8px">Not now</button>');
-            g.el.querySelectorAll('a,button').forEach(function (a) { a.addEventListener('click', function () { g.close(); }); });
-          }, 1800);
+          renderMath(q('#sx')); keep({ choice: k }); feedbackBox(k);
+          if (invite) setTimeout(function () {
+            var g = gmodal('<div class="gm-ic">🚀</div><h2>' + (k === r.correct ? 'Nice! Want to attempt more such questions?' : 'Want to master this topic?') + '</h2><p class="gm-lead">Practise more <b>' + esc(x.topic) + '</b> questions with instant explanations, or take a short quiz. Free.</p>' +
+              '<button type="button" class="btn block" id="gm-y">📘 Yes, practise this topic</button><a class="btn ghost block" href="/exams" data-link style="margin-top:8px">🧭 Explore all exams</a><button type="button" class="link-btn" id="gm-n" style="margin-top:8px">Not now</button>');
+            g.el.querySelector('#gm-y').onclick = function () { g.close(); goMore(); };
+            g.el.querySelector('#gm-n').onclick = function () { g.close(); };
+            g.el.querySelector('a').addEventListener('click', function () { g.close(); });
+          }, 2500);
         }).catch(function (er) { toast(errMsg(er)); });
-      };
+      }
+      q('#opts').onclick = function (e) { var b = e.target.closest('.opt'); if (!b || b.disabled) return; reveal(+b.getAttribute('data-k'), true); };
+      if (saved.choice != null) reveal(saved.choice, false);
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
 
@@ -2038,7 +2080,7 @@
     loading();
     Promise.all([rpc('my_dashboard'), rpc('leaderboard', { p_subject: null })]).then(function (r) {
       var d = r[0], board = r[1], all = d.attempts || [];
-      var prac = all.filter(function (a) { return a.kind === 'practice'; }), at = all.filter(function (a) { return a.kind !== 'practice'; });
+      var prac = all.filter(function (a) { return a.kind === 'practice'; }), at = all.filter(function (a) { return a.kind !== 'practice' && a.kind !== 'shared'; });
       var done = at.filter(function (a) { return a.status === 'done'; });
       var pdone = prac.filter(function (a) { return a.status === 'done'; });
       var pq = pdone.reduce(function (s, a) { return s + (a.n || 0); }, 0), pok = pdone.reduce(function (s, a) { return s + (a.score || 0); }, 0);
