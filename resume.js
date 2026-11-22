@@ -539,7 +539,7 @@
   function drawSide() {
     var pv = document.getElementById('rb-prev'); if (pv) pv.innerHTML = previewHtml();
     var pb = document.getElementById('rb-pvbtn'); if (pb) pb.textContent = '👁 ' + (isEmpty() ? 'See sample' : 'Preview');
-    var sc = document.getElementById('rb-mini'); if (sc) { var s = score(), band = s.total >= 85 ? 'great' : s.total >= 70 ? 'good' : s.total >= 50 ? 'fair' : 'low'; sc.className = 'rb-ring ' + band; sc.style.setProperty('--p', s.total); sc.innerHTML = '<span><b>' + s.total + '</b><small>ATS</small></span>'; }
+    var sc = document.getElementById('rb-mini'); if (sc) sc.hidden = isEmpty(); if (sc) { var s = score(), band = s.total >= 85 ? 'great' : s.total >= 70 ? 'good' : s.total >= 50 ? 'fair' : 'low'; sc.className = 'rb-ring ' + band; sc.style.setProperty('--p', s.total); sc.innerHTML = '<span><b>' + s.total + '</b><small>ATS</small></span>'; }
     if (step === 3 || step === 6) { var f = document.getElementById('rb-form'); if (f && f.dataset.k !== String(!!kw)) { f.dataset.k = String(!!kw); render(true); } }
   }
   function render(keepScroll) {

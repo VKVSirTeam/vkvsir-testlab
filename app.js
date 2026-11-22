@@ -842,7 +842,7 @@
         (cnt >= READY ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>' + icon('practice') + ' Practice</b><span>No pressure: see the right answer and explanation after each question</span></button>' +
           '<button type="button" data-m="quiz" aria-pressed="' + (mode === 'quiz') + '"><b>' + icon('test') + ' Test</b><span>Timed like an exam: score at the end, counts on the leaderboard</span></button></div>' +
           '<div id="pm"><p class="f">Do you want a timer?</p><div class="seg" id="pd">' + [[0, 'No timer', 'Learn at your own pace'], [5, '5 min', 'Quick revision'], [15, '15 min', 'Short session'], [60, '1 hour', 'Deep practice'], [180, '3 hours', 'Full study session']].map(function (d) { return '<button type="button" data-d="' + d[0] + '" aria-pressed="' + (d[0] === pdur) + '"><b>' + d[1] + '</b><span>' + d[2] + '</span></button>'; }).join('') + '</div>' +
-          '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Rushing through questions without reading is detected: a warning, then short pauses of 1–2 minutes. Repeating it on the same day locks all practice and quizzes for 10 minutes.</li><li>After <b>3 practice sessions</b> in a unit, take a short <b>Test</b> to check what stuck and unlock more practice.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
+          '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Rushing through questions without reading is detected: a warning, then short pauses of 1–2 minutes. Repeating it on the same day locks all practice and tests for 10 minutes.</li><li>After <b>3 practice sessions</b> in a unit, take a short <b>Test</b> to check what stuck and unlock more practice.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
           '<div id="qm" hidden>' + (ds.length ? '<p class="f">How much time do you have?</p><div class="seg" id="fd">' + ds.map(function (d) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + Math.floor(d * 60 / 45) + ' questions</span></button>'; }).join('') + '</div>' +
             '<ul class="rules small" style="text-align:left"><li>A fresh, balanced paper every time.</li><li>One question at a time, 45 seconds each.</li><li>Score, correct answers and explanations at the end. Counts on the leaderboard.</li></ul>' : '<p class="muted small">Not enough questions for a test here yet. Use Practice for now.</p>') + '</div>' +
           '<div class="err" id="fe" role="alert"></div><button class="btn block" id="fgo"></button>' +
@@ -854,7 +854,7 @@
         mode = m; var mt = q('#mt'); if (!mt) return;
         Array.prototype.forEach.call(mt.children, function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-m') === m); });
         q('#pm').hidden = m !== 'practice'; q('#qm').hidden = m !== 'quiz';
-        var g0 = q('#fgo'); g0.textContent = m === 'practice' ? '📘 Start practice' : '📝 Start the quiz'; g0.disabled = m === 'quiz' && !ds.length;
+        var g0 = q('#fgo'); g0.textContent = m === 'practice' ? '📘 Start practice' : '⏱️ Start the test'; g0.disabled = m === 'quiz' && !ds.length;
         q('#fe').innerHTML = '';
       }
       var mt = q('#mt'); if (mt) { mt.onclick = function (e) { var b = e.target.closest('button'); if (b) setMode(b.getAttribute('data-m')); }; setMode(mode); }
@@ -868,7 +868,7 @@
         call.catch(function (e) {
           var m = errMsg(e); g.disabled = false; g.textContent = lbl;
           if (/^QUIZ_DUE:/.test(m)) {
-            q('#fe').innerHTML = '<div class="qdue"><b>🧪 Time for a quick check</b><p>' + esc(m.replace(/^QUIZ_DUE:/, '')) + '</p><p class="small muted">Your test score does not stop you; it shows what you have really learnt and where to practise more.</p><button type="button" class="btn" id="qd-go">📝 Take the quiz now</button></div>';
+            q('#fe').innerHTML = '<div class="qdue"><b>🧪 Time for a quick check</b><p>' + esc(m.replace(/^QUIZ_DUE:/, '')) + '</p><p class="small muted">Your test score does not stop you; it shows what you have really learnt and where to practise more.</p><button type="button" class="btn" id="qd-go">📝 Take the test now</button></div>';
             q('#qd-go').onclick = function () { setMode('quiz'); q('#fgo').click(); };
             return;
           }
@@ -1159,7 +1159,7 @@
     var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, gate: gate, ensureGuest: guestSession, activity: guestActivity, get guest() { return isGuest(); }, get anySession() { return session; }, get session() { return isGuest() ? null : session; }, get profile() { return profile; } };
     function run() { window.RB.render(api); }
     if (window.RB) return run();
-    var s = document.createElement('script'); s.src = '/resume.js?v=11'; s.onload = run;
+    var s = document.createElement('script'); s.src = '/resume.js?v=12'; s.onload = run;
     s.onerror = function () { h('<div class="card narrow center"><p>Could not load the resume builder. Please refresh.</p></div>'); };
     document.head.appendChild(s);
   }
@@ -1179,21 +1179,23 @@
       }).join('');
       var brOpts = '<option value="">Select your branch</option>' + (o.branches || []).map(function (b) { return '<option value="' + esc(b.id) + '">' + esc(b.name) + '</option>'; }).join('');
       var levels = [['student', 'Student', 'Still studying'], ['fresher', 'Fresher', '0 to 1 year'], ['junior', 'Experienced', '2 to 4 years'], ['senior', 'Senior', '5+ years']];
-      h('<section class="hero jp-hero"><p class="eyebrow">Career &amp; interview preparation</p><h1>Know exactly what to prepare for <em>your</em> target job.</h1>' +
+      h(crumbBar([['Home', '/'], ['Job Prep', '']]) + '<section class="hero jp-hero"><p class="eyebrow">Job Prep</p><h1>Prepare for <em>your</em> target job</h1>' +
 
 
         '<p class="muted" style="max-width:680px">Tell us the company, role and branch, or paste the job post. You get a clear plan: the most important subjects and topics, what to refresh, software to learn, likely interview questions, and one-click practice for each topic.</p></section>' +
         '<details class="softinfo"><summary>How your plan is built</summary><p>We match your role and branch to the topics, software and interview questions that matter. For the company, we use its <b>current job posts</b> (read nightly from career pages and hiring systems, and refreshed when you search) to show which software it is asking for now. If we have little data for a company, we show what similar companies in the same field ask for. <a href="/why#jobprep" data-link>Learn more</a></p></details>' +
-        '<div class="card stack jp-form">' +
+        '<div class="jp-pop"><span class="small muted">Popular:</span>' + COMPANY_STRIP.slice(0, 10).map(function (c) { return '<button type="button" class="chip" data-co="' + esc(c) + '">' + esc(c) + '</button>'; }).join('') + '</div>' +
+        '<div class="card stack jp-form"><p class="jp-step"><span>1</span> Which job?</p>' +
         '<div class="two"><div><label class="f" for="jc">Company (optional)</label><input class="in" id="jc" list="jcl" placeholder="e.g. Tata Motors, Infosys, L&amp;T" autocomplete="off"><datalist id="jcl">' + (o.companies || []).map(function (c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist><input class="in" id="ju" placeholder="Company website (optional), e.g. www.tatamotors.com" style="margin-top:6px"></div>' +
         '<div><label class="f" for="jr">Job role</label><select class="in" id="jr">' + roleOpts + '</select></div></div>' +
-        '<div class="two"><div><label class="f" for="jb">Your branch / degree</label><select class="in" id="jb">' + brOpts + '</select></div>' +
+        '<p class="jp-step"><span>2</span> About you</p><div class="two"><div><label class="f" for="jb">Your branch / degree</label><select class="in" id="jb">' + brOpts + '</select></div>' +
         '<div><span class="f">Your level</span><div class="seg" id="jl">' + levels.map(function (l) { return '<button type="button" data-l="' + l[0] + '" aria-pressed="false"><b>' + l[1] + '</b><span>' + l[2] + '</span></button>'; }).join('') + '</div></div></div>' +
         '<div><label class="f" for="jt">Job post or description (optional, but gives the best result)</label><textarea class="in" id="jt" rows="6" placeholder="Paste the full job post text from LinkedIn, Naukri, the company careers page or the campus notice. Include skills, eligibility and responsibilities."></textarea>' +
         '<p class="small muted" style="margin:6px 0 0">Tip: links cannot be opened automatically (LinkedIn and Naukri block it). Open the post, select all its text, copy and paste it here.</p></div>' +
         '<div class="err" id="je" role="alert"></div><button class="btn block" id="jgo">Build my preparation plan</button></div>' +
         '<div id="iqr-slot"></div><div id="jout"></div>');
       q('#iqr-slot').appendChild(reportBox(saved.company || '', ''));
+      $view.querySelectorAll('.jp-pop .chip').forEach(function (c) { c.onclick = function () { q('#jc').value = c.getAttribute('data-co'); $view.querySelectorAll('.jp-pop .chip').forEach(function (x) { x.setAttribute('aria-pressed', x === c); }); q('#jc').focus(); }; });
       var level = saved.level || 'fresher';
       function setLevel(v) { level = v; Array.prototype.forEach.call(q('#jl').children, function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-l') === v); }); }
       setLevel(level);
@@ -1214,6 +1216,34 @@
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
 
+
+  function jpTabs() {
+    var sec = q('#jout section'); if (!sec || sec.querySelector('.jp-tabs')) return;
+    var order = ['Overview', 'Subjects', 'Software', 'Interview', 'Salary'], used = {}, first = null;
+    function kind(c) {
+      var cl = c.classList, h = ((c.querySelector('h2') || {}).textContent || '').toLowerCase();
+      if (cl.contains('jp-sum') || cl.contains('cp') || /step by step/.test(h)) return 'Overview';
+      if (cl.contains('jp-swt') || cl.contains('swfp') || cl.contains('swgen') || /software/.test(h)) return 'Software';
+      if (cl.contains('jp-tier')) return 'Subjects';
+      if (cl.contains('payc') || /salary/.test(h)) return 'Salary';
+      if (/qualities|asked at|interview/.test(h)) return 'Interview';
+      return null;
+    }
+    [].slice.call(sec.children).forEach(function (c) { var k = kind(c); if (!k) return; c.setAttribute('data-tp', k); used[k] = 1; if (!first) first = c; });
+    if (order.filter(function (k) { return used[k]; }).length < 3) return;
+    var bar = document.createElement('div'); bar.className = 'jp-tabs'; bar.setAttribute('role', 'tablist');
+    var cur = 'Overview';
+    function drawBar() { bar.innerHTML = order.filter(function (k) { return used[k]; }).map(function (n) { return '<button type="button" role="tab" data-k="' + n + '" aria-selected="' + (n === cur) + '">' + n + '</button>'; }).join(''); }
+    drawBar(); sec.insertBefore(bar, first);
+    new MutationObserver(function (ms) { var added = false; ms.forEach(function (m) { [].slice.call(m.addedNodes).forEach(function (c) { if (c.nodeType !== 1 || c.hasAttribute('data-tp')) return; var k = kind(c); if (!k) return; c.setAttribute('data-tp', k); if (!used[k]) { used[k] = 1; added = true; } c.classList.toggle('tp-hide', k !== cur); }); }); if (added) drawBar(); }).observe(sec, { childList: true });
+    function show(k) {
+      cur = k;
+      sec.querySelectorAll('[data-tp]').forEach(function (c) { c.classList.toggle('tp-hide', c.getAttribute('data-tp') !== k); });
+      bar.querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-selected', b.getAttribute('data-k') === k); });
+    }
+    bar.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; show(b.getAttribute('data-k')); var y = bar.getBoundingClientRect().top + window.scrollY - 70; if (window.scrollY > y) window.scrollTo({ top: y, behavior: 'smooth' }); };
+    show('Overview');
+  }
   function renderPlan(p) {
     var lvlName = { student: 'Student', fresher: 'Fresher (0–1 yr)', junior: 'Experienced (2–4 yrs)', senior: 'Senior (5+ yrs)' }[p.level] || p.level;
     var tiers = [[1, 'Most important', 'Interviewers are most likely to ask these. Master them first and practise until you score 80%+.', 'hi'],
@@ -1247,7 +1277,7 @@
     steps.push('<b>Refresh fundamentals</b> one or two per day so basic questions never trip you.');
     if (sw.length) steps.push('<b>Learn the software</b> to the target level and finish at least one practical task you can show or explain.');
     steps.push('<b>Prepare HR answers and company knowledge.</b> Write your "tell me about yourself", two project stories, and three facts about the company.');
-    steps.push('<b>Final week:</b> take mixed timed testzes daily, revise mistakes from your Dashboard, and rest well before the interview.');
+    steps.push('<b>Final week:</b> take mixed timed tests daily, revise mistakes from your Dashboard, and rest well before the interview.');
     var mix = p.mix || {};
     var html = '<section class="stack" style="margin-top:28px">' +
       '<div class="card jp-sum"><p class="eyebrow">Your preparation plan</p><h2 style="margin:4px 0">' + esc(p.role ? p.role.name : 'Your target role') + '</h2>' +
@@ -1274,6 +1304,7 @@
       '<tfoot><tr><td><div class="pr-foot">Prepared on VKV Sir Test Lab (test.vkvsir.com) · www.vkvsir.com · Practise every topic free online</div></td></tr></tfoot>' +
       '<tbody><tr><td>' + html + '</td></tr></tbody></table>';
     q('#jout').innerHTML = html;
+    setTimeout(jpTabs, 0);
     planSaveButtons(p);
     var ids = sk.filter(function (s) { return s.tier <= 2; }).map(function (s) { return s.id; });
     var secEl = q('#jout section');
@@ -1635,25 +1666,43 @@
       return { q: 'Area of a circle of radius ' + r + ' cm (π = 22/7)?', ans: A, w: [Math.round(2 * 22 / 7 * r * 100) / 100, A * 2, Math.round(A / 2 * 100) / 100], e: 'πr² = ' + A + ' cm².', fmt: function (v) { return v + ' cm²'; } }; }
   };
   function viewDrill() {
-    setNav('home');
-    var topics = Object.keys(GEN), chosen = topics.slice(), score = 0, total = 0, cur = null;
-    h('<div class="narrow stack"><div><p class="eyebrow">Unlimited practice</p><h1>Aptitude speed drill</h1><p class="muted">Fresh numbers every time, so you can practise as much as you like. Pick topics, answer, and see the working instantly. No sign-in needed.</p></div>' +
-      '<div class="card"><p class="f">Topics</p><div class="chips" id="dt">' + topics.map(function (t) { return '<button class="chip sel" aria-pressed="true" data-t="' + esc(t) + '">' + esc(t) + '</button>'; }).join('') + '</div></div>' +
-      '<div class="card" id="dq"></div><p class="center small muted" id="ds"></p></div>');
+    setNav('practice');
+    var topics = Object.keys(GEN), chosen = topics.slice(), score = 0, total = 0, streak = 0, best = 0, cur = null, times = [];
+    try { best = +(localStorage.getItem('vkv-drill-best') || 0); } catch (e) {}
+    h('<div class="narrow stack">' + crumbBar([['Practice', '/practice'], ['Aptitude drill', '']]) + '<div><p class="eyebrow">Unlimited practice</p><h1>Aptitude speed drill</h1><p class="muted">Fresh numbers every time. Pick topics, answer, and see the working instantly. No sign-in needed.</p></div>' +
+      '<div class="dr-stats" aria-live="polite"><div><b id="d-sc">0/0</b><span>Score</span></div><div><b id="d-st">0</b><span>Streak</span></div><div><b id="d-best">' + best + '</b><span>Best streak</span></div><div><b id="d-tm">–</b><span>Avg time</span></div></div>' +
+      '<details class="card dr-topics"><summary><b>Topics</b> <span class="small muted" id="d-tc"></span></summary><div class="row dr-all"><button type="button" class="btn ghost small" id="d-all">All</button><button type="button" class="btn ghost small" id="d-none">Only one</button></div>' +
+        '<div class="chips" id="dt">' + topics.map(function (t) { return '<button class="chip sel" aria-pressed="true" data-t="' + esc(t) + '">' + esc(t) + '</button>'; }).join('') + '</div></details>' +
+      '<div class="card" id="dq"></div></div>');
+    function tc() { q('#d-tc').textContent = chosen.length === topics.length ? 'All ' + topics.length + ' selected' : chosen.length + ' of ' + topics.length + ' selected'; }
+    function paint() { q('#dt').querySelectorAll('.chip').forEach(function (b) { b.setAttribute('aria-pressed', chosen.indexOf(b.getAttribute('data-t')) >= 0); }); tc(); }
     q('#dt').onclick = function (e) { var b = e.target.closest('button'); if (!b) return; var on = b.getAttribute('aria-pressed') !== 'true', t = b.getAttribute('data-t');
-      if (!on && chosen.length === 1) return; b.setAttribute('aria-pressed', on); chosen = on ? chosen.concat(t) : chosen.filter(function (x) { return x !== t; }); next(); };
+      if (!on && chosen.length === 1) return; chosen = on ? chosen.concat(t) : chosen.filter(function (x) { return x !== t; }); paint(); next(); };
+    q('#d-all').onclick = function () { chosen = topics.slice(); paint(); next(); };
+    q('#d-none').onclick = function () { chosen = [cur ? cur.t : topics[0]]; paint(); next(); };
+    tc();
+    function stats() {
+      q('#d-sc').textContent = score + '/' + total; q('#d-st').textContent = streak; q('#d-best').textContent = best;
+      q('#d-tm').textContent = times.length ? Math.round(times.reduce(function (a, b) { return a + b; }, 0) / times.length / 1000) + ' s' : '–';
+    }
     function next() {
-      var t = pick(chosen), g = GEN[t](), s = shuffleOpts(g.ans, g.w, g.fmt); cur = { g: g, s: s, t: t };
+      var t = pick(chosen), g = GEN[t](), s = shuffleOpts(g.ans, g.w, g.fmt); cur = { g: g, s: s, t: t, at: Date.now() };
       q('#dq').innerHTML = '<p class="pill accent">' + esc(t) + '</p><h2 style="margin:10px 0 14px">' + esc(g.q) + '</h2><div class="opts">' +
-        s.opts.map(function (o, i) { return '<button class="opt" data-i="' + i + '">' + esc(o) + '</button>'; }).join('') + '</div><div id="dx"></div>'; renderMath(q('#dq'));
+        s.opts.map(function (o, i) { return '<button class="opt" data-i="' + i + '"><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(o) + '</span></button>'; }).join('') + '</div><div id="dx"></div>'; renderMath(q('#dq'));
       q('#dq .opts').onclick = function (e) {
         var b = e.target.closest('button'); if (!b || cur.done) return; cur.done = true; var i = +b.getAttribute('data-i'); total++;
-        var ok = i === cur.s.correct; if (ok) score++;
+        var ok = i === cur.s.correct; times.push(Date.now() - cur.at); if (times.length > 20) times.shift();
+        if (ok) { score++; streak++; if (streak > best) { best = streak; try { localStorage.setItem('vkv-drill-best', String(best)); } catch (x) {} } } else streak = 0;
         Array.prototype.forEach.call(this.children, function (c, k) { if (k === cur.s.correct) c.classList.add('ok'); else if (k === i) c.classList.add('no'); });
-        q('#dx').innerHTML = '<p class="small" style="margin:12px 0"><b>' + (ok ? 'Correct.' : 'Not quite.') + '</b> ' + esc(cur.g.e) + '</p><button class="btn block" id="dn">Next question</button>';
-        q('#dn').onclick = next; q('#ds').textContent = 'Score: ' + score + ' / ' + total;
+        q('#dx').innerHTML = '<div class="px ' + (ok ? 'good' : 'bad') + '"><div class="px-h">' + icon(ok ? 'check' : 'target') + '<b>' + (ok ? (streak >= 3 ? 'Correct · ' + streak + ' in a row' : 'Correct') : 'Not quite') + '</b></div><div class="px-w"><span>Working</span><p>' + esc(cur.g.e) + '</p></div></div><button class="btn block" id="dn" style="margin-top:12px">Next question</button>';
+        renderMath(q('#dx')); stats(); q('#dn').onclick = next; q('#dn').focus({ preventScroll: true });
       };
     }
+    document.onkeydown = function (e) {
+      if (!document.getElementById('dq') || (e.target && e.target.closest && e.target.closest('input,textarea,select'))) return;
+      var k = e.key.toLowerCase(), i = 'abcd'.indexOf(k); if (i < 0 && '1234'.indexOf(k) >= 0) i = +k - 1;
+      if (i >= 0) { var o = document.querySelectorAll('#dq .opts .opt')[i]; if (o) o.click(); } else if ((k === 'enter' || k === 'n') && q('#dn')) q('#dn').click();
+    };
     next();
   }
 
@@ -2086,8 +2135,8 @@
   var WARN_TXT = [null,
     ['⚠️ Please slow down', 'It seems you are not reading the questions and are answering randomly. Read each question fully and attempt it wisely. If this continues, the app will pause your practice.'],
     ['⏸️ Paused for 90 seconds', 'You are still moving faster than anyone can read these questions. Practice is paused for 90 seconds. After this, the <b>Next</b> button waits until you have had time to read.'],
-    ['⏸️ Paused for 2 minutes', 'Please attempt practice sessions when you have time to read the questions, not to hunt for answers or guess. Our system notices this pattern. <b>If it happens again today, all practice and quizzes will lock for 10 minutes.</b>'],
-    ['🔒 Locked for 10 minutes', 'You rushed through questions again today, so practice and quizzes are locked for 10 minutes. After that you can resume this session exactly where you left it. Please read each question before answering.']];
+    ['⏸️ Paused for 2 minutes', 'Please attempt practice sessions when you have time to read the questions, not to hunt for answers or guess. Our system notices this pattern. <b>If it happens again today, all practice and tests will lock for 10 minutes.</b>'],
+    ['🔒 Locked for 10 minutes', 'You rushed through questions again today, so practice and tests are locked for 10 minutes. After that you can resume this session exactly where you left it. Please read each question before answering.']];
   /* ---------- live translation shown below the English (GK subjects first) ---------- */
   var TR_LANGS = [['', 'English only'], ['hi', 'हिन्दी (Hindi)'], ['mr', 'मराठी (Marathi)'], ['bn', 'বাংলা (Bengali)'], ['ta', 'தமிழ் (Tamil)'], ['te', 'తెలుగు (Telugu)'],
     ['gu', 'ગુજરાતી (Gujarati)'], ['kn', 'ಕನ್ನಡ (Kannada)'], ['ml', 'മലയാളം (Malayalam)'], ['pa', 'ਪੰਜਾਬੀ (Punjabi)'], ['or', 'ଓଡ଼ିଆ (Odia)'], ['as', 'অসমীয়া (Assamese)'],
@@ -2162,7 +2211,7 @@
     }
     function renderPaused(v) {
       inQ = false; var end = now() + v.seconds * 1000;
-      h('<div class="narrow card center stack"><div class="big">' + (v.global ? '🔒' : '⏸️') + '</div><h1>' + (v.global ? 'Practice and quizzes locked' : 'Practice paused') + '</h1>' +
+      h('<div class="narrow card center stack"><div class="big">' + (v.global ? '🔒' : '⏸️') + '</div><h1>' + (v.global ? 'Practice and tests locked' : 'Practice paused') + '</h1>' +
         '<p>' + (v.global ? 'You rushed through questions again today. Please attempt questions only when you have time to read them. You can resume this session exactly where you left it in:' : (v.warns >= 3 ? 'Please attempt practice when you have time to read the questions, not to hunt and guess. If it happens again today, everything locks for 10 minutes. Resumes in:' : 'You were answering faster than the questions can be read. Practice resumes in:')) + '</p><div class="big mono" id="pz"></div>' +
         '<div class="pz-f" id="pzf" aria-live="polite"></div><p class="small muted" id="pzn"></p></div>');
       var FEAT = [
@@ -2282,7 +2331,7 @@
       rpc('share_question', { p_id: attemptId, p_idx: idx }).then(function (x) {
         x.link = location.origin + '/q/' + x.code;
         x.correct = null; x.chosen = null; x.explanation = null; // the friend must try it first
-        var cap = '🤔 Can you solve this ' + (x.subject || '') + ' question? I am practising on VKV Sir Test Lab (free practice, quizzes, job prep and resume builder). Try it here 👉 ' + x.link;
+        var cap = '🤔 Can you solve this ' + (x.subject || '') + ' question? I am practising on VKV Sir Test Lab (free practice, tests, job prep and resume builder). Try it here 👉 ' + x.link;
         track('share_q', { code: x.code });
         return withImg(x).then(questionImage).then(function (blob) {
           var file = new File([blob], 'VKV-Sir-question-' + x.code + '.png', { type: 'image/png' });
@@ -2296,17 +2345,17 @@
     };
   }
   function viewShared(code) {
-    setNav('home'); loading(); track('shared_open', { code: code });
+    setNav('practice'); loading(); track('shared_open', { code: code });
     var KEY = 'vkv-sq-' + code, saved = {}; try { saved = JSON.parse(sessionStorage.getItem(KEY) || '{}'); } catch (e) {}
     function keep(o) { try { sessionStorage.setItem(KEY, JSON.stringify(Object.assign(saved, o))); } catch (e) {} }
     rpc('shared_question', { p_code: code }).then(function (x) {
       if (!x) { h('<div class="narrow card center"><h2>This question link has expired</h2><a class="btn" href="/" data-link>Explore free practice</a></div>'); return; }
       var topicLink = '/p/' + String(x.subject_id).toLowerCase() + '/' + x.unit + '/' + x.topic_id;
       var signed = session && !isGuest();
-      h('<div class="narrow stack"><div class="card"><p class="eyebrow">A friend shared this question with you · ' + esc(x.subject) + '</p><p class="small muted" style="margin:0 0 10px">' + esc(x.topic) + ' · Choose an option to see the answer and explanation.</p>' +
+      h('<div class="narrow stack">' + crumbBar([['Practice', '/practice'], [x.subject, '/p/' + String(x.subject_id).toLowerCase()], ['Shared question', '']]) + '<div class="card"><p class="eyebrow">A friend shared this question with you · ' + esc(x.subject) + '</p><p class="small muted" style="margin:0 0 10px">' + esc(x.topic) + ' · Choose an option to see the answer and explanation.</p>' +
         (x.image ? zimg(x.image, '', 'Figure') : '') + '<div class="qbody" id="qb">' + esc(x.body) + '</div><div class="opts practice" id="opts">' +
         x.options.map(function (o, k) { return '<button type="button" class="opt" data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') + '</div><div id="sx"></div><div id="sfb"></div></div>' +
-        '<div class="card center stack"><b>VKV Sir Test Lab</b><p class="muted small" style="margin:0">Free topic-wise practice with explanations, timed testzes, exam-wise preparation (GATE, JEN, university), job prep and an ATS resume builder.</p><div class="row" style="justify-content:center;gap:8px"><button type="button" class="btn" id="more1">📘 Practise more like this</button><a class="btn ghost" href="/exams" data-link>Explore exams</a></div></div></div>');
+        '<div class="card center stack"><b>VKV Sir Test Lab</b><p class="muted small" style="margin:0">Free topic-wise practice with explanations, timed tests, exam-wise preparation (GATE, JEN, university), job prep and an ATS resume builder.</p><div class="row" style="justify-content:center;gap:8px"><button type="button" class="btn" id="more1">📘 Practise more like this</button><a class="btn ghost" href="/exams" data-link>Explore exams</a></div></div></div>');
       renderMath($view);
       function goMore() {
         track('shared_more', { code: code });
@@ -2521,7 +2570,7 @@
           '<div class="list" style="margin-top:8px" data-hp="q">' + hist + '</div>' +
           '<div data-hp="p" hidden><div class="tiles" style="margin:8px 0"><div class="tile"><b>' + pdone.length + '</b><span>Practice sessions</span></div><div class="tile"><b>' + pq + '</b><span>Questions practised</span></div><div class="tile"><b>' + (pq ? Math.round(100 * pok / pq) + '%' : '–') + '</b><span>Practice accuracy</span></div></div>' +
           '<p class="small muted">Practice is for learning, so it is not counted on the leaderboard or in the test scores above. After every 3 practice sessions in a unit, take a <b>Test</b> to check your progress.</p><div class="list">' + phist + '</div></div></section>' +
-        '<a class="wa-card" href="https://whatsapp.com/channel/0029Va5ka1rFHWq4y4OcYy3U" target="_blank" rel="noopener"><svg viewBox=\"0 0 32 32\" width=\"30\" height=\"30\" aria-hidden=\"true\" style=\"vertical-align:-4px\"><path fill=\"#25D366\" d=\"M16 3C9 3 3.3 8.6 3.3 15.6c0 2.4.7 4.6 1.9 6.6L3 29l7-2.2c1.9 1 4 1.6 6.1 1.6 7 0 12.7-5.7 12.7-12.7S23 3 16 3z\"/><path fill=\"#fff\" d=\"M22.6 18.9c-.3-.2-2-1-2.3-1.1-.3-.1-.5-.2-.8.2-.2.3-.9 1.1-1.1 1.3-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.7-1.7-1-.9-1.7-2-1.9-2.3-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.4 0-.6l-1-2.5c-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.4 1.4 3.6c.2.2 2.4 3.7 5.9 5.2.8.4 1.5.6 2 .7.8.3 1.6.2 2.2.1.7-.1 2-.8 2.3-1.6.3-.8.3-1.5.2-1.6-.1-.1-.3-.2-.6-.4z\"/></svg><span><b>Follow VKV Sir on WhatsApp</b><small>Openings, opportunities, new tests &amp; updates</small></span><span>&rarr;</span></a>' + suggestBox() + boardCard(board, 'Top performers') + shareBar(location.origin + '/', 'I practise with VKV Sir Test Lab. Free quizzes with instant results:', 'Invite friends:') + '</div>');
+        '<a class="wa-card" href="https://whatsapp.com/channel/0029Va5ka1rFHWq4y4OcYy3U" target="_blank" rel="noopener"><svg viewBox=\"0 0 32 32\" width=\"30\" height=\"30\" aria-hidden=\"true\" style=\"vertical-align:-4px\"><path fill=\"#25D366\" d=\"M16 3C9 3 3.3 8.6 3.3 15.6c0 2.4.7 4.6 1.9 6.6L3 29l7-2.2c1.9 1 4 1.6 6.1 1.6 7 0 12.7-5.7 12.7-12.7S23 3 16 3z\"/><path fill=\"#fff\" d=\"M22.6 18.9c-.3-.2-2-1-2.3-1.1-.3-.1-.5-.2-.8.2-.2.3-.9 1.1-1.1 1.3-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.7-1.7-1-.9-1.7-2-1.9-2.3-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.4 0-.6l-1-2.5c-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.4 1.4 3.6c.2.2 2.4 3.7 5.9 5.2.8.4 1.5.6 2 .7.8.3 1.6.2 2.2.1.7-.1 2-.8 2.3-1.6.3-.8.3-1.5.2-1.6-.1-.1-.3-.2-.6-.4z\"/></svg><span><b>Follow VKV Sir on WhatsApp</b><small>Openings, opportunities, new tests &amp; updates</small></span><span>&rarr;</span></a>' + suggestBox() + boardCard(board, 'Top performers') + shareBar(location.origin + '/', 'I practise with VKV Sir Test Lab. Free tests with instant results:', 'Invite friends:') + '</div>');
       (function () {
         var root = $view.firstElementChild; if (!root) return;
         var find = function (re) { return [].slice.call(root.children).filter(function (c) { var t = c.querySelector('h2,h3'); return t && re.test(t.textContent); })[0]; };
@@ -2872,7 +2921,7 @@
                 document.body.appendChild(m);
               }).catch(function (e) { toast(errMsg(e)); });
             }
-            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=11'; s.onload = show; document.head.appendChild(s); }
+            if (window.RB) show(); else { var s = document.createElement('script'); s.src = '/resume.js?v=12'; s.onload = show; document.head.appendChild(s); }
           };
         });
       }).catch(function (e) { box.innerHTML = '<div class="card"><p>' + esc(errMsg(e)) + '</p></div>'; });
@@ -3362,7 +3411,7 @@
         function v(i) { return q(i).value; } function iso(i) { return v(i) ? new Date(v(i)).toISOString() : ''; }
         q('#g-save').onclick = function () { rpc('admin_save_group', { p: { id: gid, name: v('#g-n'), note: v('#g-note'), starts_at: iso('#g-s'), ends_at: iso('#g-e') } }).then(function () { toast('Saved'); load(true); }).catch(function (e) { toast(errMsg(e)); }); };
         q('#g-del').onclick = function () { if (!confirm('Delete this group? Its personal links will stop working.')) return; rpc('admin_delete_group', { p_id: gid }).then(function () { go('/admin?tab=groups'); }).catch(function (e) { toast(errMsg(e)); }); };
-        q('#g-test').onclick = function () { editTest({ slug: '', title: g.name + ' quiz', description: '', subject_id: 'MP', units: null, mode: 'exam', durations: [20], sec_per_q: 45, show_result: true, max_attempts: 1, active: true, listed: false, leave_penalty: true, group_id: gid }, function () { load(); }); };
+        q('#g-test').onclick = function () { editTest({ slug: '', title: g.name + ' test', description: '', subject_id: 'MP', units: null, mode: 'exam', durations: [20], sec_per_q: 45, show_result: true, max_attempts: 1, active: true, listed: false, leave_penalty: true, group_id: gid }, function () { load(); }); };
         q('#g-add').onclick = function () {
           var rows = parseRoster(v('#g-paste')); if (!rows.length) return toast('Paste at least one line with an email');
           var b = this; b.disabled = true;
