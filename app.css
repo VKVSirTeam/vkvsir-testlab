@@ -1266,3 +1266,25 @@ a.nx-i:hover{border-color:var(--accent)}
 @media (max-width:560px){.xs>summary,.xi>summary{flex-wrap:wrap;row-gap:6px}.xit{flex:1 1 calc(100% - 44px)}.xi>summary .xb{margin-left:28px}.xs>summary .xb{margin-left:40px}.xi .btn.mini{margin-left:auto}.xin{padding-left:16px}.xit b{font-size:15px}}
 .xi[open]>summary .caret::before{transform:rotate(90deg)}
 .xb.lvl{white-space:normal;border-radius:10px}
+
+/* ---------- practice & learn ---------- */
+.mtabs{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left}
+.mtabs button{border:1.5px solid var(--line);background:var(--card);border-radius:14px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:4px;color:var(--ink)}
+.mtabs button b{font-size:16px} .mtabs button span{font-size:13px;color:var(--muted)}
+.mtabs button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+@media (max-width:520px){.mtabs{grid-template-columns:1fr}}
+.practice .opt.ok{border-color:var(--good);background:var(--good-soft)}
+.practice .opt.bad{border-color:var(--bad);background:var(--bad-soft)}
+.practice .opt.dim{opacity:.6}
+.practice .opt[disabled]{cursor:default}
+.practice .opt .tick{margin-left:auto;color:var(--good);font-weight:800}
+.px{border-radius:14px;padding:12px 14px;margin:14px 0 0;border:1px solid var(--line)}
+.px.good{background:var(--good-soft);border-color:var(--good)} .px.bad{background:var(--warn-soft);border-color:var(--warn)}
+.px p{margin:6px 0 0;font-size:15px;line-height:1.55}
+.prow{display:flex;flex-direction:column;gap:8px;align-items:stretch}
+.prow .linkbtn{align-self:center}
+.pw-modal{position:fixed;inset:0;background:rgba(10,15,30,.55);display:grid;place-items:center;z-index:200;padding:16px}
+.pw-card{background:var(--card);border-radius:18px;padding:22px;max-width:420px;box-shadow:var(--shadow)}
+.pw-card h2{margin:0 0 8px;color:var(--warn)}
+.qdue{text-align:left;background:var(--accent-soft);border:1px solid var(--accent);border-radius:14px;padding:14px;color:var(--ink)}
+.qdue p{margin:6px 0}
