@@ -7,7 +7,8 @@ VKV Sir Test Lab - test.vkvsir.com (GitHub Pages)
 3. `node scripts/build-pages.mjs` — rebuilds one real page per exam (`e/`), public test (`t/`) and subject (`p/`),
    plus `exams.html`, `career.html` … with their own titles and descriptions, `sitemap.xml` and `robots.txt`.
    Run it after every `index.html` change and when exams, tests or subjects are added.
-4. Commit and push.
+4. `node scripts/check.mjs` — checks code, pages and database speed (also runs automatically before every `git push`).
+5. Commit and push; after GitHub publishes, `node scripts/check.mjs --live` checks the live site.
 
 ## Design system
 Tokens live at the end of `app.css` ("Design system v1"): type scale 12/14/16/18/22/28/36/44/56,

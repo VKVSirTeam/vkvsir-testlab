@@ -3023,15 +3023,36 @@
     setNav('admin');
     if (!session) return go('/login?next=/admin', true);
     if (!profile || !profile.is_admin) { h('<div class="narrow card center"><h2>Admins only</h2><p class="muted">This area is for teachers and admins.</p></div>'); return; }
-    var tab = new URLSearchParams(location.search).get('tab') || 'overview';
+    var tab = new URLSearchParams(location.search).get('tab') || 'inbox';
     var tabsJp = '<a href="/admin/jobprep" data-link>Job Prep ↗</a>';
-    var tabs = [['overview', 'Live'], ['questions', 'Questions'], ['students', 'Students'], ['tests', 'Tests'], ['results', 'Results'], ['groups', 'Groups'], ['suggest', 'Suggestions'], ['links', 'Share links'], ['resumes', 'Resumes'], ['visitors', 'Visitors']];
+    var tabs = [['inbox', 'Inbox'], ['overview', 'Live'], ['questions', 'Questions'], ['students', 'Students'], ['tests', 'Tests'], ['results', 'Results'], ['groups', 'Groups'], ['suggest', 'Suggestions'], ['links', 'Share links'], ['resumes', 'Resumes'], ['visitors', 'Visitors']];
     h('<div class="stack"><div class="spread"><div><p class="eyebrow">Admin</p><h1>Control room</h1></div></div>' +
       '<div class="tabs">' + tabs.map(function (t) { return '<a href="/admin?tab=' + t[0] + '" data-link class="' + (t[0] === tab ? 'on' : '') + '">' + t[1] + '</a>'; }).join('') + tabsJp + '</div><div id="adm"></div></div>');
     var box = q('#adm');
-    ({ overview: admOverview, questions: admQuestions, students: admStudents, tests: admTests, results: admResults, links: admLinks, groups: admGroups, suggest: admSuggest, resumes: admResumes, visitors: admVisitors }[tab] || admOverview)(box);
+    ({ inbox: admInbox, overview: admOverview, questions: admQuestions, students: admStudents, tests: admTests, results: admResults, links: admLinks, groups: admGroups, suggest: admSuggest, resumes: admResumes, visitors: admVisitors }[tab] || admOverview)(box);
   }
 
+
+  function admInbox(box) {
+    box.innerHTML = '<div class="spinner"></div>';
+    rpc('admin_inbox').then(function (d) {
+      var src = [
+        ['review', 'Questions waiting for review', 'Drafts the AI flagged or a teacher held back. Students do not see them.', '/admin?tab=questions', function (x) { return '<b>' + esc(x.id) + '</b> ' + esc(x.text) + (x.note ? '<br><span class="small muted">' + esc(x.note) + '</span>' : ''); }],
+        ['reported', 'Questions students reported', 'Thumbs-down or a flag on the current version. Fix the question or confirm the answer.', '/admin?tab=questions', function (x) { return '<b>' + esc(x.id) + '</b> · ' + x.reports + ' report' + (x.reports > 1 ? 's' : '') + (x.flags ? ' (' + esc(x.flags) + ')' : '') + '<br><span class="small muted">' + esc(x.text) + '</span>'; }],
+        ['translations', 'Translations reported as wrong', 'Students tapped “Wrong translation?”.', null, function (x) { return '<b>' + esc(x.id) + '</b> · ' + esc(x.lang) + ' · ' + x.reports + ' report' + (x.reports > 1 ? 's' : '') + '<br><span class="small muted">' + esc(x.text) + '</span>'; }],
+        ['suggestions', 'New suggestions', 'Requests for exams, subjects and topics.', '/admin?tab=suggest', function (x) { return '<span class="pill">' + esc(x.kind) + '</span> ' + esc(x.text); }],
+        ['interview', 'Interview questions sent by students', 'Approve to show them in Job Prep.', '/admin/iq-reports', function (x) { return esc(x.text); }]
+      ];
+      var total = src.reduce(function (a, x) { return a + ((d[x[0]] || {}).n || 0); }, 0), of = d.optfix || {};
+      box.innerHTML = '<p class="muted">' + (total ? total + ' item' + (total > 1 ? 's' : '') + ' waiting for you.' : 'Nothing waiting. All clear.') + '</p><div class="inbox">' + src.map(function (x) {
+        var blk = d[x[0]] || { n: 0, items: [] };
+        return '<section class="card ib' + (blk.n ? '' : ' ib-zero') + '"><div class="spread"><h3 style="margin:0">' + esc(x[1]) + '</h3><span class="ib-n">' + blk.n + '</span></div><p class="small muted">' + esc(x[2]) + '</p>' +
+          (blk.items && blk.items.length ? '<ul class="ib-l">' + blk.items.map(function (it) { return '<li>' + x[4](it) + '</li>'; }).join('') + '</ul>' : '') +
+          (x[3] && blk.n ? '<a class="btn ghost small" href="' + x[3] + '" data-link>Open ' + icon('chevron') + '</a>' : '') + '</section>';
+      }).join('') +
+        '<section class="card ib"><h3 style="margin:0">Option-quality job</h3><p class="small muted">Rewriting wrong options so they match the answer\'s category and length.</p><p><b>' + fmtNum(of.done) + '</b> done · <b>' + fmtNum(of.pending) + '</b> waiting · <b>' + fmtNum(of.n) + '</b> flagged (they appear under “waiting for review”).</p></section></div>';
+    }).catch(function (e) { box.innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; });
+  }
   function admSuggest(box) {
     var KN = { topic: 'Topic / subject', exam: 'Exam', interview: 'Company / interview', idea: 'Idea' };
     function load() {
@@ -3515,10 +3536,19 @@
     Promise.all([rpc('admin_tests')]).then(function (r) {
       var tests = r[0];
       box.innerHTML = '<div class="row"><select class="in" id="rt" style="max-width:420px"><option value="">All tests</option>' + tests.map(function (t) { return '<option value="' + esc(t.slug) + '">' + esc(t.title) + '</option>'; }).join('') + '</select>' +
-        '<button class="btn ghost" id="rx" style="min-height:44px;padding:8px 14px">Download CSV</button></div><div id="rl" style="margin-top:12px"></div>';
+        '<button class="btn ghost" id="rx" style="min-height:44px;padding:8px 14px">Download CSV</button></div><div id="rs"></div><div id="rl" style="margin-top:12px"></div>';
       var rows = [];
       function load() {
         q('#rl').innerHTML = '<div class="spinner"></div>';
+        var slug = q('#rt').value; q('#rs').innerHTML = '';
+        if (slug) rpc('admin_test_summary', { p_slug: slug }).then(function (sm) {
+          if (!sm) return; var b = sm.bands || {}, tot = sm.finished || 0, bar = function (n) { return tot ? Math.round(100 * n / tot) : 0; };
+          q('#rs').innerHTML = '<section class="card cls"><h3 style="margin:0 0 10px">Class view · ' + esc(sm.title) + '</h3>' +
+            '<div class="dr-stats"><div><b>' + tot + '</b><span>Finished</span></div><div><b>' + (sm.active || 0) + '</b><span>In progress</span></div><div><b>' + (sm.avg == null ? '–' : sm.avg + '%') + '</b><span>Average</span></div><div><b>' + (sm.max == null ? '–' : sm.min + '–' + sm.max + '%') + '</b><span>Lowest–highest</span></div></div>' +
+            '<div class="cls-b">' + [['Below 40%', b.lt40], ['40–59%', b.b40_59], ['60–79%', b.b60_79], ['80% +', b.ge80]].map(function (x) { return '<div><span class="small">' + x[0] + '</span><div class="ua-bar"><i style="width:' + bar(x[1] || 0) + '%"></i></div><span class="mono small">' + (x[1] || 0) + '</span></div>'; }).join('') + '</div>' +
+            ((sm.hardest || []).length ? '<p class="f" style="margin-top:14px">Hardest questions (re-teach these)</p><ol class="cls-h">' + sm.hardest.map(function (h) { return '<li><span>' + esc(h.text) + '<br><span class="small muted">Answer: ' + esc(h.answer) + ' · ' + esc(h.id) + '</span></span><span class="pill bad">' + h.wrong + '/' + h.seen + ' wrong</span></li>'; }).join('') + '</ol>' : '') + '</section>';
+          renderMath(q('#rs'));
+        }).catch(function () {});
         rpc('admin_results', { p_slug: q('#rt').value || null }).then(function (list) {
           rows = list.map(function (a) { a.pct = a.n ? Math.round(100 * a.score / a.n) : 0; return a; });
           q('#rl').innerHTML = rows.length ? '<div class="table"><table><tr><th>Student</th><th>Test</th><th>Score</th><th>Left screen</th><th>Finished</th><th></th></tr>' + rows.map(function (a) {

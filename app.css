@@ -1699,3 +1699,18 @@ details[open]>summary>.sj-c{transform:rotate(90deg)}
 .dr-all{margin:12px 0 8px;gap:8px}
 #dq .opt.ok{border-color:var(--good);background:var(--good-soft)}
 #dq .opt.no{border-color:var(--bad);background:var(--bad-soft)}
+/* Stage 6: admin inbox */
+.inbox{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.ib .spread{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ib-n{min-width:36px;height:36px;border-radius:var(--r-pill);display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font-weight:800;padding:0 10px}
+.ib-zero .ib-n{background:var(--soft);color:var(--muted)}
+.ib-zero{opacity:.7}
+.ib-l{list-style:none;margin:8px 0 12px;padding:0;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-14)}
+.ib-l li{border-top:1px solid var(--line);padding-top:8px}
+/* Stage 6: class view */
+.cls{margin-top:12px}
+.cls-b{display:grid;gap:8px;margin-top:12px}
+.cls-b>div{display:grid;grid-template-columns:90px minmax(0,1fr) 40px;gap:10px;align-items:center}
+.cls-h{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.cls-h li{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.cls-h .pill.bad{background:var(--bad-soft);color:var(--bad);flex:none}
