@@ -2116,11 +2116,13 @@
           var cls = r ? (k === r.correct ? ' ok' : (k === r.chosen ? ' bad' : ' dim')) : '';
           return '<button type="button" class="opt' + cls + '"' + (r ? ' disabled' : '') + ' data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span>' + (r && k === r.correct ? '<span class="tick">✓</span>' : '') + '</button>';
         }).join('') + '</div>' +
-        (r ? '<div class="px ' + (r.chosen === r.correct ? 'good' : 'bad') + '"><b>' + (r.chosen == null ? 'Answer shown' : r.chosen === r.correct ? '✅ Correct!' : '❌ Not quite') + '</b>' + (r.explanation ? '<p>' + esc(r.explanation) + '</p>' : '') + '</div>' : '') +
+        (r ? '<div class="px ' + (r.chosen === r.correct ? 'good' : 'bad') + '" role="status"><div class="px-h">' + icon(r.chosen === r.correct ? 'check' : 'target') + '<b>' + (r.chosen == null ? 'Here is the answer' : r.chosen === r.correct ? 'Correct' : 'Not quite') + '</b></div>' +
+          (r.chosen !== r.correct && v.options && v.options[r.correct] != null ? '<p class="px-a">Correct answer: <b>' + 'ABCD'[r.correct] + '. ' + esc(v.options[r.correct]) + '</b></p>' : '') +
+          (r.explanation ? '<div class="px-w"><span>Why</span><p>' + esc(r.explanation) + '</p></div>' : '') + '</div>' : '') +
         '<div class="exam-foot prow">' + (r ? '<button class="btn block" id="nx">Next question →</button>' : '<button class="btn ghost" id="sk" type="button">🤔 Show answer</button>') +
         '<button class="linkbtn" id="end" type="button">End practice &amp; see summary</button></div>' + '<button type="button" class="qshare" id="qsh" aria-label="Save this question to WhatsApp">📸<span>Save &amp; share</span><small id="qshn"></small></button>' +
         (v.slow && !r ? '<p class="small muted center" id="slowmsg">Take your time: read the question fully before answering.</p>' : '') + '</div>');
-      renderMath($view); addTranslation(id, v.idx);
+      renderMath($view); if (r) { var pxe = q('.px'); if (pxe) setTimeout(function () { pxe.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 60); } addTranslation(id, v.idx);
       shareQuota(id, q('#qshn')); q('#qsh').onclick = function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); };
       if (!r) {
         q('#opts').addEventListener('click', function (e) { var b = e.target.closest('.opt'); if (b) answer(+b.getAttribute('data-k')); });
@@ -2356,7 +2358,7 @@
         '<p class="res-msg">' + V[2] + '</p>' + tipHtml('result') +
         '<div class="res-tiles"><div><b class="g">' + r.score + '</b><span>Correct</span></div><div><b class="b">' + wrong + '</b><span>Wrong</span></div><div><b class="w">' + skip + '</b><span>Not answered</span></div><div><b>' + acc + '%</b><span>Accuracy</span></div><div><b>' + att + '%</b><span>Attempted</span></div></div>' +
         (tip ? '<div class="res-tip">💡 ' + tip + '</div>' : '') +
-        '<div class="row res-act">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/" data-link>Practise again</a><a class="btn ghost" href="/me" data-link>My dashboard</a>') + '</div></div>' +
+        '<div class="row res-act">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/practice" data-link>Practise again</a><a class="btn ghost" href="/me" data-link>My dashboard</a>') + '</div></div>' +
         (rev ? '<div class="res-rv"><div class="spread res-rvh"><div><h2>Learn from your mistakes</h2><p class="small muted">Questions you missed, with the right answer and explanation. Read these first.</p></div>' +
           '<div class="tabs" id="rvf"><button type="button" class="on" data-f="all">All</button><button type="button" data-f="no">Wrong · ' + wrong + '</button><button type="button" data-f="skip">Not answered · ' + skip + '</button></div></div>' + rev + '</div>'
           : '<div class="card center"><h2>Perfect score! 🎉</h2><p class="muted">Every answer was correct.</p></div>') +
@@ -2366,6 +2368,18 @@
         '<div class="card"><h2>Your next steps</h2><div class="nx">' + steps.map(function (s, k) { return (s[3] && !tok ? '<a class="nx-i" href="' + s[3] + '" data-link>' : '<div class="nx-i">') + '<span class="nx-n">' + (k + 1) + '</span><span class="nx-e">' + s[0] + '</span><div><b>' + s[1] + '</b><p>' + s[2] + '</p></div>' + (s[3] && !tok ? '</a>' : '</div>'); }).join('') + '</div></div>' +
         '</div>');
       var rvf = q('#rvf'); if (rvf) rvf.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; rvf.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); var f = b.dataset.f; $view.querySelectorAll('.review').forEach(function (rw) { rw.hidden = f !== 'all' && !rw.classList.contains(f); }); };
+      (function () {
+        var res = q('.res'); if (!res) return;
+        var review = res.querySelector('.res-rv'), cards = [].slice.call(res.querySelectorAll(':scope > .card'));
+        var analysis = cards.filter(function (c) { var h2 = c.querySelector('h2'); return h2 && /Unit-wise analysis|Your next steps/.test(h2.textContent); });
+        if (review) analysis.forEach(function (c) { res.insertBefore(c, review); });
+        var fg = res.querySelector('.res-top .ring .fg'); if (fg) { var to = fg.getAttribute('stroke-dashoffset'); fg.setAttribute('stroke-dashoffset', String(2 * Math.PI * 54)); requestAnimationFrame(function () { requestAnimationFrame(function () { fg.style.transition = 'stroke-dashoffset .9s ease-out'; fg.setAttribute('stroke-dashoffset', to); }); }); }
+        if (!tok && session && !isGuest()) rpc('leaderboard_page', { p_days: 30, p_subject: null }).then(function (lb) {
+          var h = res.querySelector('.res-h'); if (!h || !lb) return;
+          h.insertAdjacentHTML('beforeend', lb.me ? '<p class="res-rank"><a href="/leaderboard" data-link>' + icon('trophy') + ' Your rank this month: <b>#' + lb.me.rank + '</b> of ' + lb.total + '</a></p>'
+            : '<p class="res-rank muted small">Answer 20+ test questions this month to get a rank.</p>');
+        }).catch(function () {});
+      })();
       var rv = q('.res'); if (rv) rv.insertAdjacentHTML('beforeend', '<p class="small muted" style="text-align:center;margin:4px 0 0">Questions are expert-prepared and double-checked. Although every answer is carefully reviewed, if you find any ambiguity in an answer or in the wording, use 🚩 <b>Report</b> on that question; our team reviews every report. <a href="/disclaimer" data-link>Terms of use</a></p>' + suggestBox());
       renderMath($view);
       $view.querySelectorAll('.rfb').forEach(function (box) {
@@ -2419,7 +2433,7 @@
       h('<div class="stack"><div class="spread"><div><p class="eyebrow">Dashboard</p><h1>Hello, ' + esc(name) + '</h1>' +
         '<p class="muted small" style="margin:0">' + (d.last ? 'Last test: ' + esc(fmtDate(d.last)) : 'No tests yet') + '</p></div><a class="btn ghost" href="/profile" data-link>Edit profile</a></div>' +
         (d.locked > 0 ? '<div class="note">You are paused for leaving a test screen. You can start again in ' + mmss(d.locked * 1000) + '.</div>' : '') +
-        '<div class="qa">' + [['🎯', 'Practise', 'Start a new test', '#cat'], ['🏢', 'Job Prep', 'Plan for a company', '/career'], ['📄', 'My resumes', 'Build or update', '/resume']].map(function (x) { return '<a class="qa-i" href="' + x[3] + '"' + (x[3].charAt(0) === '/' ? ' data-link' : '') + '><span>' + x[0] + '</span><b>' + x[1] + '</b><small>' + x[2] + '</small></a>'; }).join('') + '</div>' +
+        '<div class="qa">' + [[icon('practice', 'ic-lg'), 'Practice', 'Learn topic by topic', '/practice'], [icon('test', 'ic-lg'), 'Test', 'Timed papers and mocks', '/test'], [icon('trophy', 'ic-lg'), 'Leaderboard', 'See your rank', '/leaderboard'], [icon('career', 'ic-lg'), 'Job Prep', 'Plan for a company', '/career'], [icon('resume', 'ic-lg'), 'My resumes', 'Build or update', '/resume']].map(function (x) { return '<a class="qa-i" href="' + x[3] + '"' + (x[3].charAt(0) === '/' ? ' data-link' : '') + '><span>' + x[0] + '</span><b>' + x[1] + '</b><small>' + x[2] + '</small></a>'; }).join('') + '</div>' +
         tipHtml('dash') + '<div class="tiles"><div class="tile"><b>' + done.length + '</b><span>Tests taken</span></div><div class="tile"><b>' + avg + (avg === '–' ? '' : '%') + '</b><span>Average score</span></div>' +
         '<div class="tile"><b>' + best + (best === '–' ? '' : '%') + '</b><span>Best score</span></div><div class="tile"><b>' + (tot.correct + tot.wrong + tot.skipped) + '</b><span>Questions seen</span></div></div>' +
         (done.length ? '<div class="grid2"><section class="card"><h3>All answers so far</h3>' + donut([{ l: 'Correct', v: tot.correct, c: 'var(--good)' }, { l: 'Wrong', v: tot.wrong, c: 'var(--bad)' }, { l: 'Not answered', v: tot.skipped, c: 'var(--warn)' }]) + '</section>' +
@@ -2430,11 +2444,16 @@
           '<div class="list" style="margin-top:8px" data-hp="q">' + hist + '</div>' +
           '<div data-hp="p" hidden><div class="tiles" style="margin:8px 0"><div class="tile"><b>' + pdone.length + '</b><span>Practice sessions</span></div><div class="tile"><b>' + pq + '</b><span>Questions practised</span></div><div class="tile"><b>' + (pq ? Math.round(100 * pok / pq) + '%' : '–') + '</b><span>Practice accuracy</span></div></div>' +
           '<p class="small muted">Practice is for learning, so it is not counted on the leaderboard or in the test scores above. After every 3 practice sessions in a unit, take a <b>Test</b> to check your progress.</p><div class="list">' + phist + '</div></div></section>' +
-        '<section class="dash-cat"><h2>Start a new test</h2><p class="small muted">Open a track, tick a subject, units or topics, then choose your time.</p><div id="cat"></div></section>' +
         '<a class="wa-card" href="https://whatsapp.com/channel/0029Va5ka1rFHWq4y4OcYy3U" target="_blank" rel="noopener"><svg viewBox=\"0 0 32 32\" width=\"30\" height=\"30\" aria-hidden=\"true\" style=\"vertical-align:-4px\"><path fill=\"#25D366\" d=\"M16 3C9 3 3.3 8.6 3.3 15.6c0 2.4.7 4.6 1.9 6.6L3 29l7-2.2c1.9 1 4 1.6 6.1 1.6 7 0 12.7-5.7 12.7-12.7S23 3 16 3z\"/><path fill=\"#fff\" d=\"M22.6 18.9c-.3-.2-2-1-2.3-1.1-.3-.1-.5-.2-.8.2-.2.3-.9 1.1-1.1 1.3-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.7-1.7-1-.9-1.7-2-1.9-2.3-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.4 0-.6l-1-2.5c-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.4 1.4 3.6c.2.2 2.4 3.7 5.9 5.2.8.4 1.5.6 2 .7.8.3 1.6.2 2.2.1.7-.1 2-.8 2.3-1.6.3-.8.3-1.5.2-1.6-.1-.1-.3-.2-.6-.4z\"/></svg><span><b>Follow VKV Sir on WhatsApp</b><small>Openings, opportunities, new tests &amp; updates</small></span><span>&rarr;</span></a>' + suggestBox() + boardCard(board, 'Top performers') + shareBar(location.origin + '/', 'I practise with VKV Sir Test Lab. Free quizzes with instant results:', 'Invite friends:') + '</div>');
-      mountCatalog(q('#cat'));
+      (function () {
+        var root = $view.firstElementChild; if (!root) return;
+        var find = function (re) { return [].slice.call(root.children).filter(function (c) { var t = c.querySelector('h2,h3'); return t && re.test(t.textContent); })[0]; };
+        var tiles = root.querySelector(':scope > .tiles'), qa = root.querySelector(':scope > .qa'), focus = find(/Focus areas/), hist = find(/History/);
+        if (tiles) tiles.insertAdjacentHTML('beforebegin', continueCard());
+        if (focus && tiles) tiles.after(focus);
+        if (qa && hist) hist.after(qa);
+      })();
       var hx = q('#hx'); if (hx) hx.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; hx.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); $view.querySelectorAll('[data-hp]').forEach(function (p) { p.hidden = p.getAttribute('data-hp') !== b.getAttribute('data-h'); }); };
-      var qa1 = $view.querySelector('.qa-i[href="#cat"]'); if (qa1) qa1.onclick = function (ev) { ev.preventDefault(); q('#cat').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
 

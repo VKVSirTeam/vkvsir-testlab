@@ -1611,3 +1611,22 @@ details[open]>summary>.sj-c{transform:rotate(90deg)}
   .tpage>.card>p{grid-column:1;grid-row:4}
 }
 @media(min-width:1000px){.focus>.card .seg:not(.mini){display:flex!important;flex-wrap:wrap;gap:8px}.focus>.card .seg:not(.mini)>button{flex:1 1 calc(33.333% - 6px)}}
+/* ===== Stage 4: practice explanation panel ===== */
+.px{border-radius:var(--r-lg);padding:16px 18px;animation:pxIn .22s ease-out}
+@keyframes pxIn{from{opacity:.001;transform:translateY(8px)}to{opacity:1;transform:none}}
+.px-h{display:flex;align-items:center;gap:8px;font-size:var(--fs-18)}
+.px.good .px-h{color:var(--good)} .px.bad .px-h{color:var(--warn)}
+.px-h .ic{width:22px;height:22px}
+.px-a{margin:8px 0 0}
+.px-w{margin-top:12px;padding-top:12px;border-top:1px solid color-mix(in srgb,currentColor 15%,transparent)}
+.px-w span{font-size:var(--fs-12);text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--muted)}
+.px-w p{margin:4px 0 0;font-size:var(--fs-16);line-height:1.6}
+@media (prefers-reduced-motion:reduce){.px{animation:none}}
+/* results rank */
+.res-rank{margin:8px 0 0}
+.res-rank a{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.qa{grid-template-columns:repeat(5,minmax(0,1fr))!important}
+.qa-i span .ic{color:var(--accent)}
+@media(max-width:880px){.qa{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media(max-width:560px){.qa{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+.px{scroll-margin-bottom:110px}
