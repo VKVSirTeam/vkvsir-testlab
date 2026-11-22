@@ -302,14 +302,25 @@
         ['exams', 'Exams', 'GATE, ESE, SSC, PSU, railways, state exams and B.Tech syllabus, section by section.', '/exams?k=competitive', 'Find your exam'],
         ['career', 'Career', 'A company-wise plan, interview questions and an ATS-ready resume.', '/career', 'Plan for a job']
       ];
-      var sample = { q: 'In rolling, the point where roll speed equals strip speed is called the:', o: ['Entry point', 'Neutral point', 'Exit point', 'Bite point'], a: 1, e: 'At the neutral point there is no slip between roll and strip; before it the strip moves slower, after it faster.' };
+      var SAMPLES = [
+        { s: 'Manufacturing', p: '/p/mp', q: 'In rolling, the point where roll speed equals strip speed is called the:', o: ['Entry point', 'Neutral point', 'Exit point', 'Bite point'], a: 1, e: 'At the neutral point there is no slip between roll and strip; before it the strip moves slower, after it faster.' },
+        { s: 'Thermodynamics', p: '/p/td', q: 'For the same compression ratio, which cycle has the highest efficiency?', o: ['Diesel cycle', 'Dual cycle', 'Otto cycle', 'Brayton cycle at low pressure ratio'], a: 2, e: 'For equal compression ratio and heat input, the Otto cycle is most efficient because all heat is added at constant volume.' },
+        { s: 'Strength of Materials', p: '/p/som', q: 'Poisson’s ratio of most metals lies closest to:', o: ['0.1', '0.3', '0.5', '0.7'], a: 1, e: 'Most metals have Poisson’s ratio around 0.25 to 0.35; 0.5 is the upper limit for incompressible materials.' },
+        { s: 'Fluid Mechanics', p: '/p/fm', q: 'Which turbine is best suited for a very high head and low discharge?', o: ['Kaplan', 'Francis', 'Pelton wheel', 'Propeller'], a: 2, e: 'The Pelton wheel is an impulse turbine designed for high heads and low flow rates.' },
+        { s: 'Theory of Machines', p: '/p/tom', q: 'The number of degrees of freedom of a four-bar mechanism is:', o: ['0', '1', '2', '3'], a: 1, e: 'By Grubler’s criterion, F = 3(4 − 1) − 2 × 4 = 1.' },
+        { s: 'Quantitative Aptitude', p: '/p/qa', q: 'A price rises by 20% and then falls by 20%. The net change is:', o: ['No change', '4% decrease', '4% increase', '2% decrease'], a: 1, e: 'Net = 1.2 × 0.8 = 0.96, so a 4% decrease.' },
+        { s: 'General Science', p: '/p/gsc', q: 'The SI unit of power is the:', o: ['Joule', 'Newton', 'Watt', 'Pascal'], a: 2, e: 'Power is energy per unit time; 1 watt = 1 joule per second.' },
+        { s: 'Heat Transfer', p: '/p/ht', q: 'Heat transfer from the sun to the earth takes place mainly by:', o: ['Conduction', 'Convection', 'Radiation', 'Evaporation'], a: 2, e: 'Space has no medium, so energy arrives only as electromagnetic radiation.' }
+      ];
+      var si = 0; try { si = (+(sessionStorage.getItem('vkv-sample') || -1) + 1 + Math.floor(Math.random() * (SAMPLES.length - 1))) % SAMPLES.length; sessionStorage.setItem('vkv-sample', si); } catch (e) { si = Math.floor(Math.random() * SAMPLES.length); }
+      var sample = SAMPLES[si];
       var top5 = (lb.top || []).slice(0, 5);
       h('<div class="hm">' +
         '<section class="hm-hero"><div class="hm-copy"><p class="eyebrow">Free for every student</p><h1>Practise. Test. <em>Get placed.</em></h1>' +
           '<p class="hm-lead">For semester exams, GATE, SSC, PSU and placements, with every answer explained.</p>' +
           '<div class="hm-cta"><a class="btn" href="/practice" data-link>' + icon('practice') + ' Start practice</a><a class="btn ghost" href="/test" data-link>' + icon('test') + ' Take a test</a></div>' +
-          '<dl class="hm-stats"><div><dt>Questions</dt><dd class="cnt-up" data-to="100000">1,00,000+</dd></div><div><dt>Subjects</dt><dd>' + nS + '</dd></div><div><dt>Exams</dt><dd>' + exams.length + '</dd></div><div><dt>Ready tests</dt><dd>' + tests.length + '</dd></div></dl></div>' +
-          '<div class="hm-try card" aria-label="Try a question"><p class="hm-try-h">' + icon('practice') + ' Try one · Manufacturing</p><p class="hm-q">' + esc(sample.q) + '</p><div class="hm-opts">' +
+          '<p class="hm-pool">' + icon('check') + '<span>Every paper is prepared instantly from a pool of <b class="cnt-up" data-to="100000">1,00,000+</b> questions</span></p></div>' +
+          '<div class="hm-try card" aria-label="Try a question"><p class="hm-try-h">' + icon('practice') + ' Try one · ' + esc(sample.s) + '</p><p class="hm-q">' + esc(sample.q) + '</p><div class="hm-opts">' +
             sample.o.map(function (o, i) { return '<button type="button" class="opt" data-i="' + i + '"><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(o) + '</span></button>'; }).join('') +
           '</div><p class="hm-exp" id="hm-exp" hidden></p></div></section>' +
         continueCard() +
@@ -342,7 +353,7 @@
         var b = e.target.closest('.opt'); if (!b || opts.classList.contains('done')) return; opts.classList.add('done');
         var i = +b.getAttribute('data-i');
         opts.querySelectorAll('.opt').forEach(function (o) { var k = +o.getAttribute('data-i'); o.disabled = true; if (k === sample.a) o.classList.add('ok'); else if (k === i) o.classList.add('bad'); });
-        var ex = q('#hm-exp'); ex.hidden = false; ex.innerHTML = '<b>' + (i === sample.a ? 'Correct.' : 'Not quite.') + '</b> ' + esc(sample.e) + ' <a href="/p/mp" data-link>Practise this subject ' + icon('chevron') + '</a>';
+        var ex = q('#hm-exp'); ex.hidden = false; ex.innerHTML = '<b>' + (i === sample.a ? 'Correct.' : 'Not quite.') + '</b> ' + esc(sample.e) + ' <a href="' + sample.p + '" data-link>Practise this subject ' + icon('chevron') + '</a>';
       });
     }).catch(function (e) { h('<div class="narrow card center"><p>' + esc(errMsg(e)) + '</p><button class="btn" onclick="location.reload()">Try again</button></div>'); });
   }
@@ -3300,11 +3311,12 @@
       rpc('admin_students', { p_search: search || null }).then(function (list) {
         box.innerHTML = '<div class="row"><input class="in" id="ss" placeholder="Search name, email, mobile, college, city" value="' + esc(search) + '" style="max-width:420px"><span class="muted small">' + list.length + ' students</span>' +
           '<button class="btn ghost" id="sx" style="min-height:40px;padding:8px 14px;margin-left:auto">Download CSV</button></div>' +
-          '<div class="table"><table><tr><th>Student</th><th>Mobile</th><th>College / city</th><th>Tests</th><th>Avg</th><th>Last</th><th></th></tr>' + list.map(function (s) {
-            return '<tr><td><b>' + esc(s.name || '(no profile)') + '</b><br><span class="small muted">' + esc(s.email) + '</span>' + (s.status !== 'active' ? ' <span class="pill bad">' + esc(s.status) + '</span>' : '') + (s.locked ? ' <span class="pill bad">locked</span>' : '') + '</td>' +
-              '<td class="mono small">' + esc(s.mobile || '') + '</td><td class="small">' + esc(s.college || '') + '<br><span class="muted">' + esc([s.city, s.state].filter(Boolean).join(', ')) + '</span></td>' +
-              '<td>' + s.tests + '</td><td>' + (s.avg == null ? '–' : s.avg + '%') + '</td><td class="small">' + esc(s.last ? fmtDate(s.last) : '–') + '</td><td><button class="btn ghost" data-s="' + s.id + '" style="min-height:34px;padding:4px 12px">Open</button></td></tr>';
-          }).join('') + '</table></div>';
+          '<div class="stu">' + list.map(function (s) {
+            return '<article class="stu-i"><div class="stu-h"><div class="stu-n"><b>' + esc(s.name || '(no profile)') + '</b>' + (s.status !== 'active' ? ' <span class="pill bad">' + esc(s.status) + '</span>' : '') + (s.locked ? ' <span class="pill bad">locked</span>' : '') +
+              '<span class="small muted">' + esc(s.email) + '</span></div><button class="btn ghost small" data-s="' + s.id + '">Open</button></div>' +
+              '<div class="stu-m"><span>' + icon('user') + esc([s.college, s.city, s.state].filter(Boolean).join(', ') || 'College not given') + '</span>' + (s.mobile ? '<span class="mono">' + esc(s.mobile) + '</span>' : '') + '</div>' +
+              '<div class="stu-s"><span><b>' + s.tests + '</b> tests</span><span><b>' + (s.avg == null ? '–' : s.avg + '%') + '</b> avg</span><span>Last: <b>' + esc(s.last ? fmtDate(s.last) : '–') + '</b></span></div></article>';
+          }).join('') + '</div>';
         q('#ss').onkeydown = function (e) { if (e.key === 'Enter') { search = this.value.trim(); load(); } };
         q('#sx').onclick = function () { download('students.csv', csv(list, [['name', 'Name'], ['email', 'Email'], ['mobile', 'Mobile'], ['college', 'College'], ['city', 'City'], ['state', 'State'], ['tests', 'Tests'], ['avg', 'Average %'], ['last', 'Last test'], ['status', 'Status']])); };
         box.querySelectorAll('[data-s]').forEach(function (b) { b.onclick = function () { openStudent(b.getAttribute('data-s'), load); }; });
