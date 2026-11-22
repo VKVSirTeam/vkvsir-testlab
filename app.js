@@ -91,8 +91,65 @@
       .catch(function () { window.__anonOk = false; return false; });
   }
 
+  /* ---------- visitor footprints (works with or without sign-in) ---------- */
+  var VID = (function () { try { var v = localStorage.getItem('vkv-vid'); if (!v) { v = 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); localStorage.setItem('vkv-vid', v); } return v; } catch (e) { return 'v' + Math.random().toString(36).slice(2, 14); } })();
+  var lastTrack = '';
+  function track(ev, meta) {
+    var p = location.pathname + (location.search || '');
+    if (ev === 'view') { if (p === lastTrack) return; lastTrack = p; }
+    meta = meta || {}; if (!meta.dev) meta.dev = (/Mobi|Android|iPhone/i.test(navigator.userAgent) ? '📱 Mobile' : '💻 Desktop');
+    var ref = ''; try { ref = document.referrer && document.referrer.indexOf(location.origin) !== 0 ? new URL(document.referrer).hostname : ''; } catch (e) {}
+    try { sb.rpc('track_event', { p_vid: VID, p_ev: ev, p_path: p, p_ref: ref || null, p_meta: meta }).then(function () {}, function () {}); } catch (e) {}
+  }
+
+  /* ---------- protect question content: no copy, select, print or right-click on question screens ---------- */
+  (function () {
+    function onQ() { return !!document.querySelector('.qbody, .review, .px'); }
+    ['copy', 'cut', 'contextmenu', 'selectstart', 'dragstart'].forEach(function (t) {
+      document.addEventListener(t, function (e) { if (onQ() && !(e.target.closest && e.target.closest('input,textarea,[contenteditable]'))) { e.preventDefault(); if (t === 'copy' || t === 'cut') toast('Copying questions is not allowed. Practise them here instead.'); } });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (!onQ()) return;
+      var k = (e.key || '').toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && (k === 'p' || k === 's' || k === 'c' || k === 'u' || k === 'a')) { e.preventDefault(); toast('This action is disabled on question screens.'); }
+    });
+    document.addEventListener('keyup', function (e) {
+      if (e.key === 'PrintScreen' && onQ()) { try { navigator.clipboard.writeText('Questions © VKV Sir Test Lab · practise at test.vkvsir.com'); } catch (x) {} toast('Screenshots of questions are not allowed. Your account is printed on every screen.'); track('screenshot_key'); }
+    });
+  })();
+
+  /* ---------- gentle guidance: one tip at a time, each with a link ---------- */
+  var TIPS = {
+    home: [['why-practice', '📘 New here? Start with <b>Practice &amp; learn</b>: you see the right answer and explanation after every question.', '/exams?k=competitive', 'Find your exam'],
+           ['goal', '🧭 Preparing for GATE, JEN or your university exam? Browse topics in your own exam’s order.', '/exams?k=university', 'Explore by goal'],
+           ['resume', '📄 Did you know? You can build an ATS-ready resume here for free, with PDF and Word download.', '/resume', 'Build my resume']],
+    focus: [['quiz-after', '🧪 After every 3 practice sessions in a unit, take a short <b>Test yourself</b> quiz. It shows what really stuck.', null, null],
+            ['no-rush', '🐢 Read each question fully. Rushing is detected and slows your practice down; careful reading builds real understanding.', null, null],
+            ['share', '👥 Studying with friends? Share this topic link in your class group so everyone practises together.', '#share', 'Share below']],
+    result: [['flag', '🚩 Found a typo, a doubtful answer or an unclear equation? Tap 👎 under that question to report it. Our team checks every report.', null, null],
+             ['practice-next', '📘 Use <b>Practice &amp; learn</b> on your weak units: you get the explanation right after each answer.', '/exams?k=competitive', 'Pick a topic'],
+             ['dash', '📊 Your dashboard shows your quiz and practice history separately, with unit-wise accuracy.', '/me', 'Open dashboard']],
+    dash: [['jobprep', '🏢 Targeting a company? Get a full plan with topics, software and interview questions.', '/career', 'Open Job Prep'],
+           ['resume2', '📄 Keep one resume per company: duplicate it and change a few keywords.', '/resume', 'My resumes'],
+           ['resume-pause', '⏯️ Unfinished practice? Look for <b>Continue</b> in the Practice tab to pick up where you left off.', null, null]]
+  };
+  function tipHtml(ctx) {
+    var list = TIPS[ctx] || [], seen = {};
+    try { seen = JSON.parse(localStorage.getItem('vkv-tips') || '{}'); } catch (e) {}
+    var t = list.filter(function (x) { return !seen[x[0]]; })[0]; if (!t) return '';
+    return '<div class="tipc" data-tip="' + t[0] + '"><span class="tipc-t">💡 ' + t[1] + '</span>' + (t[2] ? '<a class="tipc-a" href="' + t[2] + '"' + (t[2].charAt(0) === '/' ? ' data-link' : '') + '>' + t[3] + ' →</a>' : '') + '<button type="button" class="tipc-x" aria-label="Got it, hide this tip">Got it</button></div>';
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('.tipc-x, .tipc-a'); if (!b) return;
+    var box = b.closest('.tipc'), id = box.getAttribute('data-tip'), seen = {};
+    try { seen = JSON.parse(localStorage.getItem('vkv-tips') || '{}'); seen[id] = 1; localStorage.setItem('vkv-tips', JSON.stringify(seen)); } catch (x) {}
+    if (b.classList.contains('tipc-x')) box.remove();
+    if (b.getAttribute('href') === '#share') { e.preventDefault(); var s = document.querySelector('.share'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  });
+
   /* ---------- router ---------- */
   function route() {
+    setTimeout(function () { track('view'); }, 300);
     setTimeout(function () { if (session && !isGuest() && profile && !/^\/(exam|g)\//.test(location.pathname)) checkNotice(false); else nudgeOnOpen(); }, 1200);
     if (cleanup) { try { cleanup(); } catch (e) {} cleanup = null; }
     var p = location.pathname.replace(/\/+$/, '') || '/';
@@ -240,7 +297,7 @@
               ['cot φ − cot θ = w / l', 'cot φ + cot θ = w / l', 'tan φ − tan θ = w / l', 'sin φ − sin θ = w / l'].map(function (o, i) { return '<button class="sqo" data-ok="' + (i === 0) + '">' + 'ABCD'[i] + '&nbsp; ' + o + '</button>'; }).join('') +
           
               '<p class="small muted sqx" hidden>✓ <b>cot φ − cot θ = w / l</b>, where φ and θ are the outer and inner wheel angles, w the kingpin centre distance and l the wheelbase. Want more like this? Open <b>Fundamentals → Automobile Engineering</b>.</p></div></div></div></div>' +
-        '<div class="goalbar"><p class="f">🧭 Explore by your goal</p><div class="goal-g">' +
+        tipHtml('home') + '<div class="goalbar"><p class="f">🧭 Explore by your goal</p><div class="goal-g">' +
           '<a href="/exams?k=university" data-link><span>🎓</span><b>My university syllabus</b><small>BTU and more: subject → unit → topic, in syllabus order</small></a>' +
           '<a href="/exams?k=competitive" data-link><span>🏆</span><b>Competitive exams</b><small>GATE, JEN, RTO/MVI…: exam-wise sections at the right level</small></a>' +
           '<a href="/career" data-link><span>🚀</span><b>Interview &amp; career</b><small>Company-wise plan, aptitude and branch core</small></a></div></div>' +
@@ -626,7 +683,7 @@
           '<div class="err" id="fe" role="alert"></div><button class="btn block" id="fgo"></button>' +
           (session ? '' : '<p class="small muted" style="margin:0">Free. Sign in with Google in 10 seconds.</p>')
           : '<p class="muted">Questions for this topic are being added. Try the full unit for now.</p>' + (n.unit ? '<a class="btn" href="' + practiceLink(n.subj.id, n.unit.unit) + '" data-link>Practise the whole unit</a>' : '')) +
-        '</div>' + shareBar(url, 'Practise ' + title + ' free with VKV Sir:', 'Invite a friend:') +
+        '</div>' + tipHtml('focus') + shareBar(url, 'Practise ' + title + ' free with VKV Sir:', 'Invite a friend:') +
         '<p class="center small"><a href="/" data-link>Explore all subjects and tests</a></p></div>');
       function setMode(m) {
         mode = m; var mt = q('#mt'); if (!mt) return;
@@ -640,7 +697,7 @@
       segPick('#fd', function (d) { dur = d; }); segPick('#pd', function (d) { pdur = d; });
       var g = q('#fgo'); if (g) g.onclick = function () {
         if (!requireAuth(location.pathname + location.search, function () { q('#fgo').click(); })) return;
-        var lbl = g.textContent; g.disabled = true; g.textContent = 'Preparing…';
+        var lbl = g.textContent; g.disabled = true; g.textContent = 'Preparing…'; track(mode === 'practice' ? 'start_practice' : 'start_quiz', { s: n.subj.id, u: args.p_unit, x: exam });
         var call = mode === 'practice' ? rpc('start_practice', Object.assign({ p_duration: pdur || null, p_exam: exam }, args)).then(function (v) { go('/practice/' + v.attempt); })
           : rpc('start_custom', Object.assign({ p_duration: dur, p_exam: exam }, args)).then(function (v) { go('/exam/' + v.attempt); });
         call.catch(function (e) {
@@ -1522,7 +1579,7 @@
   var FLAGS = [['no_correct', 'No option is correct'], ['multiple_correct', 'More than one correct'], ['missing_data', 'Missing data or figure'], ['hard_language', 'Hard language'], ['typo', 'Typo or error'], ['out_of_syllabus', 'Out of syllabus']];
 
   function watermark() {
-    var t = wmEmail || (profile && profile.email) || '';
+    var em = wmEmail || (profile && profile.email) || '', t = em ? em + ' · VKV Sir Test Lab' : 'VKV Sir Test Lab · test.vkvsir.com';
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="160"><text x="10" y="110" transform="rotate(-24 10 110)" font-family="Arial" font-size="17" font-weight="700" fill="rgba(110,110,110,0.20)">' + esc(t) + '</text></svg>';
     return 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
   }
@@ -1813,14 +1870,14 @@
       else if (mid.length) steps.push(['🎯', 'Strengthen ' + esc(mid[0].u.name), 'Push this unit above 75%.', ulink(mid[0].u)]);
       steps.push(['⚡', 'Revise with Rapid fire', 'Once a unit is covered, rapid fire builds speed and recall.']);
       steps.push(['🔁', 'Retake in 2–3 days', 'A fresh paper on the same topics shows whether it stuck.']);
-      h('<div class="res" style="max-width:860px;margin:0 auto">' +
+      h('<div class="wm-layer" style="background-image:' + watermark() + '"></div><div class="res" style="max-width:860px;margin:0 auto">' +
         '<div class="card res-top res-' + V[0] + '"><div class="score-hero">' +
         '<svg class="ring" viewBox="0 0 132 132" role="img" aria-label="Score ' + pct + ' percent"><circle class="bg" cx="66" cy="66" r="54" fill="none" stroke-width="10"/>' +
         '<circle class="fg" cx="66" cy="66" r="54" fill="none" stroke-width="10" stroke-linecap="round" transform="rotate(-90 66 66)" stroke-dasharray="' + C + '" stroke-dashoffset="' + (C * (1 - pct / 100)) + '"/>' +
         '<text x="66" y="76" text-anchor="middle">' + pct + '%</text></svg>' +
         '<div class="res-h"><p class="eyebrow">' + esc(r.title) + '</p><div class="res-v">' + V[1] + '</div><div class="big">' + r.score + '<span class="muted"> / ' + r.n + '</span></div>' +
         '<p class="muted small">' + esc(r.end_reason || '') + ' · ' + esc(fmtDate(r.finished_at)) + (r.strikes ? ' · ' + r.strikes + ' penalty pause(s)' : '') + '</p></div></div>' +
-        '<p class="res-msg">' + V[2] + '</p>' +
+        '<p class="res-msg">' + V[2] + '</p>' + tipHtml('result') +
         '<div class="res-tiles"><div><b class="g">' + r.score + '</b><span>Correct</span></div><div><b class="b">' + wrong + '</b><span>Wrong</span></div><div><b class="w">' + skip + '</b><span>Not answered</span></div><div><b>' + acc + '%</b><span>Accuracy</span></div><div><b>' + att + '%</b><span>Attempted</span></div></div>' +
         (tip ? '<div class="res-tip">💡 ' + tip + '</div>' : '') +
         '<div class="row res-act">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/" data-link>Practise again</a><a class="btn ghost" href="/me" data-link>My dashboard</a>') + '</div></div>' +
@@ -1886,7 +1943,7 @@
         '<p class="muted small" style="margin:0">' + (d.last ? 'Last test: ' + esc(fmtDate(d.last)) : 'No tests yet') + '</p></div><a class="btn ghost" href="/profile" data-link>Edit profile</a></div>' +
         (d.locked > 0 ? '<div class="note">You are paused for leaving a test screen. You can start again in ' + mmss(d.locked * 1000) + '.</div>' : '') +
         '<div class="qa">' + [['🎯', 'Practise', 'Start a new test', '#cat'], ['🏢', 'Job Prep', 'Plan for a company', '/career'], ['📄', 'My resumes', 'Build or update', '/resume']].map(function (x) { return '<a class="qa-i" href="' + x[3] + '"' + (x[3].charAt(0) === '/' ? ' data-link' : '') + '><span>' + x[0] + '</span><b>' + x[1] + '</b><small>' + x[2] + '</small></a>'; }).join('') + '</div>' +
-        '<div class="tiles"><div class="tile"><b>' + done.length + '</b><span>Tests taken</span></div><div class="tile"><b>' + avg + (avg === '–' ? '' : '%') + '</b><span>Average score</span></div>' +
+        tipHtml('dash') + '<div class="tiles"><div class="tile"><b>' + done.length + '</b><span>Tests taken</span></div><div class="tile"><b>' + avg + (avg === '–' ? '' : '%') + '</b><span>Average score</span></div>' +
         '<div class="tile"><b>' + best + (best === '–' ? '' : '%') + '</b><span>Best score</span></div><div class="tile"><b>' + (tot.correct + tot.wrong + tot.skipped) + '</b><span>Questions seen</span></div></div>' +
         (done.length ? '<div class="grid2"><section class="card"><h3>All answers so far</h3>' + donut([{ l: 'Correct', v: tot.correct, c: 'var(--good)' }, { l: 'Wrong', v: tot.wrong, c: 'var(--bad)' }, { l: 'Not answered', v: tot.skipped, c: 'var(--warn)' }]) + '</section>' +
           '<section class="card"><h3>Score trend</h3>' + trendChart(d.trend) + '</section></div>' : '') +
@@ -1963,7 +2020,7 @@
   };
   var PERKS = '<ul class="gm-perks"><li><span>📊</span>Deep analysis of every test: units, trend, weak topics</li><li><span>🧭</span>Guidance for your dream company and role</li><li><span>📄</span>Resumes with ATS scores, saved and downloadable anytime</li><li><span>☁️</span>Your full history on any phone or laptop</li></ul>';
   function gate(kind, next, retry, opt) {
-    opt = opt || {};
+    opt = opt || {}; track('gate', { k: kind });
     var t = GATE_TXT[kind] || GATE_TXT.tests, nx = next || location.pathname + location.search, n = nudgeState();
     var skippable = !opt.hard;
     var g = gmodal('<div class="gm-ic">' + t[0] + '</div><h2>' + t[1] + '</h2><p class="gm-lead">' + t[2] + '</p>' +
@@ -2015,7 +2072,7 @@
       '<div class="pf-f"><label for="pf-st">State<sup>*</sup></label><input class="in" id="pf-st" list="pf-states" maxlength="60" value="' + esc(p.state || '') + '"><datalist id="pf-states">' + STATES.map(function (s) { return '<option value="' + s + '">'; }).join('') + '</datalist></div></div>' +
       '<div class="pf-f"><label for="pf-co">Country<sup>*</sup></label><input class="in" id="pf-co" maxlength="60" value="' + esc(p.country || 'India') + '"></div>' +
       '<div class="err" id="pf-er" role="alert"></div><button type="button" class="btn block" id="pf-save">Save my details</button>' +
-      '<p class="pf-warn">⚠️ Please enter true and complete information. For wrong or incomplete details, the system may block your account.</p></div>';
+      '<p class="pf-warn">⚠️ Please enter true and complete information. Names, numbers or colleges that look fake (like “abc”, “dfjdkfj” or 12345) are flagged. If they are not corrected, your account may be blocked and you could lose all your test records.</p></div>';
     function val(id) { return box.querySelector(id).value.trim(); }
     box.querySelector('#pf-save').onclick = function () {
       var b = this, mob = val('#pf-cc') + ' ' + val('#pf-mb').replace(/\D/g, '');
@@ -2257,7 +2314,7 @@
       box.innerHTML = '<div class="spinner"></div>';
       rpc('admin_visitors', { p_days: days }).then(function (r) {
         var st = r.stats || {}, rows = r.rows || [];
-        box.innerHTML = '<p class="small muted">Visitors use the website with a private guest ID before signing in. When they sign in with Google, they move to Students with their history.</p>' +
+        box.innerHTML = '<div id="vlog"></div><h3 style="margin-top:18px">Guest-ID accounts</h3><p class="small muted">Visitors use the website with a private guest ID before signing in (needs “Allow anonymous sign-ins” on in Supabase Auth). When they sign in with Google, they move to Students with their history.</p>' +
           '<div class="row" style="gap:8px;margin:8px 0">' + [7, 30, 90].map(function (d) { return '<button class="btn ' + (d === days ? '' : 'ghost') + ' small" data-d="' + d + '">' + d + ' days</button>'; }).join('') + '</div>' +
           '<div class="adm-stats">' + [['Visitors', st.visitors], ['Signed up with Google', st.converted], ['Tests by visitors', st.tests], ['Visitor resumes', st.resumes]].map(function (x) { return '<div class="card"><b>' + (x[1] || 0) + '</b><span class="small muted">' + x[0] + '</span></div>'; }).join('') + '</div>' +
           (rows.length ? '<div class="vis-l">' + rows.map(function (v) {
@@ -2269,6 +2326,17 @@
               ((v.resumes || []).length ? '<p class="small"><b>Resumes:</b> ' + v.resumes.map(function (x) { return esc(x.title) + (x.score != null ? ' · ATS ' + x.score : ''); }).join(', ') + '</p>' : '') + '</div>';
           }).join('') + '</div>' : '<div class="card"><p class="muted">No visitor activity in this period.</p></div>');
         box.querySelectorAll('[data-d]').forEach(function (b) { b.onclick = function () { days = +b.dataset.d; load(); }; });
+        rpc('admin_visitor_log', { p_days: days }).then(function (lg) {
+          var s = lg.stats || {}, rr = lg.rows || [], el = box.querySelector('#vlog'); if (!el) return;
+          el.innerHTML = '<h3 style="margin:0">Every visitor (signed in or not), last ' + days + ' days</h3>' +
+            '<div class="adm-stats">' + [['Visitors (devices)', s.visitors], ['Later signed in', s.signed_in], ['Page views', s.views], ['Practice / test starts', s.starts], ['Saw sign-in prompt', s.gates]].map(function (x) { return '<div class="card"><b>' + (x[1] || 0) + '</b><span class="small muted">' + x[0] + '</span></div>'; }).join('') + '</div>' +
+            '<div class="vis-l">' + rr.slice(0, 120).map(function (v) {
+              return '<div class="card vis"><div class="spread"><b>' + (v.user ? '👤 ' + esc(v.user) : 'Visitor · ' + esc(String(v.vid).slice(0, 8))) + '</b><span class="small muted">' + esc(fmtDate(v.last)) + '</span></div>' +
+                '<div class="vis-k"><span>👁 ' + v.views + ' views</span><span>▶ ' + v.starts + ' starts</span>' + (v.gate ? '<span>🔐 saw sign-in</span>' : '') + (v.device ? '<span>' + esc(v.device) + '</span>' : '') + '</div>' +
+                (v.ref ? '<p class="small"><b>Came from:</b> ' + esc(v.ref) + '</p>' : '') +
+                ((v.paths || []).length ? '<p class="small"><b>Pages:</b> ' + v.paths.map(esc).join(' · ') + '</p>' : '') + '</div>';
+            }).join('') + '</div>';
+        }).catch(function () {});
       }).catch(function (e) { box.innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; });
     }
     load();
