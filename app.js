@@ -327,7 +327,6 @@
           '<li><b>Practise with explanations</b><span class="muted">Learn from every answer, at your own pace.</span></li>' +
           '<li><b>Test and track your rank</b><span class="muted">Timed papers, topic-wise results and a fair leaderboard.</span></li></ol>' +
           '<p class="center"><a href="/why" data-link>Why VKV Sir Test Lab ' + icon('chevron') + '</a></p></section>' +
-        '<section class="hm-follow card"><div><h2>Stay updated</h2><p class="muted">New tests, openings and results on WhatsApp and social media.</p></div><div class="ff" id="ff2"></div></section>' +
         '</div>');
       (function () {
         var el = q('.cnt-up'); if (!el) return; var seen = false; try { seen = sessionStorage.getItem('vkv-cnt') === '1'; sessionStorage.setItem('vkv-cnt', '1'); } catch (e) {}
@@ -918,7 +917,7 @@
   /* ---------- Practice and Test hubs: one subject browser, clustered by branch ---------- */
   var BRANCHES = [['all', 'All'], ['me', 'Mechanical'], ['ce', 'Civil'], ['ee', 'Electrical'], ['ec', 'Electronics'], ['cs', 'CS & IT'], ['in', 'Instrumentation']];
   var SUBJ_GROUPS = [
-    ['me', 'Mechanical engineering', ['TD', 'FM', 'HT', 'SOM', 'TOM', 'MD', 'MP', 'EMT', 'ENM', 'ICE', 'RAC', 'PP', 'MET', 'IE', 'AE', 'MEC']],
+    ['me', 'Mechanical engineering', ['TD', 'FM', 'HT', 'SOM', 'TOM', 'MD', 'MP', 'EMT', 'ENM', 'ICE', 'RAC', 'PP', 'MET', 'IE', 'AE', 'ED', 'MEC']],
     ['ce', 'Civil engineering', ['CVC']], ['ee', 'Electrical engineering', ['EEC']], ['ec', 'Electronics engineering', ['ECC']],
     ['cs', 'Computer science & IT', ['CSF']], ['in', 'Instrumentation engineering', ['INC']],
     ['common', 'Maths & common subjects', ['EM', 'ED', 'CAD']],
@@ -935,6 +934,7 @@
     return '<a class="cont card" href="' + esc(l.u) + '" data-link>' + icon('play', 'ic-lg') + '<span><small>Continue where you left off</small><b>' + esc(l.t || 'Your last topic') + '</b></span>' + icon('chevron') + '</a>';
   }
   function crumbBar(list) {
+    if (!list.length || list[0][0] !== 'Home') list = [['Home', '/']].concat(list);
     return '<nav class="crumbs" aria-label="Breadcrumb">' + list.map(function (c, i) {
       return i < list.length - 1 ? '<a href="' + c[1] + '" data-link>' + esc(c[0]) + '</a><span aria-hidden="true">›</span>' : '<span aria-current="page">' + esc(c[0]) + '</span>';
     }).join('') + '</nav>';
@@ -1026,13 +1026,15 @@
       var qsB = new URLSearchParams(location.search);
       if (!qsB.has('b')) { var rb = BMAP[branchGet()]; if (rb && branches.indexOf(rb) >= 0) bsel = rb; }
       else { var code = Object.keys(BMAP).filter(function (k) { return BMAP[k] === bsel; })[0]; branchSet(bsel ? (code || branchGet()) : 'all'); }
-      mine.forEach(function (e) { if (bsel && e.branch && brKey(e.branch) !== bsel && !/^(All|General)/i.test(e.branch)) return; var g = e.family || e.org; if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(e); });
+      mine.forEach(function (e) { if (bsel && e.branch && brKey(e.branch) !== bsel && !/^(All|General)/i.test(e.branch)) return; var tech = kind !== 'competitive' || (e.branch && !/^(general|all)/i.test(e.branch)); var g = (kind === 'competitive' ? (tech ? 'T|' : 'N|') : '') + (e.family || e.org); if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(e); });
+      order.sort(function (a, b) { return (a.charAt(0) === 'T' ? 0 : a.charAt(0) === 'N' ? 1 : 0) - (b.charAt(0) === 'T' ? 0 : b.charAt(0) === 'N' ? 1 : 0); });
       h('<div class="stack xw"><div class="xhead"><p class="eyebrow">Explore by your goal</p><h1>' + (kind === 'university' ? 'University &amp; college syllabus' : 'Competitive exams') + '</h1>' +
         '<p class="muted">' + (kind === 'university' ? 'Choose your course and branch. Subjects follow a common syllabus: topics from different universities are merged into one well-organised set, so whichever college you study in, everything is covered.' : 'Choose your exam, then your branch. Sections and topics follow that exam\'s own syllabus, at its level of difficulty. The same question bank powers every exam, so practice in one helps in all.') + '</p>' +
         '<div class="xtabs"><a href="/exams?k=university" data-link class="' + (kind === 'university' ? 'on' : '') + '">🎓 University / College</a><a href="/exams?k=competitive" data-link class="' + (kind === 'competitive' ? 'on' : '') + '">🏆 Competitive exams</a><a href="/career" data-link>🚀 Interview &amp; career</a></div>' +
         (branches.length > 1 ? '<div class="xtabs xbr"><span class="small muted">Branch:</span><a href="/exams?k=' + kind + '&b=" data-link class="' + (!bsel ? 'on' : '') + '">All</a>' + branches.filter(function (b) { return !/^All/.test(b); }).map(function (b) { return '<a href="/exams?k=' + kind + '&b=' + encodeURIComponent(b) + '" data-link class="' + (bsel === b ? 'on' : '') + '">' + esc(b) + '</a>'; }).join('') + '</div>' : '') + '</div>' +
-        (order.length ? order.map(function (g) {
-          return '<section class="xgrp"><h2 class="sh2">' + esc(g) + ' <span class="small muted">· ' + groups[g].length + ' option' + (groups[g].length > 1 ? 's' : '') + '</span></h2><div class="xcards">' + groups[g].map(function (e) {
+        (order.length ? order.map(function (g, gi) {
+          var band = g.charAt(1) === '|' ? g.charAt(0) : '', prev = gi ? order[gi - 1].charAt(0) : '', head = band && band !== prev ? '<h2 class="xband">' + (band === 'T' ? 'Technical exams <small>engineering subjects are examined</small>' : 'Non-technical exams <small>open to graduates of any stream: aptitude, reasoning, English, GK</small>') + '</h2>' : '';
+          return head + '<section class="xgrp"><h2 class="sh2">' + esc(g.replace(/^[TN]\|/, '')) + ' <span class="small muted">· ' + groups[g].length + ' option' + (groups[g].length > 1 ? 's' : '') + '</span></h2><div class="xcards">' + groups[g].map(function (e) {
             var coming = e.status !== 'live' || !e.items;
             return '<a class="xcard' + (coming ? ' dim' : '') + '" href="/e/' + esc(e.id) + '" data-link>' + (function () { var tl = String(e.title || '').toLowerCase(), b = String(e.branch || ''); var show = b && b.split(/[^a-z]+/i).filter(function (w) { return w.length > 3; }).some(function (w) { return tl.indexOf(w.toLowerCase()) < 0; }); return show ? '<span class="xorg">' + esc(b) + '</span>' : ''; })() + '<b>' + esc(e.title) + '</b>' +
               '<span class="small muted">' + esc(e.description || '') + '</span>' +
@@ -1073,7 +1075,18 @@
           (inner ? '<div class="xin">' + inner + '</div>' : '') + '</details>';
       }
       var secs = x.sections || [];
-      h('<div class="stack xw"><p class="small"><a href="/exams?k=' + e.kind + '" data-link>← All ' + (e.kind === 'university' ? 'universities' : 'exams') + '</a></p>' +
+      var subjName = {}; (cat || []).forEach(function (c) { subjName[c.id] = c.name; });
+      function grouped(its) {
+        var subs = []; its.forEach(function (t) { var k = t.subject_id || '~'; if (subs.indexOf(k) < 0) subs.push(k); });
+        if (its.length <= 6 || subs.length < 2) return its.map(item).join('');
+        return subs.map(function (k) {
+          var g = its.filter(function (t) { return (t.subject_id || '~') === k; }), rd = g.filter(function (t) { return t.subject_id && t.count >= READY; }).length;
+          var nm = k === '~' ? 'More topics' : (subjName[k] || g[0].title);
+          var note = g.map(function (t) { return t.note; }).filter(Boolean)[0];
+          return '<details class="xsub"><summary><span class="caret"></span><span class="xit"><b>' + esc(nm) + '</b><small class="muted">' + g.length + (g.length > 1 ? ' parts' : ' part') + (note ? ' · ' + esc(note) : '') + '</small></span><span class="xb ' + (rd ? 'ok' : 'soon') + '">' + (rd ? rd + '/' + g.length + ' ready' : 'Coming soon') + '</span></summary><div class="xin">' + g.map(item).join('') + '</div></details>';
+        }).join('');
+      }
+      h('<div class="stack xw">' + crumbBar([['Home', '/'], ['Exams', '/exams?k=' + e.kind], [e.title, '']]) +
         '<div class="card xhero"><span class="xorg">' + esc(e.org) + ' · ' + esc(e.branch || '') + '</span><h1>' + esc(e.title) + '</h1><p class="muted">' + esc(e.description || '') + '</p>' +
         '<div class="xfacts">' + (e.pattern ? '<div><small>Pattern</small><b>' + esc(e.pattern) + '</b></div>' : '') + (e.numericals ? '<div><small>Numericals</small><b>' + esc(e.numericals) + '</b></div>' : '') + (e.level_note ? '<div><small>Difficulty</small><b>' + esc(e.level_note) + '</b></div>' : '') + '</div>' +
         '<p class="small muted" style="margin:10px 0 0">Tap a section to see its units and topics. Items marked <span class="xb soon">Coming soon</span> are being prepared, and new questions are added every day, so check back soon.</p></div>' +
@@ -1081,7 +1094,7 @@
           var its = s.items || [], ready = its.filter(function (t) { return t.subject_id && t.count >= READY; }).length;
           return '<details class="xs"' + (i < 2 ? ' open' : '') + '><summary><span class="xsn">' + (i + 1) + '</span><span class="xit"><b>' + esc(s.name) + '</b>' + (s.note ? '<small class="muted">' + esc(s.note) + '</small>' : '') + '</span>' +
             (its.length ? '<span class="xb ' + (ready ? 'ok' : 'soon') + '">' + ready + '/' + its.length + ' ready</span>' : '<span class="xb soon">Coming soon</span>') + '</summary>' +
-            '<div class="xsb">' + (its.length ? its.map(item).join('') : '<p class="muted small">Being mapped. Questions for this section are coming soon.</p>') + '</div></details>';
+            '<div class="xsb">' + (its.length ? grouped(its) : '<p class="muted small">Being mapped. Questions for this section are coming soon.</p>') + '</div></details>';
         }).join('') +
         shareBar(location.href, 'Prepare for ' + e.title + ' topic by topic, free, on VKV Sir Test Lab:', 'Share with friends preparing for this:') + '</div>');
     }).catch(function (er) { h('<div class="card narrow center"><p>' + esc(errMsg(er)) + '</p></div>'); });
@@ -1656,13 +1669,16 @@
   function viewJpAdmin() {
     setNav('admin'); loading();
     rpc('jp_admin_log', { p_days: 30 }).then(function (d) {
-      function list(arr, empty) { return arr && arr.length ? '<ol class="board">' + arr.map(function (x) { return '<li><span>' + esc(x.name) + '</span><span class="mono">' + x.n + '</span></li>'; }).join('') + '</ol>' : '<p class="muted small">' + empty + '</p>'; }
+      function list(arr, empty) { return arr && arr.length ? '<ol class="cntl">' + arr.map(function (x) { return '<li><span>' + esc(x.name) + '</span><span class="mono">' + x.n + '</span></li>'; }).join('') + '</ol>' : '<p class="muted small">' + empty + '</p>'; }
       h('<div class="stack"><div><p class="eyebrow">Admin · Job Prep</p><h1>What students are asking for</h1><p class="muted">Last 30 days · ' + d.total + ' plans generated.</p></div>' +
         '<p class="row" style="gap:10px;flex-wrap:wrap"><a class="btn" href="/admin/companies" data-link>Open company library (campus companies) →</a><a class="btn ghost" href="/admin/software" data-link>⚙ Software footprint tracker →</a><a class="btn ghost" href="/admin/iq-reports" data-link>🎤 Student interview reports →</a></p><div class="grid"><div class="card"><h2>Top roles</h2>' + list(d.roles, 'No data yet.') + '</div><div class="card"><h2>Top companies</h2>' + list(d.companies, 'No data yet.') + '</div>' +
         '<div class="card"><h2>Companies not in the knowledge base</h2>' + list(d.unknown_companies, 'None so far.') + '<p class="small muted">Ask Claude to add these companies in the next "continue" session.</p></div></div>' +
-        '<div class="card"><h2>Recent requests</h2><div class="table-wrap" style="overflow-x:auto"><table class="table"><thead><tr><th>When</th><th>Company</th><th>Matched role</th><th>Branch</th><th>Level</th><th>Job post (start)</th></tr></thead><tbody>' +
-        (d.recent || []).map(function (r) { return '<tr><td class="small">' + esc(fmtDate(r.created_at)) + '</td><td>' + esc(r.company || '–') + '</td><td>' + esc(r.role || '–') + '</td><td>' + esc(r.branch || '–') + '</td><td>' + esc(r.level || '') + '</td><td class="small">' + esc(r.text || '') + '</td></tr>'; }).join('') +
-        '</tbody></table></div></div></div>');
+        '<div class="card"><div class="spread"><h2 style="margin:0">Recent requests</h2><span class="small muted">' + (d.recent || []).length + ' shown</span></div><div class="jpr">' +
+        (d.recent || []).map(function (r) {
+          var chips = [[r.company, 'co'], [r.role, 'ro'], [r.branch, 'br'], [r.level, 'lv']].filter(function (c) { return c[0]; }).map(function (c) { return '<span class="jpr-c jpr-' + c[1] + '">' + esc(c[0]) + '</span>'; }).join('');
+          return '<article class="jpr-i"><div class="jpr-h"><div class="jpr-cs">' + (chips || '<span class="muted small">No details given</span>') + '</div><time class="small muted">' + esc(fmtDate(r.created_at)) + '</time></div>' +
+            (r.text ? '<details class="jpr-t"><summary>' + esc(String(r.text).slice(0, 180)) + (String(r.text).length > 180 ? '…' : '') + '</summary><p>' + esc(r.text) + '</p></details>' : '') + '</article>';
+        }).join('') + '</div></div></div>');
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
 
@@ -1780,7 +1796,7 @@
     Array.prototype.forEach.call(els, function (e) { if (!e.classList.contains('rv-in')) { e.classList.add('rv'); io.observe(e); } });
   }
   function autoCrumbs(t) {
-    var p = location.pathname; if (p === '/' || $view.querySelector('.crumbs') || /^\/(exam|practice\/[0-9a-f-]{36}|g\/|admin)/.test(p)) return;
+    var p = location.pathname; if (p === '/' || $view.querySelector('.crumbs') || /^\/(exam\/|practice\/[0-9a-f-]{36}|g\/)/.test(p)) return;
     if (!$view.firstElementChild || $view.querySelector(':scope > .spinner')) return;
     var k = new URLSearchParams(location.search).get('k');
     var sec = /^\/exams/.test(p) ? null : /^\/e\//.test(p) ? ['Exams', '/exams?k=competitive'] : /^\/(me|profile|leaderboard|result)/.test(p) ? ['Me', '/me'] : /^\/(why|disclaimer)/.test(p) ? null : null;
