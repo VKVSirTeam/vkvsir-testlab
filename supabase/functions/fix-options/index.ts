@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     const prompt = `You improve multiple-choice questions for Indian exam students (SSC, railway, state exams, GATE, engineering).
 For EACH item write exactly 3 NEW wrong options. Strict rules:
 1. Same category and type as the correct answer: if the answer is an animal, all options are animals; a person -> persons from the same field and era; a year -> nearby years; an article -> other articles; a formula -> similar formulas; a place -> places of the same kind; a definition -> definitions from the same topic.
-2. Each wrong option must be clearly and definitely wrong for this question. Never partially correct, never a synonym or another valid answer. No "All/None of the above".
+2. Each wrong option must be clearly and definitely wrong for this question. Never partially correct, never a synonym or another valid answer (e.g. for "5 years" do not offer another post whose term is also 5 years). Write complete phrases; never cut words to fit a length. No "All/None of the above".
 3. Similar length (within about 20% of the answer's characters) and the same style, units, capitalisation and level of detail, so length or style never gives the answer away.
 4. Plausible to a weak student; related to the question's topic; nothing silly, offensive or controversial; no real living persons unless the question is about persons.
 5. Names and proper nouns (persons, teams, places, books, organisations): use only REAL entities with their full, correct, standard spelling. Never truncate, abbreviate, add suffixes like "XI", or invent names to match length. Pick real entities whose names happen to be of similar length instead.
@@ -106,7 +106,13 @@ Items: ${JSON.stringify(items)}`;
       const okLen = isName
         ? a.length <= Math.max(maxW * 1.4, maxW + 8) && minW >= Math.min(a.length * 0.4, a.length - 10)
         : a.length <= Math.max(maxW * 1.2, maxW + 4) && minW >= Math.min(a.length * 0.5, a.length - 6);
-      const okKind = isNumeric(a) === w.every(isNumeric) || !isNumeric(a);
+      const minA = Math.min(...w.map((s) => s.length));
+      const okShort = a.length >= Math.min(minA * 0.6, minA - 8); // answer must not stand out as the shortest either
+      const TAIL = /\s(a|an|the|of|on|in|at|by|for|to|with|and|or|from|[A-Za-z])$/i;
+      const okCut = TAIL.test(a) || w.every((s) => !TAIL.test(s)); // no cut-off endings like "Muslim League in D"
+      if (!okShort) { await retry("answer now shortest"); continue; }
+      if (!okCut) { await retry("cut-off option"); continue; }
+      const okKind =isNumeric(a) === w.every(isNumeric) || !isNumeric(a);
       if (!okDistinct) { await retry("duplicate or equal to answer"); continue; }
       if (!okLen) { await retry("length still gives it away"); continue; }
       if (!okKind) { await retry("different kind of option"); continue; }
