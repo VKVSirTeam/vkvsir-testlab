@@ -2,289 +2,488 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
-/* Layout: one reading column with a sticky section index on wide screens; findings as severity-striped rows. */
+/* Layout: one reading column with a sticky section index on wide screens; findings as severity-striped rows, grouped by level. */
 :root{
   --bg:#f6f7fb; --surface:#ffffff; --fg:#141a2b; --muted:#5b6478; --line:#e2e6ef;
   --accent:#2f4fd8; --accent-soft:#e8edff;
-  --crit:#c4321f; --crit-soft:#fdecea; --high:#b86a00; --high-soft:#fff4e0; --med:#2d7a4f; --med-soft:#e6f5ec;
+  --crit:#c4321f; --crit-soft:#fdecea; --high:#b86a00; --high-soft:#fff4e0; --med:#2d7a4f; --med-soft:#e6f5ec; --low:#5b6478; --low-soft:#eef0f5;
   --display:"Manrope",system-ui,sans-serif; --body:"Inter",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0f1320; --surface:#171c2c; --fg:#e7eaf3; --muted:#9aa3b8; --line:#2a3146;
-  --accent:#8ea2ff; --accent-soft:#1f2848; --crit:#ff8a78; --crit-soft:#3a1c1a; --high:#ffbf5c; --high-soft:#352a14; --med:#7fd6a2; --med-soft:#163024; color-scheme:dark}}
+  --accent:#8ea2ff; --accent-soft:#1f2848; --crit:#ff8a78; --crit-soft:#3a1c1a; --high:#ffbf5c; --high-soft:#352a14; --med:#7fd6a2; --med-soft:#163024; --low:#9aa3b8; --low-soft:#222838; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f1320; --surface:#171c2c; --fg:#e7eaf3; --muted:#9aa3b8; --line:#2a3146;
-  --accent:#8ea2ff; --accent-soft:#1f2848; --crit:#ff8a78; --crit-soft:#3a1c1a; --high:#ffbf5c; --high-soft:#352a14; --med:#7fd6a2; --med-soft:#163024; color-scheme:dark}
+  --accent:#8ea2ff; --accent-soft:#1f2848; --crit:#ff8a78; --crit-soft:#3a1c1a; --high:#ffbf5c; --high-soft:#352a14; --med:#7fd6a2; --med-soft:#163024; --low:#9aa3b8; --low-soft:#222838; color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font:15px/1.65 var(--body)}
-.wrap{max-width:1120px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
-@media (max-width:860px){.wrap{grid-template-columns:minmax(0,1fr)}nav.toc{display:none}}
-nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:13px}
-nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:4px 0 4px 10px;border-left:2px solid var(--line)}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:230px minmax(0,1fr);gap:48px}
+@media (max-width:900px){.wrap{grid-template-columns:minmax(0,1fr)}nav.toc{display:none}}
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:13px;max-height:calc(100vh - 48px);overflow:auto}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:3px 0 3px 10px;border-left:2px solid var(--line)}
 nav.toc a:hover{color:var(--accent);border-color:var(--accent)}
+nav.toc b{display:block;margin:12px 0 4px;font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--fg)}
 h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.2}
 h1{font-size:clamp(28px,4vw,40px);margin:0 0 8px;font-weight:800}
-h2{font-size:24px;margin:56px 0 6px;font-weight:800}
-h3{font-size:17px;margin:28px 0 8px;font-weight:700}
-p,li{max-width:68ch}
+h2{font-size:24px;margin:64px 0 6px;font-weight:800;scroll-margin-top:16px}
+h3{font-size:17px;margin:28px 0 8px;font-weight:700;scroll-margin-top:16px}
+p,li{max-width:70ch}
 .lede{color:var(--muted);font-size:17px}
 .eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:24px 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:24px 0}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
-.stat b{display:block;font:800 26px var(--display);font-variant-numeric:tabular-nums}
+.stat b{display:block;font:800 24px var(--display);font-variant-numeric:tabular-nums}
 .stat span{color:var(--muted);font-size:13px}
-.f{display:grid;grid-template-columns:4px minmax(0,1fr);gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px 14px 0;margin:10px 0}
+.f{display:grid;grid-template-columns:4px minmax(0,1fr);gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px 12px 0;margin:8px 0}
 .f::before{content:"";border-radius:0 4px 4px 0}
-.f.c::before{background:var(--crit)} .f.h::before{background:var(--high)} .f.m::before{background:var(--med)}
-.f h4{margin:0 0 4px;font:700 15px var(--display);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.f p{margin:4px 0;font-size:14px}
-.f .fix{color:var(--fg)} .f .seen{color:var(--muted)}
-.pill{font:500 11px var(--mono);padding:2px 8px;border-radius:99px;letter-spacing:.04em}
-.c .pill{background:var(--crit-soft);color:var(--crit)} .h .pill{background:var(--high-soft);color:var(--high)} .m .pill{background:var(--med-soft);color:var(--med)}
+.f.c::before{background:var(--crit)} .f.h::before{background:var(--high)} .f.m::before{background:var(--med)} .f.l::before{background:var(--low)}
+.f h4{margin:0 0 2px;font:700 15px var(--display);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.f p{margin:3px 0;font-size:14px}
+.f .seen{color:var(--muted)}
+.pill{font:500 10.5px var(--mono);padding:2px 8px;border-radius:99px;letter-spacing:.04em;white-space:nowrap}
+.c .pill{background:var(--crit-soft);color:var(--crit)} .h .pill{background:var(--high-soft);color:var(--high)} .m .pill{background:var(--med-soft);color:var(--med)} .l .pill{background:var(--low-soft);color:var(--low)}
+.where{font:500 11px var(--mono);color:var(--muted)}
 .tbl{overflow-x:auto;margin:12px 0}
-table{border-collapse:collapse;width:100%;font-size:14px;background:var(--surface);border-radius:10px;overflow:hidden}
-th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-code{font:13px var(--mono);background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--surface)}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+td.bad{color:var(--crit);font-weight:600}
+code{font:12.5px var(--mono);background:var(--accent-soft);padding:1px 5px;border-radius:4px}
 .tree{font:13px/1.7 var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;overflow-x:auto;white-space:pre}
-.phase{border-left:3px solid var(--accent);padding-left:16px;margin:18px 0}
+.phase{border-left:3px solid var(--accent);padding-left:16px;margin:20px 0}
 .phase h3{margin-top:0}
+.note{background:var(--accent-soft);border-radius:10px;padding:12px 16px;font-size:14px}
 a{color:var(--accent)}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
 </style>
 
 <div class="wrap">
 <nav class="toc" aria-label="Sections">
+  <b>Overview</b>
   <a href="#summary">Summary</a>
   <a href="#method">How we reviewed</a>
-  <a href="#critical">Critical issues</a>
-  <a href="#ia">Structure &amp; navigation</a>
-  <a href="#home">Home page</a>
-  <a href="#practice">Practice vs Quiz</a>
+  <a href="#decisions">Decisions taken</a>
+  <a href="#done">Already fixed (Phase 0)</a>
+  <b>Whole app</b>
+  <a href="#ia">Structure &amp; menus</a>
+  <a href="#nav">Navigation &amp; back</a>
+  <a href="#naming">Names &amp; wording</a>
   <a href="#visual">Visual system</a>
-  <a href="#motion">Motion &amp; loading</a>
-  <a href="#mobile">Mobile</a>
-  <a href="#board">Leaderboard &amp; profile</a>
-  <a href="#main">www.vkvsir.com</a>
-  <a href="#tech">Speed &amp; code</a>
-  <a href="#security">Security</a>
+  <a href="#motion">Motion &amp; feedback</a>
+  <a href="#dark">Dark mode</a>
+  <b>Screen by screen</b>
+  <a href="#s-home">Home</a>
+  <a href="#s-picker">Subject picker</a>
+  <a href="#s-exams">Exams browser</a>
+  <a href="#s-exam">Exam page</a>
+  <a href="#s-start">Subject start page</a>
+  <a href="#s-test">Test start page</a>
+  <a href="#s-taking">Taking a test</a>
+  <a href="#s-practice">Practice session</a>
+  <a href="#s-result">Results</a>
+  <a href="#s-board">Leaderboard</a>
+  <a href="#s-me">Dashboard &amp; profile</a>
+  <a href="#s-career">Job Prep</a>
+  <a href="#s-resume">Resume builder</a>
+  <a href="#s-drill">Aptitude drill</a>
+  <a href="#s-login">Sign-in</a>
+  <a href="#s-misc">Why, disclaimer, 404</a>
+  <a href="#s-shared">Shared &amp; group links</a>
+  <b>Foundations</b>
+  <a href="#mobile">Mobile-specific</a>
   <a href="#a11y">Accessibility</a>
-  <a href="#plan">Rollout plan</a>
+  <a href="#perf">Speed</a>
+  <a href="#seo">Search &amp; sharing</a>
+  <a href="#security">Security</a>
+  <a href="#code">Code health</a>
+  <a href="#content">Content quality</a>
+  <a href="#admin">Admin</a>
+  <a href="#main">www.vkvsir.com</a>
+  <b>Plan</b>
+  <a href="#plan">Staged plan</a>
+  <a href="#measure">How we measure</a>
 </nav>
 
 <main>
-<div class="eyebrow">Design &amp; engineering review · 22 Nov 2026</div>
+<div class="eyebrow">Design &amp; engineering review · v2 · 22 Nov 2026</div>
 <h1>VKV Sir Test Lab: renovation audit</h1>
-<p class="lede">A full review of test.vkvsir.com and www.vkvsir.com on desktop (1366 px) and phone (375 px). It covers the structure, every main page, the look, motion, speed, code and security, and ends with one phased plan that fits it all together.</p>
+<p class="lede">A complete pass over test.vkvsir.com and www.vkvsir.com: all 19 public screens measured with the same checks at laptop (1366 px) and phone (375 px) width, light and dark mode, plus the code of every signed-in screen (practice, test, results, dashboard, profile). Each finding names where it is, what we saw, and what to do.</p>
 
 <section id="summary">
 <div class="stats">
-  <div class="stat"><b>9,744 px</b><span>home page height on desktop (about 12 screens)</span></div>
-  <div class="stat"><b>23</b><span>different font sizes on one page (a clean system uses 7–8)</span></div>
-  <div class="stat"><b>1,330</b><span>subject checkboxes loaded into the home page at once</span></div>
-  <div class="stat"><b>73</b><span>emoji used as icons on the home page</span></div>
-  <div class="stat"><b>404</b><span>HTTP status sent for every deep link (/exams, /t/…, /drill)</span></div>
-  <div class="stat"><b>353 KB</b><span>one un-split app.js with 946 functions</span></div>
+  <div class="stat"><b>95</b><span>findings with fixes: 8 critical, 31 high, 49 medium, 7 low</span></div>
+  <div class="stat"><b>19</b><span>public screens measured on laptop and phone</span></div>
+  <div class="stat"><b>1</b><span>browser-tab title for every page (“VKV Sir Test Lab”)</span></div>
+  <div class="stat"><b>11–18</b><span>font sizes per screen (target: 8 across the app)</span></div>
+  <div class="stat"><b>192</b><span><code>!important</code> overrides in app.css</span></div>
+  <div class="stat"><b>102</b><span>fixed colours that bypass the theme</span></div>
+  <div class="stat"><b>105</b><span>unlabelled controls on one exam page</span></div>
+  <div class="stat"><b>111 px</b><span>header height on a phone (14% of the screen)</span></div>
 </div>
-<p><b>Verdict.</b> The content and features are strong; the shell around them is not. The site reads as one very long page that keeps adding sections, instead of an app with clear places. Practice, Quiz, Exams, Job Prep and Resume all live inside the home page, so the same things show up two or three times. Fonts, sizes, corners and icons vary from section to section. Fixing this is mostly <b>restructuring and a design system</b>, not new features. The plan below keeps every feature, the URLs, the question bank and the data.</p>
-<p><b>The five decisions that matter most</b></p>
-<ol>
-  <li><b>Split the app into five clear places:</b> Home, Practice, Quiz &amp; Tests, Exams, Career (Job Prep + Resume), plus My Progress. Each has its own page; the home page only <i>shows</i> them.</li>
-  <li><b>Browse in clusters, not lists:</b> stream → branch → subject → unit → topic, collapsible at each level, with a branch/stream chooser remembered per user.</li>
-  <li><b>Make Practice and Quiz visibly different:</b> different colours, icons, page layouts and names everywhere: “Practice” (learn, no pressure) and “Quiz” (timed, scored, ranked).</li>
-  <li><b>One design system:</b> one font pair, an 8-step type scale, 3 corner sizes, one icon set (no emoji), light and dark themes, and shared components.</li>
-  <li><b>An app shell:</b> fixed top bar on desktop, a bottom tab bar on mobile, breadcrumbs, a working Back button, page-transition and skeleton loaders, and real 200 responses for every page.</li>
-</ol>
+<p><b>Verdict.</b> The engine is strong: about 75,000 questions, a clean exam browser with branch filters, honest timing, anti-cheat, translations, job prep and a resume builder. What holds the app back is the layer students touch: one long home page doing every job, the same idea under three names, layouts that break on phones in specific places, a header that eats the screen, and a visual style that drifts from page to page. None of this needs the content to change. It needs a design system, a clear map of places, and careful screen-by-screen rebuilding, done in stages so the site never goes down.</p>
+<div class="legend"><span><i style="background:var(--crit)"></i>Critical: broken or misleading now</span><span><i style="background:var(--high)"></i>High: hurts most students</span><span><i style="background:var(--med)"></i>Medium: polish that adds up</span><span><i style="background:var(--low)"></i>Low: nice to have</span></div>
 </section>
 
 <section id="method">
 <h2>How we reviewed</h2>
-<p>The review simulated a product team. Each specialist walked the live site on a laptop and a phone, then the lead merged overlaps and settled conflicts (for example, motion vs speed, and density vs calm).</p>
+<p>A simulated product team, each specialist working through the live site, then a lead merging overlaps and settling trade-offs (motion vs speed, density vs calm, security vs convenience).</p>
 <div class="tbl"><table>
-<tr><th>Role</th><th>Looked at</th></tr>
-<tr><td>Product lead (final call)</td><td>Goals, what goes where, what to cut, phase order</td></tr>
-<tr><td>Information architect</td><td>Menus, sub-menus, clusters, naming, back/forward, URLs</td></tr>
-<tr><td>UI / visual designer</td><td>Colour, type, spacing, icons, cards, buttons, header/footer</td></tr>
-<tr><td>UX researcher</td><td>First-time student journey, CS vs Mech vs SSC student, confusion points</td></tr>
-<tr><td>Motion designer</td><td>Loading, page change, scroll, feedback on answer</td></tr>
-<tr><td>Mobile specialist</td><td>Thumb reach, tap sizes, bottom nav, overlays, small screens</td></tr>
-<tr><td>Front-end / performance engineer</td><td>Bundle size, rendering, caching, offline, hosting</td></tr>
-<tr><td>Security engineer</td><td>Headers, XSS, database policies, auth settings</td></tr>
-<tr><td>Accessibility specialist</td><td>Contrast, focus, screen readers, reduced motion</td></tr>
-<tr><td>SEO / growth</td><td>Status codes, titles, sharing previews, main-site funnel</td></tr>
+<tr><th>Specialist</th><th>Covered</th></tr>
+<tr><td>Product lead (final call)</td><td>Goals, priorities, stage order, trade-offs</td></tr>
+<tr><td>Information architect</td><td>Places, menus, clusters, names, URLs, back/forward</td></tr>
+<tr><td>Visual designer</td><td>Type, colour, spacing, icons, cards, buttons, header, footer</td></tr>
+<tr><td>UX researcher</td><td>Journeys for a CS student, a Mech student, an SSC aspirant, a teacher</td></tr>
+<tr><td>Motion designer</td><td>Loading, page change, answer feedback, scroll</td></tr>
+<tr><td>Mobile specialist</td><td>Thumb reach, tap sizes, header height, layouts at 375 px</td></tr>
+<tr><td>Front-end &amp; performance</td><td>Bundle, rendering, caching, router, offline</td></tr>
+<tr><td>Security</td><td>Database functions and policies, XSS, headers, auth</td></tr>
+<tr><td>Accessibility</td><td>Labels, focus, contrast, screen readers, reduced motion</td></tr>
+<tr><td>SEO &amp; growth</td><td>Status codes, titles, previews, main-site funnel</td></tr>
+<tr><td>Assessment expert</td><td>Exam realism, fairness, question quality, results</td></tr>
 </table></div>
+<p><b>Measured on every screen:</b> page height in screens, horizontal overflow, distinct font sizes, weights, text colours, backgrounds, shadows and corner radii, button styles, tap targets under 40 px, unlabelled controls, images without alt text, emoji count, low-contrast text, over-long lines, heading structure and DOM size.</p>
+<div class="tbl"><table>
+<tr><th>Screen</th><th>Height (screens)</th><th>Font sizes</th><th>Text colours</th><th>Button styles</th><th>Small targets</th><th>Unlabelled</th><th>Emoji</th><th>DOM nodes</th></tr>
+<tr><td>Home <code>/</code></td><td class="n bad">12.2</td><td class="n bad">23</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n bad">73</td><td class="n bad">~9,000</td></tr>
+<tr><td>Exams: career</td><td class="n">5.3</td><td class="n">12</td><td class="n">9</td><td class="n">2</td><td class="n">16</td><td class="n">0</td><td class="n">8</td><td class="n">411</td></tr>
+<tr><td>Exam: GATE CS</td><td class="n">2.2</td><td class="n">11</td><td class="n">9</td><td class="n">4</td><td class="n bad">132</td><td class="n bad">105</td><td class="n">5</td><td class="n">743</td></tr>
+<tr><td>Exam: state subordinate</td><td class="n">5.0</td><td class="n">11</td><td class="n">9</td><td class="n">4</td><td class="n bad">86</td><td class="n bad">31</td><td class="n">5</td><td class="n">747</td></tr>
+<tr><td>Subject start <code>/p/…</code></td><td class="n">2.1</td><td class="n">12</td><td class="n">7</td><td class="n bad">7</td><td class="n">20</td><td class="n">0</td><td class="n">8</td><td class="n">254</td></tr>
+<tr><td>Test start <code>/t/…</code></td><td class="n">1.7</td><td class="n">13</td><td class="n">7</td><td class="n">4</td><td class="n">15</td><td class="n">0</td><td class="n">9</td><td class="n">212</td></tr>
+<tr><td>Aptitude drill</td><td class="n">1.9</td><td class="n">13</td><td class="n">7</td><td class="n">4</td><td class="n">27</td><td class="n">0</td><td class="n">5</td><td class="n">194</td></tr>
+<tr><td>Job Prep</td><td class="n">2.9</td><td class="n">14</td><td class="n">8</td><td class="n">4</td><td class="n">22</td><td class="n">6</td><td class="n">9</td><td class="n bad">842</td></tr>
+<tr><td>Resume builder</td><td class="n">2.9</td><td class="n bad">18</td><td class="n bad">11</td><td class="n">6</td><td class="n bad">38</td><td class="n">6</td><td class="n">14</td><td class="n">443</td></tr>
+<tr><td>Why Test Lab</td><td class="n">4.1</td><td class="n">13</td><td class="n">10</td><td class="n">3</td><td class="n">20</td><td class="n">0</td><td class="n">16</td><td class="n">337</td></tr>
+<tr><td>Disclaimer</td><td class="n">3.4</td><td class="n">12</td><td class="n">7</td><td class="n">2</td><td class="n">16</td><td class="n">0</td><td class="n">5</td><td class="n">204</td></tr>
+<tr><td>Sign-in</td><td class="n">1.5</td><td class="n">11</td><td class="n">8</td><td class="n">4</td><td class="n">17</td><td class="n">1</td><td class="n">5</td><td class="n">186</td></tr>
+<tr><td>Page not found</td><td class="n">1.3</td><td class="n">11</td><td class="n">7</td><td class="n">2</td><td class="n">15</td><td class="n">0</td><td class="n">5</td><td class="n">168</td></tr>
+</table></div>
+<p class="where">Laptop width. “Small targets” counts controls under 40 px in either direction. Signed-in screens were reviewed from code; a live pass with a student account is part of Stage 3.</p>
 </section>
 
-<section id="critical">
-<h2>Critical issues (fix first)</h2>
-<div class="f c"><div><h4><span class="pill">CRITICAL</span>Every inner page returns HTTP 404</h4>
-<p class="seen">Seen: /exams, /t/mock-qa, /drill, /p/… are served from <code>404.html</code> by GitHub Pages, so the status is 404 even though the page then renders.</p>
-<p class="fix">Fix: Google will not index these pages and WhatsApp/LinkedIn previews may fail. Move hosting to Cloudflare Pages or Netlify (free) with an SPA rewrite rule (<code>/* → /index.html 200</code>), which also lets us set security headers. Keep the same domain and URLs.</p></div></div>
-<div class="f c"><div><h4><span class="pill">CRITICAL</span>Mobile welcome tour is see-through and covers content</h4>
-<p class="seen">Seen: on a 375 px phone the “Step 1 of 5” tour box is translucent and sits on the stats, so both texts are unreadable; “Next” is faint.</p>
-<p class="fix">Fix: solid card with shadow, dim the page behind it, anchor it to the bottom on phones, and show it only once after the first visit (not on landing).</p></div></div>
-<div class="f c"><div><h4><span class="pill">CRITICAL</span>Content appears late or as grey blocks</h4>
-<p class="seen">Seen: the first paint shows a spinner with the footer already in place (the page jumps when content arrives). While scrolling, whole sections are empty grey areas until they fade in.</p>
-<p class="fix">Fix: skeleton placeholders the same size as the real content, the footer rendered only after the main content, and scroll-reveal that starts from a visible state (never opacity 0).</p></div></div>
-<div class="f c"><div><h4><span class="pill">CRITICAL</span>Database: one “security definer” view and public-callable admin-level functions</h4>
-<p class="seen">Seen (Supabase security advisor): 1 ERROR (security-definer view), several SECURITY DEFINER functions callable by anonymous users, 34 functions with an unfixed search path, and leaked-password protection turned off.</p>
-<p class="fix">Fix: review each function, revoke anonymous execute where it is not needed, set <code>search_path</code> on all, switch the view to security-invoker, and turn on leaked-password protection in Auth settings.</p></div></div>
-</section>
-
-<section id="ia">
-<h2>Structure &amp; navigation</h2>
-<h3>What is wrong today</h3>
-<div class="f h"><div><h4><span class="pill">HIGH</span>Everything lives on the home page</h4><p>The practice picker (1,330 checkboxes), exam explorer, ready-made tests, job prep and resume teasers all sit inside one 9,744 px page. The top menu (“Practice &amp; Tests”, “Job Prep”, “Resume Builder”) mostly scrolls to anchors on that same page, so the URL and Back button don't match what the student sees.</p></div></div>
-<div class="f h"><div><h4><span class="pill">HIGH</span>Flat subject lists</h4><p>Opening “Fundamentals” shows Automobile, CAD, Civil Core, CS Fundamentals, Current Affairs, Electrical Core… in one A–Z list. A CS student has to scroll past every Mechanical subject. Exams already group by branch; subjects do not.</p></div></div>
-<div class="f h"><div><h4><span class="pill">HIGH</span>The same thing in several places</h4><p>“Explore by your goal” (3 cards) and “Choose what to practise” (3 tracks) say the same thing twice; tests show up under Practice, under “Ready-made tests” and in Exams; “Start practising”, “Choose a subject”, “Practise my subjects” and “Find your exam” all lead to nearly the same spot.</p></div></div>
-<div class="f m"><div><h4><span class="pill">MEDIUM</span>Mixed labels</h4><p>A placement mock is tagged “Practice”; the track names are Fundamentals / University syllabus / Semester for the same idea; “self assessment” wording. Pick one name per idea and use it everywhere.</p></div></div>
-
-<h3>Proposed map</h3>
-<div class="tree">Top bar (desktop) / bottom tabs (mobile)
-├── Home            /            showcase only: hero, 4 doors, today's quiz, leaderboard peek
-├── Practice        /practice    learn mode: no timer, answer + explanation after each question
-│   ├── Engineering  → Branch (Mech, CS/IT, Civil, Electrical, ECE, Auto…) → Subject → Unit → Topic
-│   ├── General      → GK · Current affairs (dated) · Science · English · Reasoning · Aptitude
-│   ├── Tools &amp; CAD  → CAD software, programming
-│   └── Aptitude drill (unlimited)
-├── Quiz &amp; Tests    /quiz        timed, scored, counts on the leaderboard
-│   ├── Topic / unit quiz   (pick like Practice, then the timer)
-│   ├── Full mock tests     (GATE, SSC, RTO/MVI, placement…)
-│   ├── Daily quiz          (one shared paper per day)
-│   └── Group test          (teacher link)
-├── Exams           /exams       family → exam → branch → section map (already built; becomes its own page)
-├── Career          /career      Job Prep (company &amp; role) · Resume builder
-└── Me              /me          progress, history, weak topics, saved, settings, language</div>
-<p><b>Rules for the new structure</b></p>
+<section id="decisions">
+<h2>Decisions taken</h2>
 <ul>
-  <li><b>Clusters with expand/collapse at every level</b>, an item count on each heading (“Mechanical · 14 subjects · 21,400 Q”), and a search box at the top that filters as you type.</li>
-  <li><b>Remember the student's stream and branch</b> (asked once, changeable from “Me”), open that cluster first, and keep the others collapsed.</li>
-  <li><b>Breadcrumbs</b> on every inner page (Practice › Mechanical › Thermodynamics › Unit 3), and the browser Back button always goes one level up.</li>
-  <li><b>One primary action per screen.</b> Secondary actions are text or ghost buttons.</li>
-  <li><b>A sticky selection tray</b> at the bottom while choosing topics (“3 topics · 30 Q · Start”), instead of a button far below the list.</li>
+  <li><b>Hosting stays on GitHub Pages.</b> Deploys are unlimited, which suits frequent updates. The 404-status problem is solved inside GitHub Pages instead (see <a href="#seo">Search &amp; sharing</a>).</li>
+  <li><b>Names: “Practice” and “Test”.</b> Used everywhere: menus, buttons, tags, results, leaderboard. “Quiz”, “Test yourself” and “self assessment” are retired.</li>
+  <li><b>Leaderboard shows full name and college.</b></li>
+  <li><b>Leaked-password protection is on.</b></li>
 </ul>
 </section>
 
-<section id="home">
-<h2>Home page</h2>
-<div class="f h"><div><h4><span class="pill">HIGH</span>Hero</h4><p class="seen">Today: an orange eyebrow “Free for every student · Practice · Job prep · Resume” (wraps to two lines on mobile), a four-line paragraph, then three stacked buttons of equal weight.</p><p class="fix">New: one short headline (e.g. “Practise. Test. Get placed.”), one line of support text, <b>two</b> buttons (Start practice · Take a quiz), a live counter strip (questions, subjects, exams), and a real product preview on the right (an animated question card) instead of a feature grid. Drop the eyebrow on mobile.</p></div></div>
-<div class="f h"><div><h4><span class="pill">HIGH</span>Below the hero: four doors, then proof</h4><p>Replace the 20+ sections with: <b>4 door cards</b> (Practice · Quiz &amp; Tests · Exams · Career), each with its own colour and icon → “Today's quiz” card → <b>leaderboard peek</b> (top 5 this week) → exam logos/family strip → company strip (keep the marquee, slower, pause on hover) → short “How it works” in 3 steps → footer. Target height: about 4 screens.</p></div></div>
-<div class="f m"><div><h4><span class="pill">MEDIUM</span>Stats that say something</h4><p>“20+ subjects”, “40+ roles” undersell a bank of about 75,000 questions. Show real numbers from the database (questions, subjects, exams, attempts this week), refreshed by the existing catalog cache.</p></div></div>
-<div class="f m"><div><h4><span class="pill">MEDIUM</span>Footer</h4><p>Two different footers exist (home vs inner pages). Use one footer with 4 columns (Practice · Quiz · Career · About), social icons in one row, and the disclaimer as one short line linking to the full text.</p></div></div>
+<section id="done">
+<h2>Already fixed (Phase 0, live)</h2>
+<ul>
+  <li>One pop-up at a time on a first visit (sign-in box, tour and tip card no longer stack); the tour is a solid bottom card on phones.</li>
+  <li>No more invisible sections while scrolling; the footer waits for content.</li>
+  <li>Deep links (<code>/exams</code>, <code>/t/…</code>, <code>/p/…</code>) now load the current page, fonts and code (they were loading a months-old copy).</li>
+  <li>Maths in the drill (7<sup>45</sup>); 44 px phone tap targets for menu, footer and social links.</li>
+  <li>Database: a view running with owner rights fixed, admin functions closed to anonymous visitors, internal helpers closed, fixed search path on 34 functions.</li>
+</ul>
+<p class="note"><b>Corrections to v1 of this report.</b> The resume builder code already loads only when opened, and all files are already compressed (app.js is 104 KB over the network, not 353 KB). The performance section below is updated accordingly.</p>
 </section>
 
-<section id="practice">
-<h2>Practice vs Quiz</h2>
-<p>Students cannot tell them apart today because they are picked from the same list and look the same. Make the difference visible at every step.</p>
-<div class="tbl"><table>
-<tr><th></th><th>Practice</th><th>Quiz</th></tr>
-<tr><td>Purpose</td><td>Learn, build basics</td><td>Check yourself, rank</td></tr>
-<tr><td>Colour</td><td>Calm teal</td><td>Energetic indigo/amber</td></tr>
-<tr><td>Icon</td><td>Open book</td><td>Stopwatch</td></tr>
-<tr><td>Timer</td><td>None (optional session length)</td><td>Per question, visible ring</td></tr>
-<tr><td>After each answer</td><td>Correct answer + explanation at once</td><td>Next question; review at the end</td></tr>
-<tr><td>Leaderboard</td><td>No</td><td>Yes</td></tr>
-<tr><td>Screen layout</td><td>Reading layout, explanation panel</td><td>Exam layout: question palette, timer, mark for review</td></tr>
-</table></div>
-<div class="f h"><div><h4><span class="pill">HIGH</span>Exam-grade quiz screen</h4><p>Add a question palette (answered / skipped / marked), a progress bar, a timer ring, keyboard shortcuts (1–4, N, P, M), a confirm before submit, and a results page with a score ring, topic-wise bars, time per question and “Practise your weak topics” buttons.</p></div></div>
-<div class="f m"><div><h4><span class="pill">MEDIUM</span>Math and formatting</h4><p>The drill shows “Unit digit of 7^45” as plain text. Run the same KaTeX rendering used in quizzes so powers, fractions and units display properly everywhere.</p></div></div>
+<!-- ================= WHOLE APP ================= -->
+<section id="ia">
+<h2>Structure &amp; menus</h2>
+<div class="f c"><div><h4><span class="pill">CRITICAL</span>One page does every job</h4><p class="seen">The home page (12 screens long, ~9,000 elements) contains the pitch, the subject picker with 1,330 checkboxes, ready-made tests, job prep and resume teasers, FAQs and the leaderboard. Top menu items scroll within it.</p><p>Give each job its own place with its own URL. The home page only introduces them.</p></div></div>
+<div class="f c"><div><h4><span class="pill">CRITICAL</span>The good structure exists, but students never reach it</h4><p class="seen">The exam browser (<code>/exams?k=university</code>) already groups by family and has a branch filter (Mechanical, Civil, Electrical, ECE, CS &amp; IT, Instrumentation). The home “Fundamentals” list ignores it and shows Automobile, CAD, Civil, CS, Current Affairs… in one A–Z list.</p><p>Make the exam/branch browser the main way in. Retire the flat list.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Exams has no menu item</h4><p class="seen">The top menu is Practice &amp; Tests · Job Prep · Resume Builder (+ Dashboard when signed in). Exams is reachable only through home-page cards, and on <code>/exams</code> the highlighted item is “Practice &amp; Tests”.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Duplicate entry points</h4><p class="seen">“Explore by your goal” (3 cards) and “Choose what to practise” (3 tracks) repeat each other; tests appear under Practice, Ready-made tests and Exams; four different buttons (“Start practising”, “Choose a subject”, “Practise my subjects”, “Find your exam”) lead to nearly the same place.</p></div></div>
+<h3>Proposed map</h3>
+<div class="tree">Laptop: top bar           Phone: bottom tab bar (5)
+├── Home       /           introduce + continue where you left off
+├── Practice   /practice   Engineering ▸ Branch ▸ Subject ▸ Unit ▸ Topic
+│                          General (GK · Current affairs · Science · English · Reasoning · Aptitude)
+│                          Software &amp; programming · Aptitude drill
+├── Test       /test       Topic/unit tests · Full mock tests · Daily test · Group test link
+├── Exams      /exams      Family ▸ Exam ▸ Branch ▸ Section map  (existing page, promoted)
+├── Career     /career     Job Prep · Resume builder
+└── Me         /me         Progress · History · Weak topics · Saved · Leaderboard · Settings
+Utility (top-right): search · language · theme · sign-in/avatar</div>
+<ul>
+  <li><b>Remember the student's stream and branch</b> (asked once in a two-tap chooser, changeable in Me). Every list opens that cluster first.</li>
+  <li><b>Clusters everywhere</b>, collapsible, each with counts (“Mechanical · 14 subjects · 21,400 questions”).</li>
+  <li><b>Search</b> across subjects, topics, exams and companies, opened with <code>/</code> on a laptop.</li>
+  <li><b>“Continue” card</b> on Home and Me: the last unfinished practice or test.</li>
+</ul>
+</section>
+
+<section id="nav">
+<h2>Navigation &amp; back</h2>
+<div class="f c"><div><h4><span class="pill">CRITICAL</span>Menu drawer unreachable on phones</h4><p class="seen">At 375 px the menu button is hidden (<code>display:none</code>), so the drawer with Profile, “Why Test Lab” and the vkvsir.com link cannot be opened.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>No breadcrumbs or “up” on deep pages</h4><p class="seen">Only the exam page has “← All exams”. Subject, unit, test and result pages give no path back except the browser button.</p><p>Breadcrumbs on every inner page (Practice › Mechanical › Thermodynamics › Unit 3), shortened to “‹ Thermodynamics” on phones.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Scroll position lost on Back</h4><p class="seen">The router never restores scroll; returning from a subject to a long list starts at the top again.</p><p>Store scroll per history entry and restore it on popstate.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Section links don't change the URL</h4><p class="seen">Home tabs and “Explore ↓” links scroll without updating the address, so Back leaves the site section instead of returning.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Focus not moved on page change</h4><p class="seen">After navigation, keyboard and screen-reader focus stays on the old link. Move focus to the new page heading.</p></div></div>
+</section>
+
+<section id="naming">
+<h2>Names &amp; wording</h2>
+<div class="f c"><div><h4><span class="pill">CRITICAL</span>Tests tagged “Practice”</h4><p class="seen">The timed unit test page <code>/t/emt-u3</code> and the placement mock both carry a “Practice” tag, and the subtitle reads “Practice: Mechanical Properties and Testing”.</p><p>Tag by mode: <b>Practice</b> (no score) or <b>Test</b> (timed, scored, ranked).</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>One idea, several names</h4><p class="seen">Fundamentals / University syllabus / Semester; Practice &amp; Tests / Practice tests; Test yourself / quiz / self-assessment; Dashboard / My tests; Job Prep / Interview &amp; career / Career.</p><p>A short glossary in the code, used by every label: Practice, Test, Exams, Career, Me; Subject, Unit, Topic; Mock test.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Titles repeat themselves</h4><p class="seen">Subject start: “Mechanical Core (Placement): full syllabus” followed by “Mechanical Core (Placement)”. Exam cards: label “B.TECH / B.E. · MECHANICAL” above title “B.Tech / B.E. Mechanical Engineering”.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Long paragraphs where one line would do</h4><p class="seen">Hero (4 lines), Job Prep intro (6 lines on a phone), rules lists on test pages (5+ bullets), footer disclaimer.</p><p>One sentence plus details behind “How it works”.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Marketing numbers undersell</h4><p class="seen">“20+ subjects”, “40+ roles”, “200+ recruiters”, while the main site says 74,593 MCQs.</p><p>Live numbers from the database cache, one source for both sites.</p></div></div>
+<div class="f l"><div><h4><span class="pill">LOW</span>Spacing bug in a heading</h4><p class="seen">Job Prep on a phone: “for <i>your</i>target job” (missing space after the italic word).</p></div></div>
 </section>
 
 <section id="visual">
 <h2>Visual system</h2>
 <div class="tbl"><table>
-<tr><th>Area</th><th>Today</th><th>Standard to adopt</th></tr>
-<tr><td>Fonts</td><td>Inter + Plus Jakarta Sans mixed freely</td><td>Plus Jakarta Sans for headings, Inter for text, a mono face for numbers/timers</td></tr>
-<tr><td>Type sizes</td><td>23 sizes (11 → 54 px, including 12.8, 13.33, 17.5)</td><td>12 · 14 · 16 · 18 · 22 · 28 · 36 · 48, one line height per size</td></tr>
-<tr><td>Corners</td><td>9 radii (0, 9, 10, 12, 14, 16, 18, 999, 50%)</td><td>8 (inputs, chips) · 12 (cards) · 20 (sheets/modals) · full (pills)</td></tr>
-<tr><td>Spacing</td><td>Ad hoc margins</td><td>4-pt grid: 4, 8, 12, 16, 24, 32, 48, 64</td></tr>
-<tr><td>Icons</td><td>73 emoji; look different on each phone</td><td>One line icon set (Lucide or Phosphor, free), 20/24 px, one stroke width</td></tr>
-<tr><td>Colour</td><td>Blue, purple gradient, orange eyebrows, pastel tiles</td><td>One brand blue, one warm accent, per-section colours (Practice, Quiz, Exams, Career), semantic green/amber/red only for state</td></tr>
-<tr><td>Theme</td><td>Light only</td><td>Light + dark, follows the phone setting, toggle in “Me”</td></tr>
-<tr><td>Buttons</td><td>Many styles</td><td>Primary · secondary · ghost · danger, 3 sizes, 44 px min height on touch</td></tr>
-<tr><td>Cards</td><td>Every block is a card with a shadow</td><td>Cards only for clickable items; sections separated by space, not boxes</td></tr>
+<tr><th>Area</th><th>Found</th><th>Standard</th></tr>
+<tr><td>Fonts</td><td>Inter + Plus Jakarta Sans mixed; deep links used Fraunces/Manrope until Phase 0</td><td>Plus Jakarta Sans for headings, Inter for text, JetBrains Mono for timers and numbers</td></tr>
+<tr><td>Type sizes</td><td>23 on home; 11–18 on every other screen (11, 11.5, 12, 12.5, 12.8, 13, 13.3, 13.5, 14, 14.5, 15, 16, 17, 17.5, 19, 20, 22…)</td><td>12 · 14 · 16 · 18 · 22 · 28 · 36 · 48</td></tr>
+<tr><td>Weights</td><td>5–6 per screen</td><td>400, 600, 800</td></tr>
+<tr><td>Text colours</td><td>7–11 per screen</td><td>4 tokens: text, muted, accent, on-accent (+ success/warn/danger)</td></tr>
+<tr><td>Corner radii</td><td>6–9 per screen</td><td>8 · 12 · 20 · full</td></tr>
+<tr><td>Shadows</td><td>3–7 per screen</td><td>2: raised (cards on hover) and overlay (menus, sheets)</td></tr>
+<tr><td>Buttons</td><td>Up to 7 looks on one screen; 11 class variants in code</td><td>Primary, secondary, ghost, danger × small/medium/large</td></tr>
+<tr><td>Icons</td><td>Emoji (5–73 per screen) rendering differently on Android, iPhone and Windows</td><td>One line icon set (Lucide), 20/24 px, 1.75 stroke</td></tr>
+<tr><td>Colour</td><td>Blue, purple gradient, orange eyebrows, gold tour, green WhatsApp, pastel tiles</td><td>Brand blue + warm accent; section colours: Practice teal, Test indigo, Exams violet, Career amber</td></tr>
+<tr><td>Spacing</td><td>Per-element margins, 215 inline <code>style=""</code> attributes in app.js</td><td>4-pt scale (4–64) via layout gaps; no inline styles</td></tr>
+<tr><td>Header</td><td>Two rows on phones (111 px), three pills + Sign in</td><td>One 56 px row; navigation moves to the bottom bar</td></tr>
+<tr><td>Footer</td><td>Long disclaimer paragraph on every page</td><td>Compact 4-column footer; disclaimer as one linked line</td></tr>
+<tr><td>Cards</td><td>Nearly every block is a bordered card</td><td>Cards only for things you tap; sections separated by space</td></tr>
 </table></div>
-<p>Write these as CSS tokens in one place (<code>app.css :root</code>), then refactor components to use only tokens. That single change removes most of the “looks different everywhere” feeling.</p>
+<p>All of this becomes tokens in one file. Components then use tokens only, so a colour or size changes in one place.</p>
 </section>
 
 <section id="motion">
-<h2>Motion &amp; loading</h2>
-<ul>
-  <li><b>Page change:</b> a 180 ms fade-and-slide between pages (the View Transitions API in Chrome, fade elsewhere); the header stays still.</li>
-  <li><b>Loading:</b> skeleton cards in the real layout instead of a centre spinner; a thin progress bar at the top for anything over 300 ms.</li>
-  <li><b>Answering:</b> a soft green pulse and check on a correct answer, a gentle shake and red outline on a wrong one; the explanation slides open.</li>
-  <li><b>Results:</b> the score ring counts up once; confetti only for a personal best or rank change.</li>
-  <li><b>Lists:</b> clusters expand with a height animation; chevrons rotate.</li>
-  <li><b>Rules:</b> nothing over 300 ms, nothing that blocks input, and everything off when the phone has “reduce motion” on.</li>
-</ul>
+<h2>Motion &amp; feedback</h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>A spinner is the only loading state</h4><p>Skeletons shaped like the real content (cards, question, options) and a thin top progress bar for waits over 300 ms.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>No page transition</h4><p>A 180 ms fade-and-rise between pages (View Transitions API where supported). The header and bottom bar stay still.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Answer feedback is static</h4><p>Practice: correct option fills green with a check; a wrong pick shakes gently and turns red; the explanation slides open. Test: the chosen option fills and Next pulses once.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Results arrive all at once</h4><p>Score ring counts up once; topic bars grow in sequence; confetti only for a personal best or a rank gain.</p></div></div>
+<div class="f l"><div><h4><span class="pill">LOW</span>Micro-interactions</h4><p>Cluster chevrons rotate, checkboxes tick with a short draw, copy/share shows a toast, the timer ring turns amber at 10 s.</p></div></div>
+<p>Rules: nothing over 300 ms, nothing blocks input, everything off under “reduce motion”.</p>
 </section>
 
+<section id="dark">
+<h2>Dark mode</h2>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Works partly, by accident</h4><p class="seen">Dark mode follows the phone setting and most pages read well, but 102 fixed colours bypass the theme; the home headline turns low-contrast grey; there is no switch.</p><p>Move every colour to tokens; add Light / Dark / System in Me.</p></div></div>
+</section>
+
+<!-- ================= SCREENS ================= -->
+<section id="s-home">
+<h2>Home <span class="where">/</span></h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Hero says too much and asks for three things</h4><p class="seen">Eyebrow (wraps to 2 lines on phones), 2-line headline, 4-line paragraph, three equal buttons, four small stats, a feature grid.</p><p>One headline, one line, two buttons (<b>Start practice</b>, <b>Take a test</b>), and a live animated question card as the visual.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Order of sections</h4><p>Hero → Continue (returning students) → 4 doors (Practice, Test, Exams, Career) → Today's test → Leaderboard top 5 → Exams strip → Companies strip → 3-step how it works → footer. About 4 screens instead of 12.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Company marquee duplicates content</h4><p class="seen">Every company name appears twice in the page text (for the loop), which screen readers read twice.</p><p>Mark the copy <code>aria-hidden</code>; pause on hover; slower speed.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Sample questions are decorative</h4><p>Make them a real 3-question try-it widget that leads into Practice.</p></div></div>
+</section>
+
+<section id="s-picker">
+<h2>Subject picker <span class="where">home “Choose what to practise”</span></h2>
+<div class="f c"><div><h4><span class="pill">CRITICAL</span>Flat list, 1,330 checkboxes built at once</h4><p>Replace with the Practice page: branch chips, collapsible subject cards with progress rings, units and topics loaded only when opened.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Start button far from the selection</h4><p>Sticky selection tray at the bottom: “3 topics · 30 questions · Practice | Test”.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>No sign of progress</h4><p>Show per subject and topic: questions done, accuracy and a “weak” badge.</p></div></div>
+</section>
+
+<section id="s-exams">
+<h2>Exams browser <span class="where">/exams</span></h2>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Card titles repeat the label</h4><p class="seen">“B.TECH / B.E. · MECHANICAL” over “B.Tech / B.E. Mechanical Engineering”.</p><p>Keep the family as a small chip, title only the specific exam.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Branch filter not remembered</h4><p>Default to the student's branch; show it as a removable chip.</p></div></div>
+<div class="f l"><div><h4><span class="pill">LOW</span>Readiness badges unclear</h4><p class="seen">“33 of 47 topics ready”. Show as a small progress bar with “Coming soon” for the rest.</p></div></div>
+</section>
+
+<section id="s-exam">
+<h2>Exam page <span class="where">/e/gate-cs</span></h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>105 controls without a readable name</h4><p class="seen">Section/topic toggles and icon buttons have no text or label for screen readers; 132 targets are under 40 px.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Only “Practice” per section</h4><p>Add “Test” next to Practice for each section, and a “Full mock” button for the whole exam pattern.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Pattern facts as three grey boxes</h4><p>One compact strip: duration · questions · marks · negative marking · difficulty, with exam date and official link.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Long lines</h4><p class="seen">61 paragraphs wider than 760 px on a laptop. Cap reading width at about 70 characters.</p></div></div>
+</section>
+
+<section id="s-start">
+<h2>Subject start page <span class="where">/p/…</span></h2>
+<div class="f c"><div><h4><span class="pill">CRITICAL</span>Timer choices break words on phones</h4><p class="seen">Five columns at 375 px: “No tim er”, “revisi on”, “sessi on”, “1 hou r”.</p><p>Two-row chip layout on phones, or a segmented control with short labels (Off · 5 · 15 · 60 · 180 min).</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Narrow card in the middle of a wide screen</h4><p>Two columns on a laptop: left, choices (mode, time, units); right, a summary with what you get and the Start button.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Mode choice looks like two options of the same thing</h4><p>Two large cards in their section colours (Practice teal with a book icon; Test indigo with a stopwatch), each listing timer, answers shown, leaderboard yes/no.</p></div></div>
+</section>
+
+<section id="s-test">
+<h2>Test start page <span class="where">/t/…</span></h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>“questions” breaks mid-word on phones</h4><p class="seen">Four duration tiles: “questio ns”. Use “13 Q” or stack the tiles 2 × 2.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Four feature tiles repeat the rules below them</h4><p>Keep the rules list; drop the tiles or make them the only summary.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>No preview of past performance</h4><p>“Your best: 62% · Last: 3 days ago · Rank #14 on this test”.</p></div></div>
+</section>
+
+<section id="s-taking">
+<h2>Taking a test <span class="where">/exam/… (from code)</span></h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Exam realism</h4><p class="seen">One question at a time, no going back, no question palette, no mark-for-review. Good for anti-cheat; unlike GATE, SSC and most real exams.</p><p>Keep the strict mode for unit tests. Add an <b>Exam simulation</b> mode for full mocks: question palette (answered / not answered / marked), free navigation, section timer, negative marking as per the exam, submit confirmation.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Rating bar competes with the question</h4><p class="seen">“Rate this question” thumbs and chips sit between the options and Next.</p><p>Move to a small “⋯ Report” in the corner; the full flag list opens in a sheet.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Keyboard</h4><p>1–4 or A–D to choose, Enter for Next, M to mark (simulation mode).</p></div></div>
+<div class="f l"><div><h4><span class="pill">LOW</span>Pause screen copy</h4><p class="seen">“Test paused as a penalty” uses the ⏸ glyph. Use an illustration and a calm explanation with the remaining time as a large ring.</p></div></div>
+</section>
+
+<section id="s-practice">
+<h2>Practice session <span class="where">/practice/… (from code)</span></h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Explanations deserve more room</h4><p>After answering, the explanation opens as a panel with the correct option highlighted, plus “Why the others are wrong” where available, a “Report” link and “Save for revision”.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Session progress</h4><p>A slim bar: questions done, streak of correct answers, time spent; end-of-session summary with weak topics.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Translation bar</h4><p>Keep the language picker in a fixed spot in the top bar instead of above each question.</p></div></div>
+</section>
+
+<section id="s-result">
+<h2>Results <span class="where">/result/… (from code)</span></h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Make the result a report</h4><p>Score ring and rank first; then time used vs allowed; then topic bars (strong / weak); then the question review with filters (wrong, skipped, marked); then next steps (“Practise Unit 3 weak topics”).</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Sharing</h4><p>A share card image (score, subject, name, college) for WhatsApp, made from a template rather than a screenshot.</p></div></div>
+</section>
+
+<section id="s-board">
+<h2>Leaderboard</h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>No leaderboard page</h4><p class="seen">It is a “Top performers” card inside Home, Dashboard and test pages; top 10 only; first name only; a short college name.</p><p>A page under Me: podium for the top 3 (full name, college, score, tests), ranked list below, filters (this week / month / all time; subject; exam), your own row pinned (“You · #148 · ↑12”). Update the database function to return the full name and college (owner's decision) and the caller's own rank.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>College leaderboard</h4><p>Rank colleges by average score with a minimum number of students; motivates whole classes.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Fair ranking stays</h4><p>The current rule (first attempt only, minimum 20 questions, smoothed score) is good; show it in a small “How ranks work”.</p></div></div>
+</section>
+
+<section id="s-me">
+<h2>Dashboard &amp; profile <span class="where">/me, /profile (from code)</span></h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Dashboard order</h4><p class="seen">Greeting, last test, start buttons, all answers, score trend, accuracy by unit, focus areas, history, leaderboard, invite.</p><p>Continue card → this week (streak, questions, accuracy) → weak topics with one-tap practice → score trend → history → saved questions → leaderboard rank.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Profile and settings split</h4><p>One “Me” area with tabs: Progress · History · Saved · Profile · Settings (branch, language, theme, notifications).</p></div></div>
+</section>
+
+<section id="s-career">
+<h2>Job Prep <span class="where">/career</span></h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>A long form before any value</h4><p class="seen">Company, website, role, branch, level, job post: all on one screen (842 elements).</p><p>Step 1: company or job post. Step 2: branch and level (pre-filled). Then the plan. Popular companies as one-tap chips above the form.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Plan output as a page, not a long scroll</h4><p>Tabs: Subjects · Software · Interview questions · Salary · Practice, with a progress checklist the student can tick.</p></div></div>
+</section>
+
+<section id="s-resume">
+<h2>Resume builder <span class="where">/resume</span></h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Most crowded screen</h4><p class="seen">18 font sizes, 11 text colours, 38 small targets; four action buttons, a 7-step tab bar, a floating “See sample” button over the content, and an ATS score of “5” before anything is typed.</p><p>Steps as a vertical list on laptops (form left, live preview right), as a top stepper on phones; hide the score until there is content; move “See sample” into the header.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Step tabs scroll off-screen on phones</h4><p>Show “Step 1 of 7 · Goal” with Back/Next instead of a scrolling tab row.</p></div></div>
+</section>
+
+<section id="s-drill">
+<h2>Aptitude drill <span class="where">/drill</span></h2>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Topic chips act unclear</h4><p>All 13 topics start selected; tapping deselects. Add “All / None” and show the count.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>No score or streak</h4><p>Correct / attempted, streak, average time per question; it is the most game-like screen and should feel like one.</p></div></div>
+</section>
+
+<section id="s-login">
+<h2>Sign-in <span class="where">/login</span></h2>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Clear, but plain</h4><p>Two-column on a laptop: sign-in on the left, “what you keep when you sign in” (progress, rank, resume) on the right. On phones, Google first, email code below.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Sign-in asked too early</h4><p class="seen">Practice and tests both need sign-in; the sign-in box also opens during browsing.</p><p>Allow the first practice session without sign-in (guest), then offer to save progress. This lifts first-visit success.</p></div></div>
+</section>
+
+<section id="s-misc">
+<h2>Why, disclaimer, 404</h2>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Why page: long lines and 16 emoji</h4><p class="seen">47 paragraphs wider than 760 px. Use two-column feature rows with icons and short copy.</p></div></div>
+<div class="f l"><div><h4><span class="pill">LOW</span>404 page is a small card</h4><p>Add search and four doors (Practice, Test, Exams, Career); no heading today (h1 missing).</p></div></div>
+</section>
+
+<section id="s-shared">
+<h2>Shared &amp; group links <span class="where">/q/…, /g/…</span></h2>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>First impression for newcomers</h4><p>A shared question is often a student's first visit. Show the question, answer reveal, then a clear “Practise this topic” and a light sign-up prompt.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Group test for teachers</h4><p>A class view: who started, who finished, average, hardest questions, export to CSV.</p></div></div>
+</section>
+
+<!-- ================= FOUNDATIONS ================= -->
 <section id="mobile">
-<h2>Mobile</h2>
-<div class="f h"><div><h4><span class="pill">HIGH</span>Bottom tab bar</h4><p>On phones, replace the top pill row with a 5-item bottom bar (Home · Practice · Quiz · Exams · Me), within thumb reach, with the active tab highlighted. The top bar keeps only the logo, search and sign-in/avatar.</p></div></div>
-<div class="f h"><div><h4><span class="pill">HIGH</span>Tap targets</h4><p>20 links and buttons are under 36 px tall. Make every tap target at least 44 × 44 px, with 8 px between them.</p></div></div>
-<div class="f m"><div><h4><span class="pill">MEDIUM</span>Question screen on a phone</h4><p>Options as full-width cards, the timer and progress in a slim sticky top bar, Next/Previous in a sticky bottom bar, images tap-to-zoom (already present) with pinch.</p></div></div>
-<div class="f m"><div><h4><span class="pill">MEDIUM</span>Installable app</h4><p>A manifest exists but there is no service worker. Add one so the site installs like an app (home-screen icon, splash screen) and opens instantly, with recently used papers cached for weak networks.</p></div></div>
-</section>
-
-<section id="board">
-<h2>Leaderboard &amp; profile</h2>
-<ul>
-  <li><b>Leaderboard page:</b> podium for the top 3 (avatar, name, score), then a clean ranked list; filters for this week / this month / all time and by subject or exam; the student's own row pinned at the bottom (“You · #148 · ↑12”).</li>
-  <li><b>Home peek:</b> top 5 this week with a “See full leaderboard” link.</li>
-  <li><b>Me page:</b> streak, total questions, accuracy ring, strong and weak topics as bars, recent attempts, saved questions, language and theme settings.</li>
-  <li><b>Fairness:</b> rank only quiz mode, minimum questions per period, and hide names by default (initials + city) to respect privacy.</li>
-</ul>
-</section>
-
-<section id="main">
-<h2>www.vkvsir.com (main site)</h2>
-<p>The main site is personal and course-led, which is right, but the Test Lab gets one small “Take a free test” button.</p>
-<ul>
-  <li>Hero: three equal entry tiles under the intro: <b>Courses</b> · <b>Practice subjects</b> · <b>Take a quiz</b>. Replace “self assessment” wording with “Quiz” or “Test” everywhere.</li>
-  <li>Top menu: Home · About · Courses · <b>Test Lab ▾</b> (Practice, Quiz, Exams, Career) · Media · Blog · Join.</li>
-  <li>The Test Lab section shows the live question count (74,593), three cards, and a “Try a 5-question quiz” embed-style teaser.</li>
-  <li>Match colours and fonts between the two sites so moving from one to the other feels like one product.</li>
-</ul>
-</section>
-
-<section id="tech">
-<h2>Speed &amp; code</h2>
-<div class="f h"><div><h4><span class="pill">HIGH</span>One large script</h4><p><code>app.js</code> is 353 KB (946 functions) plus <code>resume.js</code> 110 KB and <code>app.css</code> 119 KB, all unminified and loaded on every page. Split by page (home, practice, quiz, exams, career, admin), minify with a small build step (esbuild/Vite), and load the resume and admin code only when opened. Expect the first load to drop to about a quarter.</p></div></div>
-<div class="f h"><div><h4><span class="pill">HIGH</span>1,330 checkboxes built up front</h4><p>Render a cluster's contents only when it is opened, and build the topic tree from the cached catalog. This also removes the long-page scroll lag on older phones.</p></div></div>
-<div class="f m"><div><h4><span class="pill">MEDIUM</span>Console errors</h4><p>Each page logs several 401/404 resource errors. Clean these up; they hide real problems and slow loading.</p></div></div>
-<div class="f m"><div><h4><span class="pill">MEDIUM</span>Router</h4><p>Use a single client router: each place has its own URL, page titles change per page, scroll position is restored on Back, and an unknown URL shows a friendly “Page not found” with links.</p></div></div>
-</section>
-
-<section id="security">
-<h2>Security</h2>
-<ul>
-  <li><b>Security headers</b> (after moving hosting): Content-Security-Policy, HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, frame-ancestors.</li>
-  <li><b>XSS:</b> 100 places write raw HTML (<code>innerHTML</code>). Route every user- or database-sourced text through one escape helper, and allow HTML only for trusted question content after sanitising (DOMPurify).</li>
-  <li><b>Database:</b> fix the advisor findings listed under Critical; add a monthly check.</li>
-  <li><b>Auth:</b> turn on leaked-password protection, rate-limit report and translation endpoints, keep service keys server-side only (already true).</li>
-  <li><b>Admin:</b> admin pages behind role checks on the server (RLS), not only hidden in the UI.</li>
-</ul>
+<h2>Mobile-specific</h2>
+<div class="f c"><div><h4><span class="pill">CRITICAL</span>Header uses 14% of the screen</h4><p class="seen">111 px: logo row plus a row of three pills.</p><p>56 px top bar (logo, search, avatar) + bottom tab bar (Home, Practice, Test, Exams, Me), hidden during a test.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Tight multi-column grids</h4><p class="seen">Timer and duration pickers (5 and 4 columns) break words.</p><p>Rule: no more than 3 columns under 420 px; chips wrap.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Floating buttons cover content</h4><p class="seen">Resume “See sample” floats over the form; the share button floats on questions.</p><p>Put actions in a bottom action bar that pushes content up.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Installable app</h4><p>A manifest exists but no service worker. Add one (cached app shell, last papers offline, install prompt after the second visit).</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Gestures</h4><p>Swipe left/right between practice questions; pull to refresh on lists; pinch on figures (zoom exists).</p></div></div>
 </section>
 
 <section id="a11y">
 <h2>Accessibility</h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Unlabelled controls</h4><p class="seen">105 on GATE CS, 31 on state subordinate, 6 on Job Prep and Resume.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Focus visibility</h4><p class="seen">Only 3 <code>:focus-visible</code> rules in app.css. Add one global focus ring.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Announcements</h4><p class="seen">One <code>aria-live</code> region. Announce answer result, timer at 1 minute and 10 seconds, and page changes.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Language</h4><p>Mark translated text with <code>lang="hi"</code> (etc.) so phones read it correctly.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Contrast</h4><p class="seen">2–3 low-contrast text styles per screen (pale grey on pastel); dark-mode hero headline.</p></div></div>
+</section>
+
+<section id="perf">
+<h2>Speed</h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Home builds ~9,000 elements</h4><p>Lazy-render clusters; target under 1,500 elements on any screen.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>One script for everything</h4><p class="seen">app.js: 104 KB compressed (353 KB raw), 946 functions; resume code already loads on demand.</p><p>Split admin and Job Prep the same way resume already is; minify with a one-command build that writes into the repository, so GitHub Pages hosting stays unchanged.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Cache lifetime</h4><p class="seen">GitHub Pages serves everything with a 10-minute cache. Versioned file names (already used) are fine; add a service worker for long-term caching.</p></div></div>
+<div class="f l"><div><h4><span class="pill">LOW</span>Console noise</h4><p class="seen">Several 401/404/422 resource errors on load. Clean up so real errors stand out.</p></div></div>
+</section>
+
+<section id="seo">
+<h2>Search &amp; sharing</h2>
+<div class="f c"><div><h4><span class="pill">CRITICAL</span>Every inner page answers “404 Not Found”</h4><p class="seen">GitHub Pages serves unknown paths through 404.html. The page then renders, but Google and link previews see “not found”.</p><p>Keep GitHub Pages; a small script writes a real <code>index.html</code> into a folder for every public route: fixed pages (exams, career, resume, drill, why, disclaimer, login) plus one per exam (33), test (343) and subject (36). These then answer 200, each with its own title and description. Private pages (attempts, results) stay as they are.</p></div></div>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Same title on every page</h4><p class="seen">The tab, history and Google all show “VKV Sir Test Lab”; <code>document.title</code> is never set.</p><p>“GATE CS — exam map · VKV Sir Test Lab”, “Engineering Materials Unit 3 test · …”.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>One preview image for everything</h4><p>Per-exam and per-subject preview images (template with the name and question count).</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Sitemap and structured data</h4><p>sitemap.xml for all public routes; Quiz/Course structured data on subject and exam pages.</p></div></div>
+</section>
+
+<section id="security">
+<h2>Security</h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>Raw HTML written in 100 places</h4><p>Most values pass through <code>esc()</code>, which is good. Make it impossible to forget: one template helper that escapes by default; question HTML passes through a sanitiser.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>No security headers on GitHub Pages</h4><p>Add a Content-Security-Policy and referrer policy through <code>&lt;meta&gt;</code> tags (the part GitHub Pages allows).</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Public write endpoints</h4><p class="seen">Visitor tracking, suggestions, translation reports and salary/interview reports accept anonymous calls.</p><p>Rate-limit per visitor and IP; cap text sizes; admin review queue (exists for some).</p></div></div>
+<div class="f l"><div><h4><span class="pill">LOW</span>Extensions in the public schema</h4><p>pg_trgm and pg_net; left on purpose (moving can break search); revisit during a quiet week.</p></div></div>
+</section>
+
+<section id="code">
+<h2>Code health</h2>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>CSS fights itself</h4><p class="seen">192 <code>!important</code>, 88 media queries, rules defined twice (the reveal animation existed in two places).</p><p>Rebuild app.css on tokens with one file per layer (tokens, base, components, screens).</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>One 2,800-line file</h4><p>Split into modules per screen; shared helpers (router, api, templates, icons) in their own files.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>No automated checks</h4><p>A small set of browser tests for the main journeys (pick subject → practice → result; test start → finish) run before each push.</p></div></div>
+</section>
+
+<section id="content">
+<h2>Content quality</h2>
 <ul>
-  <li>5 images without alt text on the home page; every question image needs a short alt (“Figure 3: milling cutter”).</li>
-  <li>Visible focus ring on all controls; the full quiz usable by keyboard.</li>
-  <li>Contrast: pale grey text on pastel tiles fails WCAG AA in places; use the muted token only on plain backgrounds.</li>
-  <li>Timers announced to screen readers at 1 minute and 10 seconds left, not every second.</li>
-  <li>Language selector and translations marked with the right <code>lang</code> attribute so phones read Hindi correctly.</li>
+  <li>Option-quality job is running (same-category, similar-length wrong options); keep it to completion and re-sample.</li>
+  <li>Show question counts per topic only when a topic has enough questions for a fair paper; mark the rest “Coming soon” consistently.</li>
+  <li>Every image question: alt text and a caption; figures checked for legibility at 360 px.</li>
+  <li>Current-affairs questions keep their month and year (standing rule).</li>
 </ul>
 </section>
 
+<section id="admin">
+<h2>Admin</h2>
+<ul>
+  <li>Admin uses the same styles as students; give it a compact table layout with filters, bulk actions and keyboard shortcuts.</li>
+  <li>One review inbox: flagged answers, reported translations, suggestions, interview/salary reports.</li>
+  <li>Dashboard cards for daily active students, tests taken, most-reported questions.</li>
+</ul>
+</section>
+
+<section id="main">
+<h2>www.vkvsir.com</h2>
+<div class="f h"><div><h4><span class="pill">HIGH</span>The Test Lab is one button</h4><p>Three equal tiles under the intro: <b>Courses</b> · <b>Practice subjects</b> · <b>Take a test</b>. Menu gets “Test Lab ▾” (Practice, Test, Exams, Career).</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Pale load on phones</h4><p class="seen">The hero and the next section render washed out while their fade-in runs.</p><p>Same fix as Phase 0: start visible.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>One brand across both sites</h4><p>Shared fonts, colours and footer; the Test Lab count on the main site read live.</p></div></div>
+</section>
+
+<!-- ================= PLAN ================= -->
 <section id="plan">
-<h2>Rollout plan</h2>
-<p>Each phase ships on its own, keeps all URLs working, and is checked on a laptop and a phone before going live.</p>
-<div class="phase"><h3>Phase 0 · Quick fixes (1–2 days)</h3><p>Fix the mobile tour overlay, scroll-reveal grey blocks, footer jump and drill maths; unify the footer; enlarge tap targets; fix the database advisor items and turn on leaked-password protection.</p></div>
-<div class="phase"><h3>Phase 1 · Foundation (about 1 week)</h3><p>Design tokens (type, colour, spacing, radius), the icon set replacing emoji, light/dark themes, the button/card/chip components, a move to Cloudflare Pages with SPA rewrite and security headers, and a build step with code splitting.</p></div>
-<div class="phase"><h3>Phase 2 · App shell and structure (about 1 week)</h3><p>Router with real pages (Home, Practice, Quiz, Exams, Career, Me), desktop top bar and mobile bottom bar, breadcrumbs, page transitions, skeleton loaders, and the clustered stream → branch → subject browser with search and the remembered branch.</p></div>
-<div class="phase"><h3>Phase 3 · Core screens (about 1 week)</h3><p>New home page, separate Practice and Quiz screens with their own look, the exam-grade quiz with palette and results page, the leaderboard page and peek, and the Me page.</p></div>
-<div class="phase"><h3>Phase 4 · Polish and growth (ongoing)</h3><p>Micro-animations, installable app with offline cache, daily quiz, the main-site update with three entry tiles and the Test Lab menu, sharing previews per page, and accessibility pass.</p></div>
-<p><b>Decisions the owner should confirm before Phase 1:</b> moving hosting from GitHub Pages to Cloudflare Pages (free, same domain); the final names (“Practice” and “Quiz”, or “Practice” and “Test”); and whether leaderboard names show in full or as initials.</p>
+<h2>Staged plan</h2>
+<p>Each stage ships on its own, keeps every link working, and is checked on a laptop and a phone (light and dark) before it goes live. Laptop and phone are done together, not one after the other.</p>
+<div class="phase"><h3>Stage 1 · Quick wins (2–3 days)</h3><p>Phone menu drawer reachable; timer and duration pickers without broken words; “Practice”/“Test” tags corrected everywhere; repeated titles removed; per-page titles; heading spacing; 404 page with search and doors; focus ring; labels on exam-page controls; leaderboard returns full name and college.</p></div>
+<div class="phase"><h3>Stage 2 · Foundation (about 1 week)</h3><p>Design tokens (type, colour, spacing, radius, shadow), Lucide icons replacing emoji, Light/Dark/System switch, component set (buttons, chips, cards, inputs, tabs, sheets, toasts, skeletons), CSS rebuilt on tokens, real 200 pages for every public route, sitemap, CSP meta.</p></div>
+<div class="phase"><h3>Stage 3 · App shell and places (about 1 week)</h3><p>56 px header and phone bottom bar; pages for Practice, Test, Exams, Career, Me; breadcrumbs; scroll restore; page transitions; branch chooser remembered; search; Continue card.</p></div>
+<div class="phase"><h3>Stage 4 · Core screens (1–2 weeks)</h3><p>New Home; Practice browser with clusters and sticky selection tray; subject and test start pages in two columns; exam simulation mode with palette; practice explanation panel; results report; leaderboard page with podium and own rank; Me dashboard.</p></div>
+<div class="phase"><h3>Stage 5 · Career and tools (1 week)</h3><p>Job Prep in steps with plan tabs; resume builder re-laid; drill with score and streak; shared-question landing; teacher class view.</p></div>
+<div class="phase"><h3>Stage 6 · Polish and growth (ongoing)</h3><p>Micro-animations, installable app with offline papers, share cards, daily test, college leaderboard, main-site tiles and menu, admin inbox, automated journey tests.</p></div>
+</section>
+
+<section id="measure">
+<h2>How we measure</h2>
+<div class="tbl"><table>
+<tr><th>Measure</th><th>Today</th><th>Target</th></tr>
+<tr><td>Home height</td><td class="n">12 screens</td><td class="n">≤ 4</td></tr>
+<tr><td>Font sizes per screen</td><td class="n">11–23</td><td class="n">≤ 8</td></tr>
+<tr><td>Text colours per screen</td><td class="n">7–11</td><td class="n">≤ 5</td></tr>
+<tr><td>Phone header height</td><td class="n">111 px</td><td class="n">56 px</td></tr>
+<tr><td>Unlabelled controls</td><td class="n">up to 105</td><td class="n">0</td></tr>
+<tr><td>Elements on largest screen</td><td class="n">~9,000</td><td class="n">≤ 1,500</td></tr>
+<tr><td>Inner pages answering 200</td><td class="n">0</td><td class="n">all public</td></tr>
+<tr><td>Distinct page titles</td><td class="n">1</td><td class="n">one per page</td></tr>
+<tr><td>Taps from home to first question (returning student)</td><td class="n">4–6</td><td class="n">2</td></tr>
+</table></div>
+<p>The same measuring script runs after every stage, so progress is visible in numbers as well as screenshots.</p>
 </section>
 </main>
 </div>
