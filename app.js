@@ -108,6 +108,8 @@
     if (p === '/admin/software') return viewSwAdmin();
     if (p === '/admin/iq-reports') return viewIqReportsAdmin();
     if (p === '/drill') return viewDrill();
+    if (p === '/exams') return viewExams();
+    if ((m = p.match(/^\/e\/([a-z0-9-]+)$/))) return viewExamIndex(m[1]);
     if (p === '/admin/about') return viewAboutAdmin();
     if (p === '/admin/companies') return viewCompaniesAdmin();
     if (p === '/disclaimer') return viewDisclaimer();
@@ -237,6 +239,10 @@
               ['cot φ − cot θ = w / l', 'cot φ + cot θ = w / l', 'tan φ − tan θ = w / l', 'sin φ − sin θ = w / l'].map(function (o, i) { return '<button class="sqo" data-ok="' + (i === 0) + '">' + 'ABCD'[i] + '&nbsp; ' + o + '</button>'; }).join('') +
           
               '<p class="small muted sqx" hidden>✓ <b>cot φ − cot θ = w / l</b>, where φ and θ are the outer and inner wheel angles, w the kingpin centre distance and l the wheelbase. Want more like this? Open <b>Fundamentals → Automobile Engineering</b>.</p></div></div></div></div>' +
+        '<div class="goalbar"><p class="f">🧭 Explore by your goal</p><div class="goal-g">' +
+          '<a href="/exams?k=university" data-link><span>🎓</span><b>My university syllabus</b><small>BTU and more: subject → unit → topic, in syllabus order</small></a>' +
+          '<a href="/exams?k=competitive" data-link><span>🏆</span><b>Competitive exams</b><small>GATE, JEN, RTO/MVI…: exam-wise sections at the right level</small></a>' +
+          '<a href="/career" data-link><span>🚀</span><b>Interview &amp; career</b><small>Company-wise plan, aptitude and branch core</small></a></div></div>' +
         '<h2 class="sh2" id="tracks-h">Choose what to practise</h2><p class="muted hs-sub">Open a track, tick a subject, units or single topics, then pick your time and start.</p><div class="tracks">' + tracksHtml + '</div>' +
         '<div class="modes-wrap"><p class="f">Ways to practise</p><div class="modes">' + [
           ['📝', 'Fixed paper', 'A set number of questions with fair time for each, like a real exam.'],
@@ -622,6 +628,80 @@
           .catch(function (e) { var m = errMsg(e); if (gateErr(m, location.pathname)) m = ''; q('#fe').textContent = lockText(m); g.disabled = false; g.textContent = 'Start my quiz'; });
       };
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
+  }
+
+  /* ---------- goal-wise index: University syllabus / Competitive exams (one shared question bank) ---------- */
+  var READY = 18; // a topic opens for a 5-minute paper at 18+ questions
+  function qBadge(n, hasSubj) {
+    if (!hasSubj || !n) return '<span class="xb soon">Coming soon</span>';
+    if (n < READY) return '<span class="xb soon">Adding questions soon</span>';
+    if (n < 100) return '<span class="xb grow">' + n + ' Qs · growing daily</span>';
+    return '<span class="xb ok">' + n.toLocaleString('en-IN') + ' Qs</span>';
+  }
+  function viewExams() {
+    setNav('home'); loading();
+    var kind = new URLSearchParams(location.search).get('k') === 'university' ? 'university' : 'competitive';
+    rpc('exam_list').then(function (list) {
+      list = list || [];
+      var mine = list.filter(function (e) { return e.kind === kind; });
+      var groups = {}, order = [];
+      mine.forEach(function (e) { var g = kind === 'university' ? e.org : (e.branch || 'All branches'); if (!groups[g]) { groups[g] = []; order.push(g); } groups[g].push(e); });
+      h('<div class="stack xw"><div class="xhead"><p class="eyebrow">Explore by your goal</p><h1>' + (kind === 'university' ? 'University &amp; college syllabus' : 'Competitive exams') + '</h1>' +
+        '<p class="muted">' + (kind === 'university' ? 'Choose your university and branch. Subjects, units and topics follow your syllabus order.' : 'Choose your exam. Sections and topics follow that exam\'s own syllabus, at its level of difficulty.') + '</p>' +
+        '<div class="xtabs"><a href="/exams?k=university" data-link class="' + (kind === 'university' ? 'on' : '') + '">🎓 University / College</a><a href="/exams?k=competitive" data-link class="' + (kind === 'competitive' ? 'on' : '') + '">🏆 Competitive exams</a><a href="/career" data-link>🚀 Interview &amp; career</a></div></div>' +
+        (order.length ? order.map(function (g) {
+          return '<section class="xgrp"><h2 class="sh2">' + esc(g) + '</h2><div class="xcards">' + groups[g].map(function (e) {
+            var coming = e.status !== 'live' || !e.items;
+            return '<a class="xcard' + (coming ? ' dim' : '') + '" href="/e/' + esc(e.id) + '" data-link><span class="xorg">' + esc(e.org) + '</span><b>' + esc(e.title) + '</b>' +
+              '<span class="small muted">' + esc(e.description || '') + '</span>' +
+              '<span class="xmeta">' + (coming ? '<span class="xb soon">Syllabus mapping · coming soon</span>' : '<span class="xb ok">' + e.ready + ' of ' + e.items + ' topics ready</span>') +
+              (e.level_note ? '<span class="xb lvl">Level: ' + esc(e.level_note) + '</span>' : '') + '</span></a>';
+          }).join('') + '</div></section>';
+        }).join('') : '<div class="card center"><p class="muted">Nothing listed here yet. More exams and universities are being added.</p></div>') +
+        '<p class="small muted center">Your exam or university missing? <a href="' + (session ? '/me#suggest' : '/login?next=/me') + '" data-link>Request it</a> and we will map it.</p></div>');
+    }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
+  }
+  function viewExamIndex(id) {
+    setNav('home'); loading();
+    Promise.all([rpc('exam_index', { p_exam: id }), rpc('catalog').catch(function () { return []; })]).then(function (r) {
+      var x = r[0], cat = r[1] || [];
+      if (!x || !x.exam) { h('<div class="narrow card center"><h2>This exam is not listed yet</h2><a class="btn" href="/exams" data-link>See all exams</a></div>'); return; }
+      var e = x.exam;
+      function topicsOf(it) {
+        var n = findNode(cat, it.subject_id, it.unit, null); if (!n) return [];
+        var units = it.unit ? (n.unit ? [n.unit] : []) : n.subj.units;
+        return units.map(function (u) { return { u: u, many: !it.unit }; });
+      }
+      function link(s, u, t) { return practiceLink(s, u, t).replace(location.origin, ''); }
+      function item(it) {
+        var has = !!it.subject_id, open = has && it.count >= READY;
+        var sub = has ? topicsOf(it) : [];
+        var inner = sub.map(function (o) {
+          var u = o.u, ts = u.topics || [];
+          var head = o.many ? '<div class="xu"><a href="' + link(it.subject_id, u.unit) + '" data-link><b>Unit ' + u.unit + ': ' + esc(u.name) + '</b></a>' + qBadge(u.count, true) + '</div>' : '';
+          return head + (ts.length > 1 || o.many ? '<ul class="xtl">' + ts.map(function (t) {
+            return '<li>' + (t.count >= READY ? '<a href="' + link(it.subject_id, u.unit, t.id) + '" data-link>' + esc(t.name) + '</a>' : '<span>' + esc(t.name) + '</span>') + qBadge(t.count, true) + '</li>';
+          }).join('') + '</ul>' : '');
+        }).join('');
+        var href = has ? link(it.subject_id, it.unit) : '';
+        return '<details class="xi' + (open ? '' : ' dim') + '"><summary><span class="caret"' + (inner ? '' : ' style="visibility:hidden"') + '></span><span class="xit"><b>' + esc(it.title) + '</b>' +
+          (it.note ? '<small class="muted">' + esc(it.note) + '</small>' : '') + '</span>' + qBadge(it.count, has) +
+          (open ? '<a class="btn mini" href="' + href + '" data-link onclick="event.stopPropagation()">Practise →</a>' : '') + '</summary>' +
+          (inner ? '<div class="xin">' + inner + '</div>' : '') + '</details>';
+      }
+      var secs = x.sections || [];
+      h('<div class="stack xw"><p class="small"><a href="/exams?k=' + e.kind + '" data-link>← All ' + (e.kind === 'university' ? 'universities' : 'exams') + '</a></p>' +
+        '<div class="card xhero"><span class="xorg">' + esc(e.org) + ' · ' + esc(e.branch || '') + '</span><h1>' + esc(e.title) + '</h1><p class="muted">' + esc(e.description || '') + '</p>' +
+        '<div class="xfacts">' + (e.pattern ? '<div><small>Pattern</small><b>' + esc(e.pattern) + '</b></div>' : '') + (e.numericals ? '<div><small>Numericals</small><b>' + esc(e.numericals) + '</b></div>' : '') + (e.level_note ? '<div><small>Difficulty</small><b>' + esc(e.level_note) + '</b></div>' : '') + '</div>' +
+        '<p class="small muted" style="margin:10px 0 0">Tap a section to see its units and topics. Items marked <span class="xb soon">Coming soon</span> are being prepared, and new questions are added every day, so check back soon.</p></div>' +
+        secs.map(function (s, i) {
+          var its = s.items || [], ready = its.filter(function (t) { return t.subject_id && t.count >= READY; }).length;
+          return '<details class="xs"' + (i < 2 ? ' open' : '') + '><summary><span class="xsn">' + (i + 1) + '</span><span class="xit"><b>' + esc(s.name) + '</b>' + (s.note ? '<small class="muted">' + esc(s.note) + '</small>' : '') + '</span>' +
+            (its.length ? '<span class="xb ' + (ready ? 'ok' : 'soon') + '">' + ready + '/' + its.length + ' ready</span>' : '<span class="xb soon">Coming soon</span>') + '</summary>' +
+            '<div class="xsb">' + (its.length ? its.map(item).join('') : '<p class="muted small">Being mapped. Questions for this section are coming soon.</p>') + '</div></details>';
+        }).join('') +
+        shareBar(location.href, 'Prepare for ' + e.title + ' topic by topic, free, on VKV Sir Test Lab:', 'Share with friends preparing for this:') + '</div>');
+    }).catch(function (er) { h('<div class="card narrow center"><p>' + esc(errMsg(er)) + '</p></div>'); });
   }
 
   /* ---------- plan: real PDF file, then download or share (Drive, Gmail, WhatsApp…) ---------- */
