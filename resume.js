@@ -2,7 +2,8 @@
    Text-based PDF (real, selectable text that ATS software can read), one column, standard headings. */
 (function () {
   'use strict';
-  var V, d, kw = null, step = 0, saveT = null, rid = null, LIST = [];
+  var V, d, kw = null, step = 0, saveT = null, rid = null, LIST = [], pristine = null;
+  function sig() { var c = Object.assign({}, d); delete c.title; delete c.autoT; delete c.jd; delete c.jdKw; return JSON.stringify(c); }
   var LS = 'vkv-resume-draft', LSL = 'vkv-resumes';
   function localList() { try { return JSON.parse(localStorage.getItem(LSL) || '[]'); } catch (e) { return []; } }
   function saveLocal(list) { try { localStorage.setItem(LSL, JSON.stringify(list)); } catch (e) {} }
@@ -137,7 +138,7 @@
   }
   function shortCo(c) { return String(c || '').replace(/\b(india|limited|ltd\.?|pvt\.?|private|corporation|company|co\.)\b/gi, '').replace(/\s+/g, ' ').trim(); }
   function autoTitle() {
-    var who = (d.name || '').trim() ? d.name.trim().split(/\s+/).slice(0, 2).join(' ') : 'My';
+    var who = (d.name || '').trim() && !/^\[/.test(d.name.trim()) ? d.name.trim().split(/\s+/).slice(0, 2).join(' ') : 'My';
     var tgt = shortCo(d.company) || (kw && kw.role ? kw.role.split(/[(/]/)[0].trim() : '');
     var base = who === 'My' ? 'New resume' + (tgt ? ' – ' + tgt : '') : who + ' – CV' + (tgt ? ' – ' + tgt : ''), t = base, n = 2;
     var taken = LIST.filter(function (r) { return r.id !== rid; }).map(function (r) { return (r.title || '').toLowerCase(); });
@@ -157,6 +158,8 @@
   }
   function persist() {
     titleNow();
+    // a new / template / duplicated resume is not stored until the student really changes something
+    if (pristine !== null) { if (sig() === pristine) { var tb0 = document.getElementById('rb-tname'); if (tb0) tb0.textContent = d.title; return; } pristine = null; }
     if (!V.session) {
       if (V.guest && !V.__acted && has(d.name)) { V.__acted = 1; V.activity && V.activity('resume'); V.ensureGuest && V.ensureGuest().then(function (ok) { if (ok) guestDb(); }); }
       else if (V.guest && V.anySession) guestDb();
@@ -281,8 +284,14 @@
   function set(id, v) { var p = id.split('.'); var o = d; for (var i = 0; i < p.length - 1; i++) o = o[p[i]]; o[p[p.length - 1]] = v; }
   function note(type, html) { return '<div class="rb-note ' + type + '">' + html + '</div>'; }
 
+  function startBox() {
+    return '<div class="rb-start"><b>Quick start</b><div class="rb-start-g"><button type="button" class="rb-st" data-st="tpl"><span>📋</span><b>Use a template</b><small>Prefilled for your branch, role and level (fresher or experienced). Just change the yellow parts.</small></button>' +
+      '<button type="button" class="rb-st" data-st="imp"><span>⬆</span><b>Upload my resume</b><small>PDF or Word. We convert it to an ATS-friendly format and tell you what to fix.</small></button>' +
+      '<button type="button" class="rb-st" data-st="new"><span>✍️</span><b>Start fresh</b><small>Fill step by step with suggestions.</small></button></div>' +
+      '<p class="small muted" style="margin:8px 0 0">✏️ Tip: in the preview, <b>click any line</b> (for example your Class 10 marks) to jump straight to it and edit.</p></div>';
+  }
   function stepGoal() {
-    return '<h2>What are you preparing for?</h2><p class="muted small">Tick everything you are considering. If your goals are very different (for example a private job and MS abroad), make a separate resume for each: Save, then use “New resume”.</p>' +
+    return startBox() + '<h2>What are you preparing for?</h2><p class="muted small">Tick everything you are considering. If your goals are very different (for example a private job and MS abroad), make a separate resume for each: Save, then use “New resume”.</p>' +
       '<div class="rb-goals">' + GOALS.map(function (g) { return '<label class="rb-goal"><input type="checkbox" value="' + g.id + '"' + (d.goals.indexOf(g.id) >= 0 ? ' checked' : '') + '><span><b>' + g.t + '</b><small>' + g.s + '</small></span></label>'; }).join('') + '</div>' +
       '<div id="rb-ginfo">' + goalInfo() + '</div>' +
       '<div class="rb-grid">' +
@@ -313,8 +322,16 @@
         inp('college', 'College, City', 'e.g. Govt. Engineering College, Ajmer', { req: 1, wide: 1 }) + inp('grad', 'Graduation year', 'e.g. 2027', { req: 1 }) +
         inp('cgpa', 'CGPA / %', 'e.g. 8.1 / 10', { req: 1 }) +
         '<div class="rb-f"><label for="yearNow">Current year of study</label><select class="in" id="yearNow">' + ['1', '2', '3', '4', 'Graduated'].map(function (y) { return '<option' + (String(d.yearNow) === y ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select></div>') +
-      grp('School', inp('x12', 'Class 12 / Diploma', 'RBSE, 2023, 86%') + inp('x10', 'Class 10', 'CBSE, 2021, 91%'), 'Board, year and percentage.') +
+      grp('School', inp('x12', 'Class 12 / Diploma', 'RBSE, 2023, 86%') + inp('x10', 'Class 10', 'CBSE, 2021, 91%'), 'Board, year and percentage. Scored below about 60%? Write the division (e.g. “RBSE, 2021, First Division”) or only board and year. Leave a box empty to remove that line from your resume.') + marksNote() +
       grp('Test scores', inp('tests.gate', 'GATE score', 'e.g. 712') + inp('tests.gateAir', 'GATE AIR', 'e.g. 1450') + inp('tests.cat', 'CAT percentile', '') + inp('tests.gre', 'GRE', 'e.g. 318') + inp('tests.toefl', 'TOEFL', 'e.g. 104') + inp('tests.ielts', 'IELTS', 'e.g. 7.5'), 'Optional. Fill only what applies to your goal.');
+  }
+  function pctOf(v) { var m = String(v || '').match(/(\d{2}(?:\.\d+)?)\s*%/); return m ? +m[1] : null; }
+  function divOf(p) { return p >= 60 ? 'First Division' : p >= 45 ? 'Second Division' : 'Third Division'; }
+  function marksNote() {
+    var low = ['x12', 'x10'].filter(function (k) { var p = pctOf(d[k]); return p !== null && p < 60; });
+    if (!low.length) return '';
+    return note('warn', '<b>Tip on school marks:</b> ' + low.map(function (k) { return (k === 'x10' ? 'Class 10' : 'Class 12') + ' (' + pctOf(d[k]) + '%)'; }).join(' and ') + ' may get filtered out by recruiters who set a cut-off. You can show the division instead, or only the board and year.' +
+      '<div class="rb-mk">' + low.map(function (k) { var n = k === 'x10' ? 'Class 10' : 'Class 12'; return '<button type="button" class="btn ghost small" data-mk="div" data-k="' + k + '">' + n + ': show division</button><button type="button" class="btn ghost small" data-mk="strip" data-k="' + k + '">' + n + ': board &amp; year only</button>'; }).join('') + '</div>');
   }
   function stepSkills() {
     var ks = kwList();
@@ -377,24 +394,29 @@
   /* ---------------- resume model (shared by preview, PDF and text) ---------------- */
   function model() {
     var t = track(), sec = [];
-    var contact = [d.phone, d.email, d.city, d.linkedin, d.github, d.portfolio].filter(has);
-    var edu = { h: 'Education', items: [{ a: d.degree + (has(d.branch) ? ' in ' + d.branch : ''), b: d.grad ? 'Expected ' + d.grad : '', c: d.college, dd: has(d.cgpa) ? 'CGPA: ' + d.cgpa : '' }] };
-    if (has(d.x12)) edu.items.push({ a: 'Class 12 / Diploma', c: d.x12 }); if (has(d.x10)) edu.items.push({ a: 'Class 10', c: d.x10 });
-    var tests = []; if (has(d.tests.gate)) tests.push('GATE score ' + d.tests.gate + (has(d.tests.gateAir) ? ' (AIR ' + d.tests.gateAir + ')' : '')); if (has(d.tests.cat)) tests.push('CAT ' + d.tests.cat + ' percentile'); if (has(d.tests.gre)) tests.push('GRE ' + d.tests.gre); if (has(d.tests.toefl)) tests.push('TOEFL ' + d.tests.toefl); if (has(d.tests.ielts)) tests.push('IELTS ' + d.tests.ielts);
+    var cpairs = [['phone', d.phone], ['email', d.email], ['city', d.city], ['linkedin', d.linkedin], ['github', d.github], ['portfolio', d.portfolio]].filter(function (x) { return has(x[1]); });
+    var contact = cpairs.map(function (x) { return x[1]; }), contactF = cpairs.map(function (x) { return x[0]; });
+    var edu = { h: 'Education', items: [{ a: d.degree + (has(d.branch) ? ' in ' + d.branch : ''), b: d.grad ? 'Expected ' + d.grad : '', c: d.college, dd: has(d.cgpa) ? 'CGPA: ' + d.cgpa : '', f: 'degree', fc: 'college', fd: 'cgpa', fb: 'grad' }] };
+    if (has(d.x12)) edu.items.push({ a: 'Class 12 / Diploma', c: d.x12, f: 'x12', fc: 'x12' }); if (has(d.x10)) edu.items.push({ a: 'Class 10', c: d.x10, f: 'x10', fc: 'x10' });
+    var tests = [], testsF = []; function tp(t, f) { tests.push(t); testsF.push(f); }
+    if (has(d.tests.gate)) tp('GATE score ' + d.tests.gate + (has(d.tests.gateAir) ? ' (AIR ' + d.tests.gateAir + ')' : ''), 'tests.gate'); if (has(d.tests.cat)) tp('CAT ' + d.tests.cat + ' percentile', 'tests.cat'); if (has(d.tests.gre)) tp('GRE ' + d.tests.gre, 'tests.gre'); if (has(d.tests.toefl)) tp('TOEFL ' + d.tests.toefl, 'tests.toefl'); if (has(d.tests.ielts)) tp('IELTS ' + d.tests.ielts, 'tests.ielts');
     var tidy = function (v) { return String(v || '').replace(/[\s,;]+$/, '').replace(/,\s*,/g, ','); };
-    var skills = { h: 'Technical Skills', rows: [['Core', tidy(d.skTech)], ['Software', tidy(d.skSoft)], ['Other', tidy(d.skOther)], ['Languages', tidy(d.langs)]].filter(function (r) { return has(r[1]); }) };
-    var exp = { h: 'Internships & Training', items: d.exp.filter(function (x) { return has(x.org) || has(x.role); }).map(function (x) { return { a: x.role, b: x.when, c: x.org, bl: lines(x.bullets) }; }) };
-    var proj = { h: 'Projects', items: d.projects.filter(function (x) { return has(x.title); }).map(function (x) { return { a: x.title + (has(x.kind) ? ' (' + x.kind + ')' : ''), b: x.when, c: [x.tools ? 'Tools: ' + x.tools : '', x.link].filter(has).join(' | '), bl: lines(x.bullets) }; }) };
-    var pubs = { h: 'Publications & Patents', items: d.pubs.filter(function (x) { return has(x.title); }).map(function (x) { return { a: x.title, b: x.year, c: x.venue }; }) };
-    var ach = { h: 'Achievements', list: d.ach.map(function (x) { return x.text; }).filter(has).concat(lines(d.extra)) };
-    var por = { h: 'Positions of Responsibility', items: d.por.filter(function (x) { return has(x.role) || has(x.org); }).map(function (x) { return { a: [x.role, x.org].filter(has).join(', '), b: x.when, bl: lines(x.text) }; }) };
-    var cert = { h: 'Certifications', list: d.certs.filter(function (x) { return has(x.name); }).map(function (x) { return [x.name, x.org, x.year].filter(has).join(' - '); }) };
-    var test = { h: 'Test Scores', list: tests };
+    var skills = { h: 'Technical Skills', rows: [['Core', tidy(d.skTech), 'skTech'], ['Software', tidy(d.skSoft), 'skSoft'], ['Other', tidy(d.skOther), 'skOther'], ['Languages', tidy(d.langs), 'langs']].filter(function (r) { return has(r[1]); }) };
+    function idx(arr, ok, fn) { return arr.map(function (x, i) { return [x, i]; }).filter(function (p) { return ok(p[0]); }).map(function (p) { return fn(p[0], p[1]); }); }
+    var exp = { h: 'Internships & Training', items: idx(d.exp, function (x) { return has(x.org) || has(x.role); }, function (x, i) { return { a: x.role, b: x.when, c: x.org, bl: lines(x.bullets), f: 'exp.' + i + '.role', fb: 'exp.' + i + '.when', fc: 'exp.' + i + '.org', fl: 'exp.' + i + '.bullets' }; }) };
+    var proj = { h: 'Projects', items: idx(d.projects, function (x) { return has(x.title); }, function (x, i) { return { a: x.title + (has(x.kind) ? ' (' + x.kind + ')' : ''), b: x.when, c: [x.tools ? 'Tools: ' + x.tools : '', x.link].filter(has).join(' | '), bl: lines(x.bullets), f: 'projects.' + i + '.title', fb: 'projects.' + i + '.when', fc: 'projects.' + i + '.tools', fl: 'projects.' + i + '.bullets' }; }) };
+    var pubs = { h: 'Publications & Patents', items: idx(d.pubs, function (x) { return has(x.title); }, function (x, i) { return { a: x.title, b: x.year, c: x.venue, f: 'pubs.' + i + '.title', fc: 'pubs.' + i + '.venue' }; }) };
+    var achL = idx(d.ach, function (x) { return has(x.text); }, function (x, i) { return [x.text, 'ach.' + i + '.text']; }).concat(lines(d.extra).map(function (x) { return [x, 'extra']; }));
+    var ach = { h: 'Achievements', list: achL.map(function (x) { return x[0]; }), fs: achL.map(function (x) { return x[1]; }) };
+    var por = { h: 'Positions of Responsibility', items: idx(d.por, function (x) { return has(x.role) || has(x.org); }, function (x, i) { return { a: [x.role, x.org].filter(has).join(', '), b: x.when, bl: lines(x.text), f: 'por.' + i + '.role', fb: 'por.' + i + '.when', fl: 'por.' + i + '.text' }; }) };
+    var certL = idx(d.certs, function (x) { return has(x.name); }, function (x, i) { return [[x.name, x.org, x.year].filter(has).join(' - '), 'certs.' + i + '.name']; });
+    var cert = { h: 'Certifications', list: certL.map(function (x) { return x[0]; }), fs: certL.map(function (x) { return x[1]; }) };
+    var test = { h: 'Test Scores', list: tests, fs: testsF };
     if (has(d.summary)) sec.push({ h: 'Summary', p: d.summary });
     if (t === 'academic') sec.push(edu, test, pubs, proj, exp, skills, ach, cert, por);
     else if (t === 'psu') sec.push(test, edu, skills, exp, proj, ach, cert, por, pubs);
     else sec.push(edu, skills, exp.items.length >= 1 ? exp : proj, exp.items.length >= 1 ? proj : exp, cert, ach, por, pubs, test);
-    return { name: d.name || 'Your Name', contact: contact, sections: sec.filter(function (s) { return (s.items && s.items.length) || (s.list && s.list.length) || (s.rows && s.rows.length) || s.p; }) };
+    return { name: d.name || 'Your Name', contact: contact, contactF: contactF, sections: sec.filter(function (s) { return (s.items && s.items.length) || (s.list && s.list.length) || (s.rows && s.rows.length) || s.p; }) };
   }
   var SAMPLE = { name: 'Aarav Mehta', email: 'aarav.mehta@gmail.com', phone: '98xxxxxx10', city: 'Jaipur, Rajasthan', linkedin: 'linkedin.com/in/aarav-mehta',
     summary: 'Final-year Mechanical Engineering student skilled in SolidWorks, ANSYS and lean manufacturing, seeking a Graduate Engineer Trainee role in automotive production.',
@@ -408,12 +430,14 @@
   function previewHtml() {
     if (isEmpty()) { var keep = d; d = Object.assign(blank(), SAMPLE); var hs = previewHtml(); d = keep; return '<div class="rv-sample"><span>Sample resume · type your full name to start your own</span></div>' + hs; }
     var m = model();
-    return '<div class="rv-paper"><div class="rv-name">' + esc(m.name) + '</div><div class="rv-contact">' + m.contact.map(esc).join(' | ') + '</div>' +
+    function E(s) { return esc(s).replace(/\[[^\]\n]{1,80}\]/g, '<mark class="rv-ph">$&</mark>'); }
+    function F(f) { return f ? ' data-f="' + esc(f) + '"' : ''; }
+    return '<div class="rv-paper"><div class="rv-name"' + F('name') + '>' + E(m.name) + '</div><div class="rv-contact">' + m.contact.map(function (c, i) { return '<span' + F(m.contactF[i]) + '>' + E(c) + '</span>'; }).join(' | ') + '</div>' +
       m.sections.map(function (s) {
-        return '<div class="rv-h">' + esc(s.h.toUpperCase()) + '</div>' + (s.p ? '<p>' + esc(s.p) + '</p>' : '') +
-          (s.rows ? s.rows.map(function (r) { return '<p><b>' + esc(r[0]) + ':</b> ' + esc(r[1]) + '</p>'; }).join('') : '') +
-          (s.list ? '<ul>' + s.list.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '') +
-          (s.items ? s.items.map(function (x) { return '<div class="rv-it"><div class="rv-row"><b>' + esc(x.a) + '</b><span>' + esc(x.b || '') + '</span></div>' + (x.c ? '<div class="rv-row"><i>' + esc(x.c) + '</i><span>' + esc(x.dd || '') + '</span></div>' : '') + (x.bl && x.bl.length ? '<ul>' + x.bl.map(function (b) { return '<li>' + esc(b) + '</li>'; }).join('') + '</ul>' : '') + '</div>'; }).join('') : '');
+        return '<div class="rv-h">' + esc(s.h.toUpperCase()) + '</div>' + (s.p ? '<p' + F('summary') + '>' + E(s.p) + '</p>' : '') +
+          (s.rows ? s.rows.map(function (r) { return '<p' + F(r[2]) + '><b>' + esc(r[0]) + ':</b> ' + E(r[1]) + '</p>'; }).join('') : '') +
+          (s.list ? '<ul>' + s.list.map(function (x, i) { return '<li' + F(s.fs && s.fs[i]) + '>' + E(x) + '</li>'; }).join('') + '</ul>' : '') +
+          (s.items ? s.items.map(function (x) { return '<div class="rv-it"><div class="rv-row"><b' + F(x.f) + '>' + E(x.a) + '</b><span' + F(x.fb) + '>' + E(x.b || '') + '</span></div>' + (x.c ? '<div class="rv-row"><i' + F(x.fc) + '>' + E(x.c) + '</i><span' + F(x.fd) + '>' + E(x.dd || '') + '</span></div>' : '') + (x.bl && x.bl.length ? '<ul' + F(x.fl) + '>' + x.bl.map(function (b) { return '<li>' + E(b) + '</li>'; }).join('') + '</ul>' : '') + '</div>'; }).join('') : '');
       }).join('') + '</div>';
   }
   function plainText() {
@@ -565,25 +589,232 @@
         V.toast('Inserted. Now replace the [ ] parts with your real details.');
       };
     });
+    Array.prototype.forEach.call(f.querySelectorAll('[data-st]'), function (b) { b.onclick = function () { var k = b.dataset.st; if (k === 'tpl') templates(); else if (k === 'imp') importResume(); else { step = 1; render(); } }; });
+    Array.prototype.forEach.call(f.querySelectorAll('[data-mk]'), function (b) { b.onclick = function () {
+      var k = b.dataset.k, v = String(d[k] || ''), p = pctOf(v);
+      var base = v.replace(/,?\s*\d{2}(\.\d+)?\s*%/, '').replace(/[,\s]+$/, '');
+      d[k] = b.dataset.mk === 'div' && p !== null ? base + ', ' + divOf(p) : base; persist(); render(true);
+      V.toast(b.dataset.mk === 'div' ? 'Now showing the division.' : 'Now showing only board and year.');
+    }; });
+    Array.prototype.forEach.call(f.querySelectorAll('input.in, textarea.in'), function (el) { el.addEventListener('input', function () { el.classList.toggle('rb-phin', /\[[^\]\n]{1,80}\]/.test(el.value)); }); });
+    markPh();
     var jb = document.getElementById('rb-jdgo'); if (jb) jb.onclick = checkJd;
     var jc = document.getElementById('rb-jdclr'); if (jc) jc.onclick = function () { d.jd = ''; d.jdKw = null; persist(); render(true); };
     var dx = document.getElementById('rb-docx'); if (dx) dx.onclick = downloadDocx;
     var nx = document.getElementById('rb-next'), bk = document.getElementById('rb-back');
     if (nx) nx.onclick = function () { step++; render(); };
     if (bk) bk.onclick = function () { step--; render(); };
-    var pdf = document.getElementById('rb-pdf'); if (pdf) pdf.onclick = downloadPdf;
+    var pdf = document.getElementById('rb-pdf'); if (pdf) pdf.onclick = function () { if (phGuard()) downloadPdf(); };
+    var dx2 = document.getElementById('rb-docx'); if (dx2) dx2.onclick = function () { if (phGuard()) downloadDocx(); };
     var tx = document.getElementById('rb-txt'); if (tx) tx.onclick = function () { var t = plainText(); (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () { V.toast('Copied as plain text.'); }).catch(function () { var a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove(); V.toast('Copied as plain text.'); }); };
+  }
+  var FIELD_STEP = { name: 1, email: 1, phone: 1, city: 1, linkedin: 1, github: 1, portfolio: 1, summary: 1, degree: 2, branch: 2, college: 2, grad: 2, cgpa: 2, x12: 2, x10: 2, tests: 2, skTech: 3, skSoft: 3, skOther: 3, langs: 3, exp: 4, projects: 4, ach: 5, por: 5, certs: 5, pubs: 5, extra: 5 };
+  function goEdit(f) {
+    var st = FIELD_STEP[String(f).split('.')[0]]; if (st == null) return;
+    document.body.classList.remove('rb-pv-open');
+    if (step !== st) { step = st; render(true); }
+    setTimeout(function () {
+      var el = document.getElementById(f); if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus({ preventScroll: true });
+      var w = el.closest('.rb-f') || el; w.classList.remove('rb-flash'); void w.offsetWidth; w.classList.add('rb-flash');
+    }, 60);
+  }
+  function phCount() { var m = plainText().match(/\[[^\]\n]{1,80}\]/g); return m ? m.length : 0; }
+  function phGuard() {
+    var n = phCount(); if (!n) return true;
+    return confirm(n + ' highlighted part' + (n > 1 ? 's' : '') + ' still contain template text in [ brackets ] (yellow in the preview). Replace them with your real details before sending this resume. Download anyway?');
+  }
+  function markPh() {
+    var f = document.getElementById('rb-form'); if (!f) return;
+    Array.prototype.forEach.call(f.querySelectorAll('input.in, textarea.in'), function (el) { el.classList.toggle('rb-phin', /\[[^\]\n]{1,80}\]/.test(el.value)); });
+  }
+  var PERSONAL_PH = { name: '[Your Full Name]', email: '[yourname@gmail.com]', phone: '[+91 98XXXXXXXX]', city: '[City, State]', linkedin: '[linkedin.com/in/your-name]', college: '[Your College Name, City]', grad: '[2027]', cgpa: '[8.0 / 10]', x12: '[Board, Year, % or Division]', x10: '[Board, Year, % or Division]' };
+  var KEEP_ME = ['name', 'email', 'phone', 'city', 'linkedin', 'github', 'portfolio', 'college', 'grad', 'cgpa', 'yearNow', 'x12', 'x10', 'langs'];
+  function applyTemplate(t) {
+    var nd = Object.assign(blank(), JSON.parse(JSON.stringify(t.data)));
+    if (has(d.name) && !/^\[/.test(d.name)) KEEP_ME.forEach(function (k) { if (has(d[k])) nd[k] = JSON.parse(JSON.stringify(d[k])); });
+    else Object.keys(PERSONAL_PH).forEach(function (k) { if (!has(nd[k])) nd[k] = PERSONAL_PH[k]; });
+    nd.role = t.role || ''; nd.company = ''; nd.title = ''; nd.autoT = true; nd.tpl = t.id;
+    d = nd; rid = null; kw = null; step = 1; titleNow(); pristine = sig();
+    var tb = document.getElementById('rb-tname'); if (tb) tb.textContent = d.title;
+    render(); loadKw();
+    V.toast('Template loaded. Replace everything highlighted in yellow, delete what you do not have, then download.');
+  }
+  function templates() {
+    var m = document.createElement('div'); m.className = 'rbg-wrap'; m.setAttribute('role', 'dialog');
+    m.innerHTML = '<div class="rbg rbt"><div class="rbg-h"><div><b>📋 Start from a professional template</b><small>Prefilled for the branch, role and level. Yellow parts are personal: change them. Delete anything you do not have.</small></div><button type="button" class="rbg-x" aria-label="Close">✕</button></div><div class="rbt-body"><div class="spinner"></div></div></div>';
+    document.body.appendChild(m); document.body.classList.add('noscroll');
+    function close() { m.remove(); document.body.classList.remove('noscroll'); }
+    m.querySelector('.rbg-x').onclick = close; m.addEventListener('click', function (e) { if (e.target === m) close(); });
+    V.rpc('rb_template_list').then(function (list) {
+      list = list || []; var br = 'all', lv = 'all';
+      var branches = list.map(function (t) { return t.branch; }).filter(function (x, i, a) { return a.indexOf(x) === i; });
+      var levels = list.map(function (t) { return t.level; }).filter(function (x, i, a) { return a.indexOf(x) === i; });
+      var body = m.querySelector('.rbt-body');
+      function chips(id, arr, cur) { return '<div class="chips" id="' + id + '"><button type="button" class="chip" aria-pressed="' + (cur === 'all') + '" data-v="all">All</button>' + arr.map(function (x) { return '<button type="button" class="chip" aria-pressed="' + (cur === x) + '" data-v="' + esc(x) + '">' + esc(x) + '</button>'; }).join('') + '</div>'; }
+      function draw() {
+        var vis = list.filter(function (t) { return (br === 'all' || t.branch === br) && (lv === 'all' || t.level === lv); });
+        body.innerHTML = '<p class="f">Branch</p>' + chips('rbt-b', branches, br) + '<p class="f">Experience</p>' + chips('rbt-l', levels, lv) +
+          '<p class="small muted">Skills and software in each template follow what current job posts ask for. After you pick one, the <b>Skills</b> step also shows live keywords from recent job posts for that role and company.</p>' +
+          '<div class="rbt-g">' + vis.map(function (t) {
+            return '<div class="rbt-c"><div class="rbt-th"><div class="rbg-sc">' + (window.RB && V ? RB.preview(V, Object.assign({}, PERSONAL_PH, t.data)) : '') + '</div></div><div class="rbt-m"><b>' + esc(t.title) + '</b><small>' + esc(t.for || '') + '</small>' + (t.companies ? '<small class="muted">Fits: ' + esc(t.companies) + '</small>' : '') + '<span class="pill">' + esc(t.branch) + ' · ' + esc(t.level) + '</span><button type="button" class="btn small" data-use="' + esc(t.id) + '">Use this template</button></div></div>';
+          }).join('') + '</div>';
+        body.querySelector('#rbt-b').onclick = function (e) { var b = e.target.closest('[data-v]'); if (b) { br = b.dataset.v; draw(); } };
+        body.querySelector('#rbt-l').onclick = function (e) { var b = e.target.closest('[data-v]'); if (b) { lv = b.dataset.v; draw(); } };
+        Array.prototype.forEach.call(body.querySelectorAll('[data-use]'), function (b) { b.onclick = function () { var t = list.filter(function (x) { return x.id === b.dataset.use; })[0]; close(); applyTemplate(t); }; });
+      }
+      draw();
+    }).catch(function (e) { m.querySelector('.rbt-body').innerHTML = '<p class="err">' + esc(V.errMsg(e)) + '</p>'; });
+  }
+
+  /* ---------- import an existing resume (PDF / Word): read in the browser, nothing is uploaded ---------- */
+  function loadScript(src) { return new Promise(function (ok, bad) { var x = document.createElement('script'); x.src = src; x.onload = ok; x.onerror = bad; document.head.appendChild(x); }); }
+  function fileText(file) {
+    var n = file.name.toLowerCase();
+    if (/\.txt$/.test(n)) return file.text();
+    if (/\.docx$/.test(n)) return (window.mammoth ? Promise.resolve() : loadScript('https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js'))
+      .then(function () { return file.arrayBuffer(); }).then(function (buf) { return window.mammoth.extractRawText({ arrayBuffer: buf }); }).then(function (r) { return r.value; });
+    if (/\.pdf$/.test(n)) return (window.pdfjsLib ? Promise.resolve() : loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'))
+      .then(function () { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; return file.arrayBuffer(); })
+      .then(function (buf) { return window.pdfjsLib.getDocument({ data: buf }).promise; })
+      .then(function (pdf) {
+        var all = [], ps = [];
+        for (var i = 1; i <= Math.min(pdf.numPages, 4); i++) ps.push(pdf.getPage(i).then(function (pg) { return pg.getTextContent(); }));
+        return Promise.all(ps).then(function (cs) {
+          cs.forEach(function (c) {
+            var rows = {}; c.items.forEach(function (it) { var y = Math.round(it.transform[5] / 3) * 3; (rows[y] = rows[y] || []).push(it); });
+            Object.keys(rows).map(Number).sort(function (a, b) { return b - a; }).forEach(function (y) { all.push(rows[y].sort(function (a, b) { return a.transform[4] - b.transform[4]; }).map(function (it) { return it.str; }).join(' ').replace(/\s+/g, ' ').trim()); });
+          });
+          return all.join('\n');
+        });
+      });
+    return Promise.reject(new Error('Please upload a PDF or Word (.docx) file. Old .doc files: open in Word and “Save as” .docx first.'));
+  }
+  var HEADS = [['summary', /^(professional |career )?(summary|objective|profile|about me)\b/i], ['edu', /^(education|academic (details|qualifications?|profile)|educational qualifications?|qualifications?|scholastic)/i],
+    ['skills', /^(technical |key |core |it )?(skills|competencies|proficiency)|^(software|tools)( skills| known)?$|^technical (skills|expertise)/i], ['exp', /^(work |professional |industrial )?(experience|internships?|training|employment|work history)/i],
+    ['proj', /^(academic |major |minor |key )?projects?/i], ['certs', /^(certifications?|certificates?|courses|online courses|trainings? (&|and) certifications?)/i],
+    ['ach', /^(achievements?|awards?|honou?rs|accomplishments)/i], ['por', /^(positions? of responsibility|leadership|extra[- ]?curricular|co-?curricular|activities|volunteer)/i],
+    ['pubs', /^(publications?|research papers?|papers? presented|patents?)/i], ['langs', /^languages?( known)?\s*:?$/i], ['skip', /^(personal (details|information|profile|data)|declaration|hobbies|interests|strengths|references?)/i]];
+  var BUL_RE = /^\s*([•●▪◦➢►✓✔*\-–]|\d+[.)])\s*/;
+  var SOFT_RE = /\b(autocad|solidworks|catia|creo|ansys|nx|fusion 360|matlab|simulink|python|java|c\+\+|javascript|react|node(\.js)?|sql|mysql|excel|power ?bi|tableau|sap|minitab|staad(\.pro)?|etap|plc|keil|arduino|git|aws|azure|salesforce|primavera|ms project|revit|labview|hypermesh|abaqus)\b/i;
+  var DATE_RE = /((jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*'?\d{2,4}|\b(19|20)\d{2}\b)(\s*[-–to]+\s*((jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?\s*'?\d{2,4}|\b(19|20)\d{2}\b|present|current|till date))?/i;
+  function parseResume(text) {
+    var L = String(text || '').split(/\r?\n/).map(function (x) { return x.replace(/\s+/g, ' ').trim(); }).filter(Boolean);
+    var r = blank(), rep = { got: [], removed: [], check: [] }, sec = 'head', B = { head: [] };
+    r.projects = [];
+    L.forEach(function (ln) {
+      var h = ln.length < 45 && ln.replace(/[:\-–|]+$/, '').trim(), hit = null;
+      if (h) HEADS.some(function (x) { if (x[1].test(h)) { hit = x[0]; return true; } return false; });
+      if (hit) { sec = hit; B[sec] = B[sec] || []; if (hit === 'skip') rep.removed.push(h); return; }
+      (B[sec] = B[sec] || []).push(ln);
+    });
+    var all = L.join('\n');
+    var em = all.match(/[\w.+-]+@[\w-]+\.[\w.]+/); if (em) r.email = em[0];
+    var ph = all.match(/(\+?\d{1,3}[\s-]?)?[6-9]\d{4}[\s-]?\d{5}/); if (ph) r.phone = ph[0].trim();
+    var li = all.match(/(https?:\/\/)?(www\.)?linkedin\.com\/in\/[\w\-%]+/i); if (li) r.linkedin = li[0].replace(/^https?:\/\/(www\.)?/i, '');
+    var gh = all.match(/(https?:\/\/)?(www\.)?github\.com\/[\w\-]+/i); if (gh) r.github = gh[0].replace(/^https?:\/\/(www\.)?/i, '');
+    var nm = (B.head || []).filter(function (x) { return !/[@\d|]|resume|curriculum|vitae|linkedin|github/i.test(x) && x.split(' ').length <= 5 && x.length > 2; })[0];
+    if (nm) r.name = nm.toLowerCase().replace(/\b([a-z])/g, function (c) { return c.toUpperCase(); });
+    if (/date of birth|d\.o\.b|father|marital|religion|nationality/i.test(all)) rep.removed.push('Personal details (date of birth, father’s name, religion…)');
+    // education
+    (B.edu || []).forEach(function (ln, i, arr) {
+      var nx = arr[i + 1] || '';
+      if (/(b\.?\s?tech|b\.?\s?e\b|bachelor|diploma|m\.?\s?tech|b\.?sc|bca|mca|m\.?e\b)/i.test(ln) && !has(r.college)) {
+        var dg = ln.match(/(b\.?\s?tech|b\.?\s?e\.?|bachelor of [a-z]+|diploma|m\.?\s?tech|b\.?sc|bca|mca)/i); if (dg) r.degree = dg[0].replace(/\s+/g, '').replace(/^btech$/i, 'B.Tech');
+        var br = ln.match(/(mechanical|civil|electrical|electronics[a-z &]*|computer science[a-z &]*|information technology|automobile|production|chemical|instrumentation)/i); if (br) r.branch = br[0].replace(/\b([a-z])/g, function (c) { return c.toUpperCase(); }) + (/engineering/i.test(br[0]) ? '' : ' Engineering');
+        var col = [ln, nx].filter(function (x) { return /college|institute|university|iit|nit|polytechnic|school of/i.test(x); })[0]; if (col) r.college = col.replace(/.*?(?=[A-Z][a-z]*\s*(college|institute|university|engineering))/,'').slice(0, 120);
+        var y = (ln + ' ' + nx).match(/\b20\d{2}\b(?!.*\b20\d{2}\b)/); if (y) r.grad = y[0];
+      }
+      var cg = (ln + ' ' + nx).match(/(cgpa|cpi|sgpa|gpa)\s*[:\-]?\s*(\d{1,2}(\.\d{1,2})?)(\s*\/\s*10)?/i); if (cg && !has(r.cgpa)) r.cgpa = cg[2] + (cg[4] ? ' / 10' : '');
+      if (/(12th|\bxii\b|hsc|senior secondary|intermediate|class 12|higher secondary)/i.test(ln) && !has(r.x12)) r.x12 = (ln + (/%|cgpa|\d{4}/i.test(ln) ? '' : ' ' + nx)).replace(/^(12th|xii|class 12)[:\s-]*/i, '').slice(0, 90);
+      else if (/(10th|\bx\b|ssc|matric|secondary school|class 10|high school)/i.test(ln) && !has(r.x10)) r.x10 = (ln + (/%|cgpa|\d{4}/i.test(ln) ? '' : ' ' + nx)).replace(/^(10th|x|class 10)[:\s-]*/i, '').slice(0, 90);
+    });
+    // skills
+    var tech = [], soft = [];
+    (B.skills || []).forEach(function (ln) {
+      var t = ln.replace(BUL_RE, ''); var lab = t.match(/^([A-Za-z &/]{2,30}):\s*(.*)$/), body = lab ? lab[2] : t;
+      if (/language/i.test(lab ? lab[1] : '') && !/programming/i.test(lab ? lab[1] : '')) { r.langs = body; return; }
+      if ((lab && /software|tool|programming|technolog|platform|cad/i.test(lab[1])) || SOFT_RE.test(body)) soft.push(body); else tech.push(body);
+    });
+    if (tech.length) r.skTech = tech.join(', '); if (soft.length) r.skSoft = soft.join(', ');
+    if ((B.langs || []).length) r.langs = B.langs.join(', ').replace(BUL_RE, '');
+    if ((B.summary || []).length) r.summary = B.summary.join(' ').slice(0, 600);
+    if (has(r.college)) r.college = r.college.replace(/\s+(cgpa|cpi|sgpa|gpa|percentage|aggregate)\b.*$/i, '').replace(/\s+\b(19|20)\d{2}\b.*$/, '').trim();
+    ['x12', 'x10'].forEach(function (k) { if (has(r[k])) r[k] = r[k].replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim().replace(/\s+((19|20)\d{2})/, ', $1').replace(/\s+(\d{1,2}(\.\d+)?\s*%)/, ', $1').replace(/^,\s*/, ''); });
+    if (has(r.summary) && /challenging|growth of the organi|utili[sz]e my (skills|knowledge)|dynamic (environment|organi)|reputed (organi|company)/i.test(r.summary)) rep.check.push('Summary: replace the generic “objective” with 2 lines naming your target role and top 2–3 skills');
+    // items with bullets
+    function items(lines, mk) {
+      var out = [], cur = null;
+      lines.forEach(function (ln) {
+        if (BUL_RE.test(ln) && cur) { cur.bl.push(ln.replace(BUL_RE, '')); return; }
+        if (!cur || cur.bl.length) { cur = { head: [ln], bl: [] }; out.push(cur); } else if (cur.head.length < 3) cur.head.push(ln); else cur.bl.push(ln);
+      });
+      return out.map(mk);
+    }
+    r.exp = items(B.exp || [], function (x) {
+      var h = x.head.join(' | '), dt = h.match(DATE_RE);
+      var parts = x.head.map(function (s) { return s.replace(DATE_RE, '').replace(/[|,–-]\s*$/, '').trim(); }).filter(Boolean);
+      return { role: parts[0] || '', org: parts[1] || '', when: dt ? dt[0] : '', bullets: x.bl.join('\n') };
+    });
+    r.projects = items(B.proj || [], function (x) {
+      var h = x.head.join(' | '), dt = h.match(DATE_RE), tl = h.match(/(tools|technolog(y|ies)( used)?|tech stack|software)\s*[:\-]\s*([^|]+)/i);
+      return { title: x.head[0].replace(DATE_RE, '').replace(/[|,–-]\s*$/, '').trim(), kind: '', tools: tl ? tl[4].trim() : '', link: '', when: dt ? dt[0] : '', bullets: x.bl.join('\n') };
+    });
+    if (!r.projects.length) r.projects = [{ title: '', kind: 'Major project', tools: '', link: '', when: '', bullets: '' }];
+    r.certs = (B.certs || []).map(function (x) { var t = x.replace(BUL_RE, ''), y = t.match(/\b20\d{2}\b/); return { name: t.replace(/\(?\b20\d{2}\b\)?/, '').trim(), org: '', year: y ? y[0] : '' }; });
+    r.ach = (B.ach || []).map(function (x) { return { text: x.replace(BUL_RE, '') }; });
+    r.pubs = (B.pubs || []).map(function (x) { var t = x.replace(BUL_RE, ''), y = t.match(/\b20\d{2}\b/); return { title: t, venue: '', year: y ? y[0] : '' }; });
+    r.por = items(B.por || [], function (x) { var dt = x.head.join(' ').match(DATE_RE); return { role: x.head[0].replace(DATE_RE, '').trim(), org: x.head[1] || '', when: dt ? dt[0] : '', text: x.bl.join('\n') }; });
+    [['name', 'Name'], ['email', 'Email'], ['phone', 'Mobile'], ['linkedin', 'LinkedIn'], ['degree', 'Degree'], ['college', 'College'], ['cgpa', 'CGPA'], ['x12', 'Class 12'], ['x10', 'Class 10'], ['skTech', 'Technical skills'], ['skSoft', 'Software'], ['summary', 'Summary']].forEach(function (k) { (has(r[k[0]]) ? rep.got : rep.check).push(k[1]); });
+    if (r.exp.length) rep.got.push(r.exp.length + ' internship/experience item(s)'); if (r.projects.some(function (p) { return has(p.title); })) rep.got.push(r.projects.filter(function (p) { return has(p.title); }).length + ' project(s)');
+    if (r.certs.length) rep.got.push(r.certs.length + ' certificate(s)'); if (r.ach.length) rep.got.push(r.ach.length + ' achievement(s)');
+    return { d: r, rep: rep };
+  }
+  function importResume() {
+    var fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    fi.onchange = function () {
+      var f = fi.files && fi.files[0]; if (!f) return;
+      if (f.size > 5 * 1024 * 1024) { V.toast('File too large. Please use a file under 5 MB.'); return; }
+      V.toast('Reading your resume…');
+      fileText(f).then(function (txt) {
+        if (!txt || txt.replace(/\s/g, '').length < 80) throw new Error('We could not read text from this file. If it is a scanned image PDF, please upload the Word version instead.');
+        var p = parseResume(txt), nd = p.d;
+        nd.goals = d.goals && d.goals.length ? d.goals : ['private']; nd.role = d.role || ''; nd.title = ''; nd.autoT = true;
+        d = nd; rid = null; kw = null; step = 1; pristine = null; titleNow(); persist(); render(); loadKw();
+        var sc = score();
+        var m = document.createElement('div'); m.className = 'rbg-wrap'; m.setAttribute('role', 'dialog');
+        m.innerHTML = '<div class="rbg rbi"><div class="rbg-h"><div><b>✅ Your resume is imported</b><small>Converted into an ATS-friendly, one-column layout with standard headings.</small></div><button type="button" class="rbg-x" aria-label="Close">✕</button></div><div class="rbi-b">' +
+          '<div class="rbi-s"><b>' + sc.total + '</b><span>/100 ATS score now</span></div>' +
+          (p.rep.got.length ? '<p><b>We picked up:</b> ' + p.rep.got.map(esc).join(', ') + '.</p>' : '') +
+          (p.rep.check.length ? '<p><b>Please fill or check:</b> ' + p.rep.check.map(esc).join(', ') + '. Click any line in the preview to edit it.</p>' : '') +
+          (p.rep.removed.length ? '<p><b>Left out on purpose:</b> ' + p.rep.removed.map(esc).join(', ') + '. Private-job resumes should not carry date of birth, father’s name, religion, hobbies lists or a “Declaration”.</p>' : '') +
+          (sc.tips.length ? '<p><b>Improve next:</b></p><ul>' + sc.tips.slice(0, 5).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' : '') +
+          '<p class="small muted">Your file was read in your browser and was not uploaded anywhere. Check every section: automatic reading is good but not perfect.</p>' +
+          '<button type="button" class="btn block" id="rbi-ok">Review my resume</button></div></div>';
+        document.body.appendChild(m); document.body.classList.add('noscroll');
+        function close() { m.remove(); document.body.classList.remove('noscroll'); }
+        m.querySelector('.rbg-x').onclick = close; m.querySelector('#rbi-ok').onclick = close;
+      }).catch(function (e) { V.toast(V.errMsg ? V.errMsg(e) : String(e)); });
+    };
+    fi.click();
   }
   function shell(list) {
     V.h('<div class="rb" id="rb-top"><div class="rb-head2"><div><h1>Resume Builder</h1><p class="muted">ATS-friendly resume with keywords from real job posts. Free, unlimited PDF &amp; Word downloads.</p>' +
       '<details class="softinfo"><summary>Why this builder is different</summary><ul><li><b>Free and unlimited:</b> download PDF and Word as often as you like. No subscription, no watermark.</li><li><b>Readable by ATS:</b> real text, one column and standard headings.</li><li><b>Real keywords:</b> skills and software from current job posts, including your target company’s.</li><li><b>Job-post match:</b> paste any job description and see the exact keywords you are missing.</li></ul></details></div>' +
       '<div class="rb-ring" id="rb-mini" title="Live ATS score"></div></div>' +
       '<div class="rb-tbar"><div class="rb-tname-w"><span class="rb-doc">📄</span><div class="rb-tn"><b id="rb-tname">' + esc(titleNow()) + '</b><small id="rb-saved">' + (V.session ? 'Saves to your account automatically' : 'Not saved to your account · <a href="/login?next=/resume" data-link>sign in</a> to keep it safe') + '</small></div></div>' +
-      '<div class="rb-tact"><span id="rb-pickw"></span><button type="button" class="btn ghost small" id="rb-gal">🗂 My resumes</button><details class="rb-menu"><summary class="btn ghost small">⋯ Manage</summary><div class="rb-menu-p">' +
+      '<div class="rb-tact"><span id="rb-pickw"></span><button type="button" class="btn ghost small" id="rb-tpl">📋 Templates</button><button type="button" class="btn ghost small" id="rb-imp">⬆ Upload my resume</button><button type="button" class="btn ghost small" id="rb-gal">🗂 My resumes</button><details class="rb-menu"><summary class="btn ghost small">⋯ Manage</summary><div class="rb-menu-p">' +
         '<button type="button" id="rb-ren">✏️ Rename</button><button type="button" id="rb-dup">⧉ Duplicate for another job</button><button type="button" id="rb-new">＋ New (keep my details)</button><button type="button" id="rb-blank">＋ Blank resume</button><button type="button" id="rb-del" class="rb-delb">🗑 Delete this resume</button></div></details></div></div>' +
-      '<nav class="rb-steps" id="rb-steps" aria-label="Steps"></nav><div class="rb-body"><div class="card rb-form" id="rb-form"></div><aside class="rb-side" id="rb-side"><div class="rb-ptitle"><b>Live preview</b><span class="small muted">A4 · one column</span><button type="button" class="rb-pvx" id="rb-pvx" aria-label="Close preview">✕</button></div><div id="rb-prev"></div></aside></div>' +
+      '<nav class="rb-steps" id="rb-steps" aria-label="Steps"></nav><div class="rb-body"><div class="card rb-form" id="rb-form"></div><aside class="rb-side" id="rb-side"><div class="rb-ptitle"><b>Live preview</b><span class="small muted rb-clk">✏️ Click any line to edit it</span><button type="button" class="rb-pvx" id="rb-pvx" aria-label="Close preview">✕</button></div><div id="rb-prev"></div></aside></div>' +
       '<button type="button" class="rb-pvbtn" id="rb-pvbtn">👁 ' + (isEmpty() ? 'See sample' : 'Preview') + '</button></div>');
     document.getElementById('rb-gal').onclick = function () { if (V.guest) return V.gate('resume', '/resume'); gallery(); };
+    document.getElementById('rb-tpl').onclick = templates;
+    document.getElementById('rb-imp').onclick = importResume;
+    document.getElementById('rb-prev').addEventListener('click', function (e) {
+      var t = e.target.closest('[data-f]');
+      if (t && !isEmpty()) { goEdit(t.getAttribute('data-f')); return; }
+      if (isEmpty()) V.toast('This is a sample. Type your name, pick a template or upload your resume to start your own.');
+    });
     ['rb-new', 'rb-blank', 'rb-dup'].forEach(function (id) { var b = document.getElementById(id); if (b) b.addEventListener('click', function (e) { if (V.guest) { e.stopImmediatePropagation(); V.gate('resume', '/resume'); } }, true); });
     document.getElementById('rb-pvbtn').onclick = function () { document.body.classList.add('rb-pv-open'); };
     document.getElementById('rb-pvx').onclick = function () { document.body.classList.remove('rb-pv-open'); };
@@ -593,10 +824,10 @@
       // new resume keeps personal details and education, clears the target-specific parts
       var keep = ['name', 'email', 'phone', 'city', 'linkedin', 'github', 'portfolio', 'degree', 'branch', 'college', 'grad', 'cgpa', 'yearNow', 'x12', 'x10', 'tests', 'langs'];
       var nd = blank(); keep.forEach(function (k) { nd[k] = JSON.parse(JSON.stringify(d[k])); });
-      d = nd; rid = null; kw = null; step = 0; titleNow(); persist(); render(); V.toast('New resume started with your personal details and education.');
+      d = nd; rid = null; kw = null; step = 0; titleNow(); pristine = sig(); render(); V.toast('New resume started with your personal details and education. It is saved once you change something.');
     };
     document.getElementById('rb-blank').onclick = function () {
-      d = blank(); rid = null; kw = null; step = 0; titleNow(); persist(); render(); V.toast('Blank resume started.');
+      d = blank(); rid = null; kw = null; step = 0; titleNow(); pristine = sig(); render(); V.toast('Blank resume started.');
     };
     document.getElementById('rb-del').onclick = function () {
       if (!confirm('Delete “' + (d.title || 'this resume') + '”? This cannot be undone.')) return;
@@ -616,9 +847,9 @@
       var from = d.title; d = JSON.parse(JSON.stringify(d)); rid = null;
       if (d.autoT === false) { var base = from.replace(/\s*\(copy( \d+)?\)$/, ''), n = 1, t = base + ' (copy)'; var taken = LIST.map(function (x) { return (x.title || '').toLowerCase(); }); while (taken.indexOf(t.toLowerCase()) >= 0) t = base + ' (copy ' + (++n) + ')'; d.title = t; }
       else d.title = '';
-      titleNow(); persist(); pickerHtml();
+      titleNow(); pristine = sig(); pickerHtml();
       var tb = document.getElementById('rb-tname'); if (tb) tb.textContent = d.title;
-      V.toast('Copy created: “' + d.title + '”. Change the company or keywords for the new job.');
+      V.toast('Copy ready: “' + d.title + '”. It is saved as a new resume as soon as you change the company or keywords.');
     };
     document.getElementById('rb-ren').onclick = function () {
       var n = prompt('Resume name', d.title || ''); if (n == null) return; n = n.trim().slice(0, 80);
@@ -675,6 +906,7 @@
   }
   function countDl() { if (rid && V.session) V.rpc('rb_count_download', { p_id: rid }).catch(function () {}); }
   window.RB = {
+    parse: function (t) { return parseResume(t); },
     download: function (api, data, title, kind) {
       var keepV = V, keepD = d; V = Object.assign({ toast: function () {} }, keepV || {}, api); d = Object.assign(blank(), data); if (title) { d.title = title; d.autoT = false; }
       function restore() { V = keepV || V; d = keepD; }
