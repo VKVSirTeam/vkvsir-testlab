@@ -1787,8 +1787,22 @@
       inQ = false; var end = now() + v.seconds * 1000;
       h('<div class="narrow card center stack"><div class="big">' + (v.global ? '🔒' : '⏸️') + '</div><h1>' + (v.global ? 'Practice and quizzes locked' : 'Practice paused') + '</h1>' +
         '<p>' + (v.global ? 'You rushed through questions again today. Please attempt questions only when you have time to read them. You can resume this session exactly where you left it in:' : (v.warns >= 3 ? 'Please attempt practice when you have time to read the questions, not to hunt and guess. If it happens again today, everything locks for 10 minutes. Resumes in:' : 'You were answering faster than the questions can be read. Practice resumes in:')) + '</p><div class="big mono" id="pz"></div>' +
-        '<p class="small muted">Tip: meanwhile, read the explanations of your earlier answers in your dashboard.</p><a class="btn ghost" href="/me" data-link>My dashboard</a></div>');
-      ticker = setInterval(function () { var l = Math.max(0, end - now()), el = q('#pz'); if (!el) return; el.textContent = mmss(l); if (l <= 0) { clearInterval(ticker); load(); } }, 500);
+        '<div class="pz-f" id="pzf" aria-live="polite"></div><p class="small muted" id="pzn"></p></div>');
+      var FEAT = [
+        ['📘', 'Practice & learn', 'No timer on any question. After you answer, you see the correct option and its explanation or solution, then move on with Next at your own pace.'],
+        ['📝', 'Test yourself', 'A timed quiz like a real exam. Your score, correct answers and explanations come at the end, and it counts on the leaderboard.'],
+        ['🧪', 'Quiz after practice', 'After every 3 practice sessions in a unit, a short quiz shows how much really stuck and unlocks more practice.'],
+        ['🧭', 'Explore by your goal', 'Choose your university syllabus or a competitive exam such as GATE, JEN or RTO/MVI, and practise topics in that exam’s order and level.'],
+        ['📸', 'Save & share a question', 'Save a few hard questions to WhatsApp to discuss with a friend or teacher. Your friend can try it from the link and see the solution.'],
+        ['🚩', 'Report a question', 'Found a typo, an unclear equation or a doubtful answer? Tap 👎 under the question. Our team reviews every report.'],
+        ['📊', 'Your dashboard', 'Quiz and practice history are kept separately, with accuracy by unit and your weakest topics first.'],
+        ['🏢', 'Job Prep', 'Enter a company, role and level to get the topics to master, software to learn and interview questions asked there.'],
+        ['📄', 'Resume Builder', 'Start from a template for your branch and role, or upload your old resume. It becomes ATS-friendly, and you can download PDF or Word free.'],
+        ['🐢', 'Why read slowly?', 'Reading every question fully is how concepts stick. Guessing quickly feels productive but leaves gaps that show up in the real exam.']
+      ], fi = 0;
+      function showF() { var f = FEAT[fi % FEAT.length], el = q('#pzf'), n = q('#pzn'); if (!el) return; el.innerHTML = '<span>' + f[0] + '</span><b>' + esc(f[1]) + '</b><p>' + esc(f[2]) + '</p>'; n.textContent = 'Did you know? ' + ((fi % FEAT.length) + 1) + ' of ' + FEAT.length; fi++; }
+      showF(); var fTick = 0;
+      ticker = setInterval(function () { var l = Math.max(0, end - now()), el = q('#pz'); if (!el) return; el.textContent = mmss(l); if (++fTick % 18 === 0) showF(); if (l <= 0) { clearInterval(ticker); load(); } }, 500);
     }
     function renderQ(v) {
       inQ = true; shownAt = now() - (v.elapsed_ms || 0);

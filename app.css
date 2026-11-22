@@ -1335,3 +1335,6 @@ a.nx-i:hover{border-color:var(--accent)}
 .qshare small{font-size:11px;color:#128C4A;font-weight:700}
 .qshare[disabled]{opacity:.45;cursor:not-allowed}
 @media (max-width:700px){.qshare{top:auto;bottom:86px;transform:none;flex-direction:row;width:auto;padding:8px 12px;gap:6px;font-size:16px}}
+.pz-f{border:1px solid var(--line);background:var(--soft);border-radius:14px;padding:16px;text-align:left;min-height:120px;animation:pzin .4s ease}
+.pz-f span{font-size:28px;display:block} .pz-f b{font-size:17px} .pz-f p{margin:6px 0 0;font-size:15px;line-height:1.55}
+@keyframes pzin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
