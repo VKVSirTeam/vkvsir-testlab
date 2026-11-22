@@ -111,7 +111,7 @@
     dr.innerHTML = '<div class="drawer-bg" data-close></div><aside class="drawer-p" role="dialog" aria-label="Menu"><div class="drawer-h"><b>Menu</b><button type="button" class="drawer-x" data-close aria-label="Close menu">✕</button></div>' +
       '<nav class="drawer-n">' + items.map(function (x) { return '<a href="' + x[1] + '" data-link class="' + (active === x[0] ? 'on' : '') + '"><span class="di">' + x[3] + '</span><span><b>' + x[2] + '</b><small>' + x[4] + '</small></span></a>'; }).join('') + '</nav>' +
       '<div class="drawer-f"><p class="small muted" style="margin:0">Appearance</p><div class="theme-seg">' + [['light', 'Light'], ['dark', 'Dark'], ['auto', 'System']].map(function (t) { return '<button type="button" data-t="' + t[0] + '">' + icon({ auto: 'auto', light: 'sun', dark: 'moon' }[t[0]]) + t[1] + '</button>'; }).join('') + '</div>' + (session ? '<a class="btn ghost block" href="/profile" data-link>👤 My profile</a>' : '<a class="btn block" href="/login" data-link>Sign in / Create free account</a>') +
-      '<a class="drawer-site" href="https://www.vkvsir.com">Visit vkvsir.com ↗</a><a class="drawer-site" href="/why" data-link>Why VKV Sir Test Lab</a></div></aside>';
+      '<button type="button" class="btn ghost block" id="inst"' + (window.__bip ? '' : ' hidden') + '>' + icon('auto') + ' Install the app</button><a class="drawer-site" href="https://www.vkvsir.com">Visit vkvsir.com ↗</a><a class="drawer-site" href="/why" data-link>Why VKV Sir Test Lab</a></div></aside>';
     function openD(o) { dr.classList.toggle('open', o); dr.setAttribute('aria-hidden', o ? 'false' : 'true'); document.body.classList.toggle('noscroll', o); var b = $nav.querySelector('.menu-btn'); if (b) b.setAttribute('aria-expanded', o); }
     $nav.querySelector('.menu-btn').onclick = function () { openD(true); };
     $nav.querySelector('.theme-btn').onclick = function () { var order = ['auto', 'light', 'dark'], t = themeGet(); themeSet(order[(order.indexOf(t) + 1) % 3]); };
@@ -291,10 +291,10 @@
     setNav('home'); loading();
     Promise.all([rpc('catalog').catch(function () { return []; }), rpc('list_tests').catch(function () { return []; }),
       rpc('exam_list').catch(function () { return []; }), rpc('leaderboard_page', { p_days: 30, p_subject: null }).catch(function () { return null; })]).then(function (r) {
-      var cat = r[0] || [], tests = r[1] || [], exams = r[2] || [], lb = r[3] || { top: [] };
+      var cat = r[0] || [], tests = (r[1] || []).filter(function (t) { return t.slug !== 'daily'; }), exams = r[2] || [], lb = r[3] || { top: [] };
       var nQ = cat.reduce(function (a, x) { return a + (x.count || 0); }, 0), nS = cat.filter(function (x) { return (x.count || 0) >= READY; }).length;
       var fmtN = function (n) { return Number(n || 0).toLocaleString('en-IN'); };
-      var day = Math.floor(Date.now() / 864e5), today = tests.length ? tests[day % tests.length] : null;
+      var today = { slug: 'daily', title: 'Daily test · ' + new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long' }), description: 'Same 20 questions for everyone today: aptitude, reasoning, English and science. One attempt; ranked by score and time.', durations: [15] };
       var fam = {}; exams.forEach(function (e) { var f = e.family || e.org; if (!fam[f]) fam[f] = { n: 0, k: e.kind }; fam[f].n++; });
       var doors = [
         ['practice', 'Practice', 'Learn topic by topic. See the right answer and explanation after every question.', '/practice', 'Start practice'],
@@ -344,6 +344,19 @@
   function viewLeaderboard() {
     setNav('me'); loading();
     var prm = new URLSearchParams(location.search), days = +(prm.get('d') || 30), subj = prm.get('s') || '';
+    if (prm.get('v') === 'colleges') {
+      rpc('college_board', { p_days: days }).then(function (cb) {
+        var top = (cb && cb.top) || [];
+        h('<div class="hub stack">' + crumbBar([['Home', '/'], ['Leaderboard', '']]) +
+          '<div><p class="eyebrow">Leaderboard</p><h1>Top colleges</h1><p class="muted">Average test score of each college\'s ranked students (at least 3 students, 20+ questions each).</p></div>' +
+          '<div class="lb-f"><div class="seg mini" role="group" aria-label="View"><a class="chip" href="/leaderboard?d=' + days + '" data-link aria-pressed="false">Students</a><a class="chip" href="/leaderboard?v=colleges&d=' + days + '" data-link aria-pressed="true">Colleges</a></div>' +
+            '<div class="seg mini" role="group" aria-label="Period">' + [[30, 'This month'], [365, 'This year']].map(function (d) { return '<a class="chip" href="/leaderboard?v=colleges&d=' + d[0] + '" data-link aria-pressed="' + (days === d[0]) + '">' + d[1] + '</a>'; }).join('') + '</div></div>' +
+          (top.length ? '<ol class="board lb-list">' + top.map(function (c) { return '<li class="' + (c.me ? 'me' : '') + '"><span class="bd-r">' + c.rank + '</span><span class="bd-n"><b>' + esc(c.name) + (c.me ? ' (your college)' : '') + '</b><span class="bd-c">' + c.students + ' students</span></span><span class="mono">' + c.pct + '%</span></li>'; }).join('') + '</ol>'
+            : '<div class="card center stack"><b>No college has 3 ranked students yet</b><p class="muted">Invite classmates to take tests. Make sure everyone writes the college name the same way in their profile.</p><div class="row" style="justify-content:center"><a class="btn" href="/test" data-link>Take a test</a><a class="btn ghost" href="/profile" data-link>Check my college name</a></div></div>') +
+          '</div>');
+      }).catch(function (e) { h('<div class="narrow card center"><p>' + esc(errMsg(e)) + '</p></div>'); });
+      return;
+    }
     Promise.all([rpc('leaderboard_page', { p_days: days, p_subject: subj || null }), rpc('catalog').catch(function () { return []; })]).then(function (r) {
       var lb = r[0] || { top: [] }, cat = r[1] || [], top = lb.top || [];
       var url = function (d, s2) { return '/leaderboard?d=' + d + (s2 ? '&s=' + s2 : ''); };
@@ -353,7 +366,7 @@
       var me = lb.me;
       h('<div class="hub stack">' + crumbBar([['Home', '/'], ['Leaderboard', '']]) +
         '<div><p class="eyebrow">Leaderboard</p><h1>Top students</h1><p class="muted">' + fmtNum(lb.total || 0) + ' students ranked · first attempt of each test · at least 20 questions.</p></div>' +
-        '<div class="lb-f"><div class="seg mini" role="group" aria-label="Period">' + [[7, 'This week'], [30, 'This month'], [365, 'This year']].map(function (d) { return '<a class="chip" href="' + url(d[0], subj) + '" data-link aria-pressed="' + (days === d[0]) + '">' + d[1] + '</a>'; }).join('') + '</div>' +
+        '<div class="lb-f"><div class="seg mini" role="group" aria-label="View"><a class="chip" href="/leaderboard?d=' + days + '" data-link aria-pressed="true">Students</a><a class="chip" href="/leaderboard?v=colleges&d=' + days + '" data-link aria-pressed="false">Colleges</a></div><div class="seg mini" role="group" aria-label="Period">' + [[7, 'This week'], [30, 'This month'], [365, 'This year']].map(function (d) { return '<a class="chip" href="' + url(d[0], subj) + '" data-link aria-pressed="' + (days === d[0]) + '">' + d[1] + '</a>'; }).join('') + '</div>' +
           '<label class="lb-sel"><span class="small muted">Subject</span><select class="in" id="lb-s"><option value="">All subjects</option>' + cat.filter(function (x) { return (x.count || 0) >= READY; }).map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === subj ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') + '</select></label></div>' +
         (top.length ? podHtml + '<ol class="board lb-list" start="4">' + rest.map(function (b) { return '<li class="' + (b.me ? 'me' : '') + '"><span class="bd-r">' + b.rank + '</span><span class="bd-n"><b>' + esc(b.name) + (b.me ? ' (you)' : '') + '</b>' + (b.college ? '<span class="bd-c">' + esc(b.college) + '</span>' : '') + '</span><span class="mono">' + b.pct + '%</span></li>'; }).join('') + '</ol>'
           : '<div class="card center"><p>No ranked students for this choice yet.</p><a class="btn" href="/test" data-link>Take a test</a></div>') +
@@ -743,7 +756,14 @@
   function viewTest(slug) {
     setNav('test'); loading();
     rpc('test_info', { p_slug: slug }).then(function (t) {
-      if (t) setTimeout(function () { rpc('leaderboard', { p_subject: null, p_test: slug }).then(function (b) { var n = q('.narrow'); if (n && b && b.length) n.insertAdjacentHTML('beforeend', boardCard(b, 'Top performers in this test')); }).catch(function () {}); }, 600);
+      if (t && slug === 'daily') setTimeout(function () { rpc('daily_board', { p_day: null }).then(function (d) { var n = q('.narrow'); if (!n || !d) return;
+          var mm = function (x) { return x == null ? '' : Math.floor(x / 60) + ':' + ('0' + (x % 60)).slice(-2); };
+          n.insertAdjacentHTML('beforeend', '<section class="card"><div class="spread"><h2 style="margin:0">Today\'s leaderboard</h2><span class="small muted">' + d.total + ' taken today</span></div>' +
+            (d.top && d.top.length ? '<ol class="board">' + d.top.map(function (b) { return '<li class="' + (b.me ? 'me' : '') + '"><span class="bd-r">' + b.rank + '</span><span class="bd-n"><b>' + esc(b.name) + (b.me ? ' (you)' : '') + '</b>' + (b.college ? '<span class="bd-c">' + esc(b.college) + '</span>' : '') + '</span><span class="mono">' + b.score + '/' + b.n + ' · ' + mm(b.secs) + '</span></li>'; }).join('') + '</ol>' : '<p class="muted">Be the first today.</p>') +
+            '<p class="small muted">Ranked by score, then time taken. First attempt only. A new paper opens at midnight.</p></section>');
+          if (d.taken) { var go0 = q('.tpage .btn.block, .narrow .btn.block'); if (go0) { go0.disabled = true; go0.textContent = d.me ? 'Done today: rank #' + d.me.rank + ' · come back tomorrow' : 'Done today · come back tomorrow'; } }
+        }).catch(function () {}); }, 400);
+      else if (t) setTimeout(function () { rpc('leaderboard', { p_subject: null, p_test: slug }).then(function (b) { var n = q('.narrow'); if (n && b && b.length) n.insertAdjacentHTML('beforeend', boardCard(b, 'Top performers in this test')); }).catch(function () {}); }, 600);
       if (!t) { h('<div class="narrow card center"><h2>Test not found</h2><p class="muted">It may have been closed.</p><a class="btn" href="/" data-link>See all tests</a></div>'); return; }
       setTimeout(function () { guide(q('#seg'), 'Choose how much time you have, then press Start'); }, 400);
       var dur = t.durations[Math.min(1, t.durations.length - 1)];
@@ -752,7 +772,7 @@
         var n = Math.min(t.available, Math.floor(d * 60 / t.sec_per_q));
         return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + n + ' questions</span></button>';
       }).join('');
-      h('<div class="narrow stack tpage">' + crumbBar([['Test', '/test'], [t.title, '']]) + '<div><div class="row"><span class="pill accent">' + esc(t.subject) + '</span><span class="pill">' + (t.mode === 'exam' ? 'Mock test' : 'Test') + '</span></div>' +
+      h('<div class="narrow stack tpage">' + crumbBar([['Test', '/test'], [t.title, '']]) + '<div><div class="row"><span class="pill accent">' + esc(slug === 'daily' ? 'Mixed: aptitude, reasoning, English, science' : t.subject) + '</span><span class="pill">' + (t.mode === 'exam' ? 'Mock test' : 'Test') + '</span></div>' +
         '<h1 style="margin-top:12px">' + esc(t.title) + '</h1>' + (function (d) { d = String(d || '').replace(/^practice:\s*/i, '').trim(); return d && t.title.toLowerCase().indexOf(d.toLowerCase()) < 0 ? '<p class="muted">' + esc(d) + '</p>' : ''; })(t.description) + '</div>' +
         '<div class="card stack">' +
         (t.active_attempt ? '<div class="note">You have an unfinished attempt. Continue where you left off.</div><a class="btn block" href="/exam/' + t.active_attempt + '" data-link>Resume test</a>' :
@@ -958,14 +978,15 @@
   function viewHub(mode) {
     setNav(mode); loading();
     Promise.all([rpc('catalog').catch(function () { return []; }), mode === 'test' ? rpc('list_tests').catch(function () { return []; }) : Promise.resolve([])]).then(function (r) {
-      var cat = r[0] || [], tests = r[1] || [], sb = subjectBrowser(cat, mode);
+      var cat = r[0] || [], tests = (r[1] || []).filter(function (t) { return t.slug !== 'daily'; }), sb = subjectBrowser(cat, mode);
       var head = mode === 'test'
         ? '<p class="eyebrow">Test</p><h1>Take a test</h1><p class="muted">Timed like a real exam. Your score and explanations come at the end, and it counts on the leaderboard.</p>'
         : '<p class="eyebrow">Practice</p><h1>What do you want to practise?</h1><p class="muted">No timer pressure: you see the right answer and explanation after every question.</p>';
       var mocks = '';
       if (mode === 'test' && tests.length) {
         var g = {}; tests.forEach(function (t) { (g[t.grp] = g[t.grp] || []).push(t); });
-        mocks = '<section class="stack"><h2>Ready-made tests</h2>' + Object.keys(g).map(function (k) {
+        mocks = '<a class="card hm-today" href="/t/daily" data-link><p class="eyebrow">Daily test</p><h2>Today\'s 20 questions</h2><p class="muted">The same paper for everyone today. One attempt, ranked by score and time.</p><span class="tmeta">' + icon('test') + ' 15 min · new paper at midnight</span></a>' +
+          '<section class="stack"><h2>Ready-made tests</h2>' + Object.keys(g).map(function (k) {
           return '<details class="grp" open><summary><b>' + esc(k) + '</b><small>' + g[k].length + ' test' + (g[k].length > 1 ? 's' : '') + '</small>' + icon('chevron', 'sj-c') + '</summary><div class="grp-b tcards">' + g[k].map(function (t) {
             return '<a class="tcard card" href="/t/' + esc(t.slug) + '" data-link><b>' + esc(t.title) + '</b><small class="muted">' + esc(t.description || t.subject || '') + '</small><span class="tmeta">' + icon('test') + ' ' + esc((t.durations || []).join(' / ')) + ' min</span></a>'; }).join('') + '</div></details>';
         }).join('') + '</section><h2>Make a test from any subject</h2>';
@@ -2440,6 +2461,39 @@
   }
 
   /* ---------- result ---------- */
+
+  /* share card: a 1080x1080 image of the score for WhatsApp / Instagram */
+  function scoreCard(r, pct) {
+    var c = document.createElement('canvas'); c.width = 1080; c.height = 1080; var x = c.getContext('2d');
+    var g = x.createLinearGradient(0, 0, 1080, 1080); g.addColorStop(0, '#1d3fd1'); g.addColorStop(1, '#6d43d9'); x.fillStyle = g; x.fillRect(0, 0, 1080, 1080);
+    x.fillStyle = 'rgba(255,255,255,.08)'; x.beginPath(); x.arc(920, 160, 260, 0, 7); x.fill(); x.beginPath(); x.arc(120, 980, 220, 0, 7); x.fill();
+    function t(str, font, color, y, max) { x.font = font; x.fillStyle = color; x.textAlign = 'center';
+      var words = String(str).split(' '), line = '', lines = []; words.forEach(function (w) { var test = line ? line + ' ' + w : w; if (x.measureText(test).width > (max || 900) && line) { lines.push(line); line = w; } else line = test; }); lines.push(line);
+      lines.slice(0, 2).forEach(function (l, i) { x.fillText(l, 540, y + i * parseInt(font.match(/(\d+)px/)[1], 10) * 1.2); }); return lines.length > 1; }
+    t('VKV SIR TEST LAB', 'bold 34px Arial', 'rgba(255,255,255,.8)', 120);
+    var two = t(r.title || 'Test', 'bold 50px Arial', '#fff', 210);
+    var cy = two ? 520 : 480, R = 190;
+    x.lineWidth = 34; x.strokeStyle = 'rgba(255,255,255,.18)'; x.beginPath(); x.arc(540, cy, R, 0, 7); x.stroke();
+    x.strokeStyle = pct >= 70 ? '#4ade80' : pct >= 50 ? '#facc15' : '#fb923c'; x.lineCap = 'round';
+    x.beginPath(); x.arc(540, cy, R, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * Math.max(0.01, pct / 100)); x.stroke();
+    t(pct + '%', 'bold 120px Arial', '#fff', cy + 40); t(r.score + ' / ' + r.n + ' correct', '32px Arial', 'rgba(255,255,255,.85)', cy + 90);
+    var name = (profile && profile.full_name) || '', col = (profile && profile.college) || '';
+    if (name) t(name, 'bold 48px Arial', '#fff', cy + R + 110);
+    if (col) t(col, '34px Arial', 'rgba(255,255,255,.85)', cy + R + 165);
+    t('Practise free at test.vkvsir.com', 'bold 34px Arial', '#fff', 1020);
+    return c;
+  }
+  if (location.hostname === 'localhost') window.__scoreCard = scoreCard;
+  function shareScore(r, pct) {
+    var c = scoreCard(r, pct), text = 'I scored ' + pct + '% in ' + (r.title || 'a test') + ' on VKV Sir Test Lab. Practise free: https://test.vkvsir.com';
+    c.toBlob(function (b) {
+      var f = new File([b], 'vkv-score.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], text: text }).catch(function () {}); track('share_score'); return; }
+      var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'vkv-score.png'; document.body.appendChild(a); a.click(); a.remove();
+      try { navigator.clipboard.writeText(text); } catch (e) {}
+      toast('Image saved. The message is copied: paste it with the image.'); track('share_score');
+    }, 'image/png');
+  }
   function viewResult(id, tok) {
     setNav(tok ? 'exam' : 'me');
     var A = examApi(tok), home = tok ? '/g/' + tok : '/me';
@@ -2484,7 +2538,7 @@
         '<p class="res-msg">' + V[2] + '</p>' + tipHtml('result') +
         '<div class="res-tiles"><div><b class="g">' + r.score + '</b><span>Correct</span></div><div><b class="b">' + wrong + '</b><span>Wrong</span></div><div><b class="w">' + skip + '</b><span>Not answered</span></div><div><b>' + acc + '%</b><span>Accuracy</span></div><div><b>' + att + '%</b><span>Attempted</span></div></div>' +
         (tip ? '<div class="res-tip">💡 ' + tip + '</div>' : '') +
-        '<div class="row res-act">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/practice" data-link>Practise again</a><a class="btn ghost" href="/me" data-link>My dashboard</a>') + '</div></div>' +
+        '<div class="row res-act">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/practice" data-link>Practise again</a><button type="button" class="btn ghost" id="shsc">Share my score</button><a class="btn ghost" href="/me" data-link>My dashboard</a>') + '</div></div>' +
         (rev ? '<div class="res-rv"><div class="spread res-rvh"><div><h2>Learn from your mistakes</h2><p class="small muted">Questions you missed, with the right answer and explanation. Read these first.</p></div>' +
           '<div class="tabs" id="rvf"><button type="button" class="on" data-f="all">All</button><button type="button" data-f="no">Wrong · ' + wrong + '</button><button type="button" data-f="skip">Not answered · ' + skip + '</button></div></div>' + rev + '</div>'
           : '<div class="card center"><h2>Perfect score! 🎉</h2><p class="muted">Every answer was correct.</p></div>') +
@@ -2507,6 +2561,7 @@
         }).catch(function () {});
       })();
       var rv = q('.res'); if (rv) rv.insertAdjacentHTML('beforeend', '<p class="small muted" style="text-align:center;margin:4px 0 0">Questions are expert-prepared and double-checked. Although every answer is carefully reviewed, if you find any ambiguity in an answer or in the wording, use 🚩 <b>Report</b> on that question; our team reviews every report. <a href="/disclaimer" data-link>Terms of use</a></p>' + suggestBox());
+      var shb = q('#shsc'); if (shb) shb.onclick = function () { shareScore(r, pct); };
       renderMath($view);
       $view.querySelectorAll('.rfb').forEach(function (box) {
         var no = +box.getAttribute('data-no'), rating = null, flags = [], chips = box.querySelector('.chips');
@@ -3492,6 +3547,11 @@
       });
     }, 0);
   });
+  /* installable app */
+  if ('serviceWorker' in navigator) window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.__bip = e; var b = document.getElementById('inst'); if (b) b.hidden = false; });
+  window.addEventListener('appinstalled', function () { window.__bip = null; var b = document.getElementById('inst'); if (b) b.hidden = true; track('app_installed'); });
+  document.addEventListener('click', function (e) { if (!e.target.closest('#inst') || !window.__bip) return; window.__bip.prompt(); window.__bip.userChoice.then(function () { window.__bip = null; var b = document.getElementById('inst'); if (b) b.hidden = true; }); });
   sb.auth.getSession().then(function (r) {
     session = r.data.session;
     return loadProfile();
