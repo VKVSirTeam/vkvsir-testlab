@@ -113,13 +113,13 @@ a{color:var(--accent)}
 
 <section id="summary">
 <div class="stats">
-  <div class="stat"><b>95</b><span>findings with fixes: 8 critical, 31 high, 49 medium, 7 low</span></div>
+  <div class="stat"><b>95</b><span>findings with fixes: 8 critical, 29 high, 51 medium, 7 low</span></div>
   <div class="stat"><b>19</b><span>public screens measured on laptop and phone</span></div>
   <div class="stat"><b>1</b><span>browser-tab title for every page (“VKV Sir Test Lab”)</span></div>
   <div class="stat"><b>11–18</b><span>font sizes per screen (target: 8 across the app)</span></div>
   <div class="stat"><b>192</b><span><code>!important</code> overrides in app.css</span></div>
   <div class="stat"><b>102</b><span>fixed colours that bypass the theme</span></div>
-  <div class="stat"><b>105</b><span>unlabelled controls on one exam page</span></div>
+  <div class="stat"><b>0</b><span>unlabelled controls after recheck (first count of 105 was a measuring error)</span></div>
   <div class="stat"><b>111 px</b><span>header height on a phone (14% of the screen)</span></div>
 </div>
 <p><b>Verdict.</b> The engine is strong: about 75,000 questions, a clean exam browser with branch filters, honest timing, anti-cheat, translations, job prep and a resume builder. What holds the app back is the layer students touch: one long home page doing every job, the same idea under three names, layouts that break on phones in specific places, a header that eats the screen, and a visual style that drifts from page to page. None of this needs the content to change. It needs a design system, a clear map of places, and careful screen-by-screen rebuilding, done in stages so the site never goes down.</p>
@@ -148,8 +148,8 @@ a{color:var(--accent)}
 <tr><th>Screen</th><th>Height (screens)</th><th>Font sizes</th><th>Text colours</th><th>Button styles</th><th>Small targets</th><th>Unlabelled</th><th>Emoji</th><th>DOM nodes</th></tr>
 <tr><td>Home <code>/</code></td><td class="n bad">12.2</td><td class="n bad">23</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n bad">73</td><td class="n bad">~9,000</td></tr>
 <tr><td>Exams: career</td><td class="n">5.3</td><td class="n">12</td><td class="n">9</td><td class="n">2</td><td class="n">16</td><td class="n">0</td><td class="n">8</td><td class="n">411</td></tr>
-<tr><td>Exam: GATE CS</td><td class="n">2.2</td><td class="n">11</td><td class="n">9</td><td class="n">4</td><td class="n bad">132</td><td class="n bad">105</td><td class="n">5</td><td class="n">743</td></tr>
-<tr><td>Exam: state subordinate</td><td class="n">5.0</td><td class="n">11</td><td class="n">9</td><td class="n">4</td><td class="n bad">86</td><td class="n bad">31</td><td class="n">5</td><td class="n">747</td></tr>
+<tr><td>Exam: GATE CS</td><td class="n">2.2</td><td class="n">11</td><td class="n">9</td><td class="n">4</td><td class="n bad">132</td><td class="n">0*</td><td class="n">5</td><td class="n">743</td></tr>
+<tr><td>Exam: state subordinate</td><td class="n">5.0</td><td class="n">11</td><td class="n">9</td><td class="n">4</td><td class="n bad">86</td><td class="n">0*</td><td class="n">5</td><td class="n">747</td></tr>
 <tr><td>Subject start <code>/p/…</code></td><td class="n">2.1</td><td class="n">12</td><td class="n">7</td><td class="n bad">7</td><td class="n">20</td><td class="n">0</td><td class="n">8</td><td class="n">254</td></tr>
 <tr><td>Test start <code>/t/…</code></td><td class="n">1.7</td><td class="n">13</td><td class="n">7</td><td class="n">4</td><td class="n">15</td><td class="n">0</td><td class="n">9</td><td class="n">212</td></tr>
 <tr><td>Aptitude drill</td><td class="n">1.9</td><td class="n">13</td><td class="n">7</td><td class="n">4</td><td class="n">27</td><td class="n">0</td><td class="n">5</td><td class="n">194</td></tr>
@@ -160,7 +160,7 @@ a{color:var(--accent)}
 <tr><td>Sign-in</td><td class="n">1.5</td><td class="n">11</td><td class="n">8</td><td class="n">4</td><td class="n">17</td><td class="n">1</td><td class="n">5</td><td class="n">186</td></tr>
 <tr><td>Page not found</td><td class="n">1.3</td><td class="n">11</td><td class="n">7</td><td class="n">2</td><td class="n">15</td><td class="n">0</td><td class="n">5</td><td class="n">168</td></tr>
 </table></div>
-<p class="where">Laptop width. “Small targets” counts controls under 40 px in either direction. Signed-in screens were reviewed from code; a live pass with a student account is part of Stage 3.</p>
+<p class="where">Laptop width. “Small targets” counts controls under 40 px in either direction. Signed-in screens were reviewed from code; a live pass with a student account is part of Stage 3. *Rechecked with every section open: all controls have readable names; the first count included hidden menu links.</p>
 </section>
 
 <section id="decisions">
@@ -291,7 +291,7 @@ Utility (top-right): search · language · theme · sign-in/avatar</div>
 
 <section id="s-exam">
 <h2>Exam page <span class="where">/e/gate-cs</span></h2>
-<div class="f h"><div><h4><span class="pill">HIGH</span>105 controls without a readable name</h4><p class="seen">Section/topic toggles and icon buttons have no text or label for screen readers; 132 targets are under 40 px.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Small targets</h4><p class="seen">132 targets under 40 px (section toggles and Practice buttons). Labels are fine on recheck.</p></div></div>
 <div class="f h"><div><h4><span class="pill">HIGH</span>Only “Practice” per section</h4><p>Add “Test” next to Practice for each section, and a “Full mock” button for the whole exam pattern.</p></div></div>
 <div class="f m"><div><h4><span class="pill">MEDIUM</span>Pattern facts as three grey boxes</h4><p>One compact strip: duration · questions · marks · negative marking · difficulty, with exam date and official link.</p></div></div>
 <div class="f m"><div><h4><span class="pill">MEDIUM</span>Long lines</h4><p class="seen">61 paragraphs wider than 760 px on a laptop. Cap reading width at about 70 characters.</p></div></div>
@@ -393,7 +393,7 @@ Utility (top-right): search · language · theme · sign-in/avatar</div>
 
 <section id="a11y">
 <h2>Accessibility</h2>
-<div class="f h"><div><h4><span class="pill">HIGH</span>Unlabelled controls</h4><p class="seen">105 on GATE CS, 31 on state subordinate, 6 on Job Prep and Resume.</p></div></div>
+<div class="f m"><div><h4><span class="pill">MEDIUM</span>Unlabelled controls</h4><p class="seen">A few on Job Prep and Resume (6 each). The exam-page count was a measuring error.</p></div></div>
 <div class="f h"><div><h4><span class="pill">HIGH</span>Focus visibility</h4><p class="seen">Only 3 <code>:focus-visible</code> rules in app.css. Add one global focus ring.</p></div></div>
 <div class="f m"><div><h4><span class="pill">MEDIUM</span>Announcements</h4><p class="seen">One <code>aria-live</code> region. Announce answer result, timer at 1 minute and 10 seconds, and page changes.</p></div></div>
 <div class="f m"><div><h4><span class="pill">MEDIUM</span>Language</h4><p>Mark translated text with <code>lang="hi"</code> (etc.) so phones read it correctly.</p></div></div>
@@ -477,7 +477,7 @@ Utility (top-right): search · language · theme · sign-in/avatar</div>
 <tr><td>Font sizes per screen</td><td class="n">11–23</td><td class="n">≤ 8</td></tr>
 <tr><td>Text colours per screen</td><td class="n">7–11</td><td class="n">≤ 5</td></tr>
 <tr><td>Phone header height</td><td class="n">111 px</td><td class="n">56 px</td></tr>
-<tr><td>Unlabelled controls</td><td class="n">up to 105</td><td class="n">0</td></tr>
+<tr><td>Unlabelled controls</td><td class="n">up to 6</td><td class="n">0</td></tr>
 <tr><td>Elements on largest screen</td><td class="n">~9,000</td><td class="n">≤ 1,500</td></tr>
 <tr><td>Inner pages answering 200</td><td class="n">0</td><td class="n">all public</td></tr>
 <tr><td>Distinct page titles</td><td class="n">1</td><td class="n">one per page</td></tr>

@@ -975,7 +975,8 @@ body.noscroll{overflow:hidden}
 .tabp,.split-v{max-width:100%;overflow:hidden}
 @media(max-width:560px){.b2{left:4px}.why-tbl td,.why-tbl th{font-size:12px;padding:8px 6px}.why-tbl td:first-child{min-width:110px}}
 /* header: mobile = brand row + tab row (no side menu) */
-.menu-btn{display:none!important}
+@media(min-width:881px){.menu-btn{display:none!important}}
+@media(max-width:880px){.menu-btn{display:inline-flex!important;width:44px;height:44px;margin-left:6px}}
 .brand-t{display:none}
 @media(max-width:880px){
   .bar{flex-wrap:wrap;height:auto!important;padding:8px 12px 0!important;row-gap:6px}
@@ -1359,3 +1360,26 @@ a.nx-i:hover{border-color:var(--accent)}
   .fi{min-width:44px;justify-content:center}
 }
 body.touring .tipc{display:none}
+/* Stage 1: segmented pickers never break words on phones (max 3 per row, wrap) */
+.seg button{word-break:normal;overflow-wrap:normal;hyphens:none}
+@media(max-width:560px){
+  .seg:not(.mini){display:flex!important;flex-wrap:wrap;gap:8px}
+  .seg:not(.mini)>button{flex:1 1 calc(33.333% - 6px);min-width:92px;padding:10px 6px}
+  .seg button b{font-size:16px;white-space:nowrap}
+  .seg button span{font-size:12px;line-height:1.3}
+}
+.nf-doors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.nf-d{display:flex;flex-direction:column;gap:4px;text-decoration:none;color:inherit;padding:16px}
+.nf-d:hover{border-color:var(--accent)}
+.nf-i{font-size:22px}
+/* Stage 1: one visible keyboard focus ring everywhere (mouse clicks stay clean) */
+:where(a,button,input,select,textarea,summary,[tabindex]):focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+/* italic gradient words overhang into the next word */
+h1 em,h2 em{padding-right:.14em;margin-right:-.04em}
+/* Stage 1: leaderboard rows with full name and college on two lines */
+.board li{display:grid!important;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:10px}
+.board .bd-r{font-weight:800;color:var(--muted);text-align:center}
+.board li:nth-child(-n+3) .bd-r{color:var(--accent)}
+.board .bd-n{display:flex;flex-direction:column;min-width:0}
+.board .bd-n b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board .bd-c{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

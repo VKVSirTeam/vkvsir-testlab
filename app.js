@@ -50,7 +50,7 @@
   function setNav(active) {
     if (active !== undefined) navActive = active;
     active = navActive;
-    var items = [['home', '/', 'Practice & Tests', '🎯', 'Learn with practice, then test yourself', 'Practice'], ['career', '/career', 'Job Prep', '🏢', 'Company-wise plan, software & interviews', 'Job Prep'], ['resume', '/resume', 'Resume Builder', '📄', 'ATS-ready resume, PDF & Word', 'Resume']];
+    var items = [['home', '/', 'Practice & Tests', '🎯', 'Learn with practice, then take a test', 'Practice'], ['career', '/career', 'Job Prep', '🏢', 'Company-wise plan, software & interviews', 'Job Prep'], ['resume', '/resume', 'Resume Builder', '📄', 'ATS-ready resume, PDF & Word', 'Resume']];
     if (session && !isGuest()) items.push(['me', '/me', 'Dashboard', '📊', 'Your results and progress', 'My tests']);
     if (session && profile && profile.is_admin) items.push(['admin', '/admin', 'Admin', '🛠', 'Control room', 'Admin']);
     var ini = ((profile && (profile.full_name || profile.email)) || '?').charAt(0).toUpperCase();
@@ -120,15 +120,15 @@
 
   /* ---------- gentle guidance: one tip at a time, each with a link ---------- */
   var TIPS = {
-    home: [['why-practice', '📘 New here? Start with <b>Practice &amp; learn</b>: you see the right answer and explanation after every question.', '/exams?k=competitive', 'Find your exam'],
+    home: [['why-practice', '📘 New here? Start with <b>Practice</b>: you see the right answer and explanation after every question.', '/exams?k=competitive', 'Find your exam'],
            ['goal', '🧭 Preparing for GATE, JEN or your university exam? Browse topics in your own exam’s order.', '/exams?k=university', 'Explore by goal'],
            ['resume', '📄 Did you know? You can build an ATS-ready resume here for free, with PDF and Word download.', '/resume', 'Build my resume']],
-    focus: [['quiz-after', '🧪 After every 3 practice sessions in a unit, take a short <b>Test yourself</b> quiz. It shows what really stuck.', null, null],
+    focus: [['quiz-after', '🧪 After every 3 practice sessions in a unit, take a short <b>Test</b>. It shows what really stuck.', null, null],
             ['no-rush', '🐢 Read each question fully. Rushing is detected and slows your practice down; careful reading builds real understanding.', null, null],
             ['share', '👥 Studying with friends? Share this topic link in your class group so everyone practises together.', '#share', 'Share below']],
     result: [['flag', '🚩 Found a typo, a doubtful answer or an unclear equation? Tap 👎 under that question to report it. Our team checks every report.', null, null],
-             ['practice-next', '📘 Use <b>Practice &amp; learn</b> on your weak units: you get the explanation right after each answer.', '/exams?k=competitive', 'Pick a topic'],
-             ['dash', '📊 Your dashboard shows your quiz and practice history separately, with unit-wise accuracy.', '/me', 'Open dashboard']],
+             ['practice-next', '📘 Use <b>Practice</b> on your weak units: you get the explanation right after each answer.', '/exams?k=competitive', 'Pick a topic'],
+             ['dash', '📊 Your dashboard shows your test and practice history separately, with unit-wise accuracy.', '/me', 'Open dashboard']],
     dash: [['jobprep', '🏢 Targeting a company? Get a full plan with topics, software and interview questions.', '/career', 'Open Job Prep'],
            ['resume2', '📄 Keep one resume per company: duplicate it and change a few keywords.', '/resume', 'My resumes'],
            ['resume-pause', '⏯️ Unfinished practice? Look for <b>Continue</b> in the Practice tab to pick up where you left off.', null, null]]
@@ -181,7 +181,10 @@
     if ((m = p.match(/^\/g\/([0-9a-f]{20,64})$/))) return viewGroup(m[1]);
     if ((m = p.match(/^\/result\/([0-9a-f-]{36})$/))) return viewResult(m[1]);
     setNav('');
-    h('<div class="narrow card center"><h2>Page not found</h2><p class="muted">The link may be old or mistyped.</p><a class="btn" href="/" data-link>Go to tests</a></div>');
+    h('<div class="nf narrow stack"><div class="card center stack"><p class="eyebrow">Error 404</p><h1>Page not found</h1><p class="muted">The link may be old or mistyped. Try one of these instead.</p></div>' +
+      '<div class="nf-doors">' + [['📘', 'Practice', 'Subjects, units and topics', '/exams?k=university'], ['⏱️', 'Tests', 'Timed papers and mock tests', '/exams?k=competitive'], ['🎓', 'Exams', 'GATE, SSC, PSU and more', '/exams?k=competitive'], ['🏢', 'Job Prep', 'Company-wise plan', '/career']].map(function (d) {
+        return '<a class="card nf-d" href="' + d[3] + '" data-link><span class="nf-i" aria-hidden="true">' + d[0] + '</span><b>' + d[1] + '</b><span class="small muted">' + d[2] + '</span></a>'; }).join('') + '</div>' +
+      '<p class="center"><a class="btn" href="/" data-link>Go to home</a></p></div>');
   }
   function nextParam() { var n = new URLSearchParams(location.search).get('next'); return n && n.charAt(0) === '/' ? n : '/me'; }
 
@@ -299,8 +302,8 @@
               ['cot φ − cot θ = w / l', 'cot φ + cot θ = w / l', 'tan φ − tan θ = w / l', 'sin φ − sin θ = w / l'].map(function (o, i) { return '<button class="sqo" data-ok="' + (i === 0) + '">' + 'ABCD'[i] + '&nbsp; ' + o + '</button>'; }).join('') +
           
               '<p class="small muted sqx" hidden>✓ <b>cot φ − cot θ = w / l</b>, where φ and θ are the outer and inner wheel angles, w the kingpin centre distance and l the wheelbase. Want more like this? Open <b>Fundamentals → Automobile Engineering</b>.</p></div></div></div></div>' +
-        tipHtml('home') + '<div class="twoway"><div class="tw2 tw-p"><b>📘 Practice &amp; learn</b><ul><li>Read at your own pace: no timer on any question</li><li>See the right answer and the explanation or solution right after you answer</li><li>Choose no timer, or a session of 5 min to 3 hours</li><li>For building your base. Not on the leaderboard</li></ul></div>' +
-          '<div class="tw2 tw-t"><b>📝 Test yourself (quiz)</b><ul><li>Timed: about 45 seconds per question, like a real exam</li><li>Next question opens as soon as you answer</li><li>Score, answers and explanations at the end</li><li>Counts on the leaderboard. Due after every 3 practice sessions</li></ul></div></div>' +
+        tipHtml('home') + '<div class="twoway"><div class="tw2 tw-p"><b>📘 Practice</b><ul><li>Read at your own pace: no timer on any question</li><li>See the right answer and the explanation or solution right after you answer</li><li>Choose no timer, or a session of 5 min to 3 hours</li><li>For building your base. Not on the leaderboard</li></ul></div>' +
+          '<div class="tw2 tw-t"><b>📝 Test</b><ul><li>Timed: about 45 seconds per question, like a real exam</li><li>Next question opens as soon as you answer</li><li>Score, answers and explanations at the end</li><li>Counts on the leaderboard. Due after every 3 practice sessions</li></ul></div></div>' +
           '<div class="goalbar"><p class="f">🧭 Explore by your goal</p><div class="goal-g">' +
           '<a href="/exams?k=university" data-link><span>🎓</span><b>My university syllabus</b><small>B.Tech / B.E. by branch: subject → unit → topic, common to all universities</small></a>' +
           '<a href="/exams?k=competitive" data-link><span>🏆</span><b>Competitive exams</b><small>GATE, JEN, RTO/MVI…: exam-wise sections at the right level</small></a>' +
@@ -351,10 +354,10 @@
           ].map(function (r) { return '<div class="req"><span>' + r[0] + '</span>"' + r[1] + '"</div>'; }).join('') + '</div></section>' +
         '<section class="follow"><h2 class="sh2">Follow VKV Sir</h2><div class="fl">' + FOLLOW.map(function (f) { return '<a href="' + f[1] + '" target="_blank" rel="noopener" class="fbtn ' + f[2] + '">' + f[3] + '<span>' + f[0] + '</span></a>'; }).join('') + '</div></section>' +
         '<div class="startbar" id="sbar" hidden><div class="sbtop"><b id="sn"></b><button type="button" class="linkbtn" id="sclr">Clear all</button></div><div class="snames" id="sd"></div>' +
-        '<div class="sbrow"><div class="seg mini" id="smode"><button type="button" data-m="practice" aria-pressed="true">📘 Practice &amp; learn</button><button type="button" data-m="fixed" aria-pressed="false">📝 Test yourself</button><button type="button" data-m="rapid" aria-pressed="false">⚡ Rapid fire</button></div>' +
+        '<div class="sbrow"><div class="seg mini" id="smode"><button type="button" data-m="practice" aria-pressed="true">📘 Practice</button><button type="button" data-m="fixed" aria-pressed="false">📝 Test</button><button type="button" data-m="rapid" aria-pressed="false">⚡ Rapid fire</button></div>' +
         '<div class="seg mini" id="sdur"></div>' +
         '<button class="btn" id="sgo"></button></div><p class="small muted" id="smi"></p><div class="err" id="se" role="alert"></div></div>' +
-        shareBar(location.origin + '/', 'Free practice quizzes with instant results by VKV Sir:', 'Invite friends:') + boardCard(board, 'Top performers') + '<div id="about"></div>');
+        shareBar(location.origin + '/', 'Free practice and tests with instant results by VKV Sir:', 'Invite friends:') + boardCard(board, 'Top performers') + '<div id="about"></div>');
       mountAbout(q('#about'));
       var qg = q('#qgo');
       if (qg) qg.onclick = function () {
@@ -364,8 +367,8 @@
       };
       var dur = 15, mode = 'practice', hint1 = false, hint2 = false;
       var SDUR = { practice: [[0, 'No timer'], [5, '5 min'], [15, '15 min'], [60, '1 hour'], [180, '3 hours']], fixed: [[5, '5 min'], [10, '10 min'], [15, '15 min'], [30, '30 min']], rapid: [[5, '5 min'], [10, '10 min'], [30, '30 min']] };
-      var SMI = { practice: '📘 <b>Practice &amp; learn:</b> no timer per question. Answer at your own pace and see the correct answer with its explanation or solution straight away, then tap Next. Pick one subject, unit or topic. Not counted on the leaderboard.',
-        fixed: '📝 <b>Test yourself:</b> a timed quiz, about 45 seconds per question. The next question opens when you answer or when its time ends. Score, correct answers and explanations at the end. Counts on the leaderboard.',
+      var SMI = { practice: '📘 <b>Practice:</b> no timer per question. Answer at your own pace and see the correct answer with its explanation or solution straight away, then tap Next. Pick one subject, unit or topic. Not counted on the leaderboard.',
+        fixed: '📝 <b>Test:</b> a timed test, about 45 seconds per question. The next question opens when you answer or when its time ends. Score, correct answers and explanations at the end. Counts on the leaderboard.',
         rapid: '⚡ <b>Rapid fire:</b> questions come one after another until time runs out. Pick one whole unit or subject; it unlocks after you have practised all its topics.' };
       function drawMode() {
         var ds = SDUR[mode]; if (!ds.some(function (x) { return x[0] === dur; })) dur = ds[Math.min(2, ds.length - 1)][0];
@@ -389,7 +392,7 @@
         bar.hidden = !s.length;
         q('#sn').textContent = s.length ? 'Your selection (' + s.length + ')' : '';
         q('#sd').innerHTML = s.map(function (x) { var k = [x.s, x.u, x.t].filter(function (v) { return v != null; }).join('|'); return '<span class="snm">' + esc(NAMES[k] || k) + '</span>'; }).join('');
-        if (s.length && !hint2) { hint2 = true; guide(q('#smode'), 'Choose Practice & learn (answers shown after each question) or Test yourself (timed quiz), pick your time, then Start'); }
+        if (s.length && !hint2) { hint2 = true; guide(q('#smode'), 'Choose Practice (answers shown after each question) or Test (timed), pick your time, then Start'); }
       }
       if ($view._treeBound) { $view.removeEventListener('change', $view._treeChange); $view.removeEventListener('click', $view._treeClick, true); }
       $view._treeBound = true;
@@ -417,7 +420,7 @@
         var call, back = function () { g.disabled = false; drawMode(); };
         track(mode === 'practice' ? 'start_practice' : 'start_quiz', { from: 'home' });
         if (mode === 'practice') {
-          if (s.length !== 1) { q('#se').textContent = 'Practice works on one subject, one unit or one topic at a time. Tick just one, or choose “Test yourself” for a mixed paper.'; back(); return; }
+          if (s.length !== 1) { q('#se').textContent = 'Practice works on one subject, one unit or one topic at a time. Tick just one, or choose “Test” for a mixed paper.'; back(); return; }
           call = rpc('start_practice', { p_subject: s[0].s, p_unit: s[0].u == null ? null : s[0].u, p_topic: s[0].t || null, p_duration: dur || null, p_exam: null }).then(function (v) { go('/practice/' + v.attempt); });
         } else if (mode === 'rapid') {
           if (s.length !== 1 || s[0].t) { q('#se').textContent = 'For Rapid fire, tick exactly one whole unit or one whole subject.'; back(); return; }
@@ -452,13 +455,13 @@
       ['4. Learning alongside standard references', 'For the best preparation, use this platform together with standard textbooks, codes and official syllabus documents. Explanations here are written to build understanding and can be read alongside those references.'],
       ['5. Exam patterns and names', 'Names of examinations, universities, boards, organisations or companies are used only to describe the nature or level of practice. Questions are not official, previous-year or leaked papers unless expressly stated, and no affiliation, endorsement or sponsorship is implied.'],
       ['6. Scores and rankings', 'Scores, leaderboards, timings and analyses are indicative only, may change as content is corrected, and do not predict or guarantee performance, selection or results in any examination or interview.'],
-      ['7. Different opinion? Report it', 'If you find an answer that differs from your reference book or seems ambiguous, tap Report on that question during the quiz or from your result page, where the correct answer and explanation for each question are shown. Our team reviews every report and updates content where needed; decisions on changes rest with the platform.'],
+      ['7. Different opinion? Report it', 'If you find an answer that differs from your reference book or seems ambiguous, tap Report on that question during the test or from your result page, where the correct answer and explanation for each question are shown. Our team reviews every report and updates content where needed; decisions on changes rest with the platform.'],
       ['8. Limitation of liability', 'To the maximum extent permitted by law, VKV Sir Test Lab, the VKV Sir team and associated contributors shall not be liable for any direct, indirect, incidental or consequential loss, damage, claim or grievance arising from the use of, or reliance on, any content, answer, score or service of this platform.'],
       ['9. Fair use and conduct', 'Content is for personal, non-commercial learning. Copying, scraping, republishing or redistributing questions, or misusing the platform, is not permitted. Accounts may be restricted for misuse, unfair means or attempts to manipulate scores or feedback.'],
       ['10. Changes and acceptance', 'These terms may be updated at any time without prior notice; the version on this page applies. By accessing or using this platform, you acknowledge that you have read, understood and accepted this disclaimer and these terms. Any dispute shall be subject to the jurisdiction of courts at Ajmer, Rajasthan, India.']
     ];
     h('<div class="narrow stack legal"><div><p class="eyebrow">Legal</p><h1>Disclaimer &amp; terms of use</h1><p class="muted small">Last updated: 19 October 2026</p></div>' +
-      '<div class="card" style="border-left:4px solid var(--warn,#b4531a)"><p style="margin:0"><b>In short:</b> every question on VKV Sir Test Lab is written with care and reviewed before it goes live, so you can practise with confidence. Although our content is thoroughly checked, if you ever find an answer or question wording that seems ambiguous compared with your reference book, simply report it from the quiz or result page and we will review it promptly. This platform is designed for learning and self-assessment, so its answer keys serve as practice guidance; for any examination, the official key of the examining body is always the final word.</p></div>' +
+      '<div class="card" style="border-left:4px solid var(--warn,#b4531a)"><p style="margin:0"><b>In short:</b> every question on VKV Sir Test Lab is written with care and reviewed before it goes live, so you can practise with confidence. Although our content is thoroughly checked, if you ever find an answer or question wording that seems ambiguous compared with your reference book, simply report it from the test or result page and we will review it promptly. This platform is designed for learning and self-assessment, so its answer keys serve as practice guidance; for any examination, the official key of the examining body is always the final word.</p></div>' +
       S.map(function (x) { return '<section><h3>' + x[0] + '</h3><p>' + x[1] + '</p></section>'; }).join('') +
       '<p class="small muted">Questions about these terms: <a href="https://mail.google.com/mail/?view=cm&fs=1&to=vinodvermavkvsir@gmail.com&su=Test%20Lab%20disclaimer%20query" target="_blank" rel="noopener">vinodvermavkvsir@gmail.com</a></p></div>');
   }
@@ -510,8 +513,8 @@
   function boardCard(board, title) {
     if (!board || !board.length) return '';
     return '<section class="card" style="margin-top:24px"><h2>' + esc(title) + '</h2><ol class="board">' + board.map(function (b, i) {
-      return '<li class="' + (b.me ? 'me' : '') + '"><span class="bd-n">' + (i + 1) + '. ' + esc(b.name) + (b.me ? ' (you)' : '') + (b.college ? ' <span class="bd-c">· ' + esc(b.college) + '</span>' : '') + '</span><span class="mono">' + b.pct + '%</span></li>';
-    }).join('') + '</ol><p class="small muted" style="margin-top:10px">Last 30 days &middot; first attempt of each test &middot; at least 20 questions answered &middot; first names with college. Scores are smoothed so one lucky short test cannot top the board.</p></section>';
+      return '<li class="' + (b.me ? 'me' : '') + '"><span class="bd-r">' + (i + 1) + '</span><span class="bd-n"><b>' + esc(b.name) + (b.me ? ' (you)' : '') + '</b>' + (b.college ? '<span class="bd-c">' + esc(b.college) + '</span>' : '') + '</span><span class="mono">' + b.pct + '%</span></li>';
+    }).join('') + '</ol><p class="small muted" style="margin-top:10px">Last 30 days &middot; first attempt of each test &middot; at least 20 questions answered &middot; full name with college. Scores are smoothed so one lucky short test cannot top the board.</p></section>';
   }
 
   /* ---------- login ---------- */
@@ -608,8 +611,8 @@
         var n = Math.min(t.available, Math.floor(d * 60 / t.sec_per_q));
         return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + n + ' questions</span></button>';
       }).join('');
-      h('<div class="narrow stack"><div><div class="row"><span class="pill accent">' + esc(t.subject) + '</span><span class="pill">' + (t.mode === 'exam' ? 'Exam' : 'Practice') + '</span></div>' +
-        '<h1 style="margin-top:12px">' + esc(t.title) + '</h1><p class="muted">' + esc(t.description || '') + '</p></div>' +
+      h('<div class="narrow stack"><div><div class="row"><span class="pill accent">' + esc(t.subject) + '</span><span class="pill">' + (t.mode === 'exam' ? 'Mock test' : 'Test') + '</span></div>' +
+        '<h1 style="margin-top:12px">' + esc(t.title) + '</h1>' + (function (d) { d = String(d || '').replace(/^practice:\s*/i, '').trim(); return d && t.title.toLowerCase().indexOf(d.toLowerCase()) < 0 ? '<p class="muted">' + esc(d) + '</p>' : ''; })(t.description) + '</div>' +
         '<div class="card stack">' +
         (t.active_attempt ? '<div class="note">You have an unfinished attempt. Continue where you left off.</div><a class="btn block" href="/exam/' + t.active_attempt + '" data-link>Resume test</a>' :
           '<div><p class="f" style="margin-top:0;font-weight:700">How much time do you have?</p><div class="seg" id="seg">' + segs + '</div></div>' +
@@ -681,8 +684,8 @@
       var n = findNode(cat || [], subjId, unitNo, topicId);
       if (!n) { h('<div class="narrow card center"><h2>This practice link is not active yet</h2><p class="muted">Explore what is available instead.</p><a class="btn" href="/" data-link>See all tests</a></div>'); return; }
       var node = n.topic || n.unit || n.subj, ds = node.durations || [], dur = ds.length ? ds[0] : null;
-      var title = n.topic ? n.topic.name : n.unit ? 'Unit ' + n.unit.unit + ': ' + n.unit.name : n.subj.name + ': full syllabus';
-      var crumbs = [n.subj.name, n.unit && !n.topic ? null : n.unit ? 'Unit ' + n.unit.unit + ': ' + n.unit.name : null].filter(Boolean).join(' · ');
+      var title = n.topic ? n.topic.name : n.unit ? 'Unit ' + n.unit.unit + ': ' + n.unit.name : n.subj.name;
+      var crumbs = n.unit ? [n.subj.name, n.topic ? 'Unit ' + n.unit.unit + ': ' + n.unit.name : null].filter(Boolean).join(' · ') : 'Full syllabus';
       var url = practiceLink(n.subj.id, n.unit && n.unit.unit, n.topic && n.topic.id);
       var exam = new URLSearchParams(location.search).get('x') || null;
       var mode = new URLSearchParams(location.search).get('m') === 'quiz' ? 'quiz' : 'practice', pdur = 15;
@@ -690,12 +693,12 @@
       var args = { p_subject: n.subj.id, p_unit: n.unit ? n.unit.unit : null, p_topic: n.topic ? n.topic.id : null };
       h('<div class="narrow stack focus"><div class="card center stack">' +
         '<p class="eyebrow">' + (exam ? 'Exam-level paper · ' + esc(exam.toUpperCase().replace(/-/g, ' ')) : 'Free practice & tests') + '</p><h1>' + esc(title) + '</h1>' + (crumbs && crumbs !== title ? '<p class="muted" style="margin:0">' + esc(crumbs) + '</p>' : '') +
-        (cnt >= READY ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>📘 Practice &amp; learn</b><span>Answer, then see the right answer and explanation at once</span></button>' +
-          '<button type="button" data-m="quiz" aria-pressed="' + (mode === 'quiz') + '"><b>📝 Test yourself</b><span>Timed quiz, score at the end, counts on the leaderboard</span></button></div>' +
+        (cnt >= READY ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>📘 Practice</b><span>No pressure: see the right answer and explanation after each question</span></button>' +
+          '<button type="button" data-m="quiz" aria-pressed="' + (mode === 'quiz') + '"><b>⏱️ Test</b><span>Timed like an exam: score at the end, counts on the leaderboard</span></button></div>' +
           '<div id="pm"><p class="f">Do you want a timer?</p><div class="seg" id="pd">' + [[0, 'No timer', 'Learn at your own pace'], [5, '5 min', 'Quick revision'], [15, '15 min', 'Short session'], [60, '1 hour', 'Deep practice'], [180, '3 hours', 'Full study session']].map(function (d) { return '<button type="button" data-d="' + d[0] + '" aria-pressed="' + (d[0] === pdur) + '"><b>' + d[1] + '</b><span>' + d[2] + '</span></button>'; }).join('') + '</div>' +
-          '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Rushing through questions without reading is detected: a warning, then short pauses of 1–2 minutes. Repeating it on the same day locks all practice and quizzes for 10 minutes.</li><li>After <b>3 practice sessions</b> in a unit, take a short <b>Test yourself</b> quiz to check what stuck and unlock more practice.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
+          '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Rushing through questions without reading is detected: a warning, then short pauses of 1–2 minutes. Repeating it on the same day locks all practice and quizzes for 10 minutes.</li><li>After <b>3 practice sessions</b> in a unit, take a short <b>Test</b> to check what stuck and unlock more practice.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
           '<div id="qm" hidden>' + (ds.length ? '<p class="f">How much time do you have?</p><div class="seg" id="fd">' + ds.map(function (d) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + Math.floor(d * 60 / 45) + ' questions</span></button>'; }).join('') + '</div>' +
-            '<ul class="rules small" style="text-align:left"><li>A fresh, balanced paper every time.</li><li>One question at a time, 45 seconds each.</li><li>Score, correct answers and explanations at the end. Counts on the leaderboard.</li></ul>' : '<p class="muted small">Not enough questions for a quiz here yet. Use Practice for now.</p>') + '</div>' +
+            '<ul class="rules small" style="text-align:left"><li>A fresh, balanced paper every time.</li><li>One question at a time, 45 seconds each.</li><li>Score, correct answers and explanations at the end. Counts on the leaderboard.</li></ul>' : '<p class="muted small">Not enough questions for a test here yet. Use Practice for now.</p>') + '</div>' +
           '<div class="err" id="fe" role="alert"></div><button class="btn block" id="fgo"></button>' +
           (session ? '' : '<p class="small muted" style="margin:0">Free. Sign in with Google in 10 seconds.</p>')
           : '<p class="muted">Questions for this topic are being added. Try the full unit for now.</p>' + (n.unit ? '<a class="btn" href="' + practiceLink(n.subj.id, n.unit.unit) + '" data-link>Practise the whole unit</a>' : '')) +
@@ -719,7 +722,7 @@
         call.catch(function (e) {
           var m = errMsg(e); g.disabled = false; g.textContent = lbl;
           if (/^QUIZ_DUE:/.test(m)) {
-            q('#fe').innerHTML = '<div class="qdue"><b>🧪 Time for a quick check</b><p>' + esc(m.replace(/^QUIZ_DUE:/, '')) + '</p><p class="small muted">Your quiz score does not stop you; it shows what you have really learnt and where to practise more.</p><button type="button" class="btn" id="qd-go">📝 Take the quiz now</button></div>';
+            q('#fe').innerHTML = '<div class="qdue"><b>🧪 Time for a quick check</b><p>' + esc(m.replace(/^QUIZ_DUE:/, '')) + '</p><p class="small muted">Your test score does not stop you; it shows what you have really learnt and where to practise more.</p><button type="button" class="btn" id="qd-go">📝 Take the quiz now</button></div>';
             q('#qd-go').onclick = function () { setMode('quiz'); q('#fgo').click(); };
             return;
           }
@@ -755,7 +758,7 @@
         (order.length ? order.map(function (g) {
           return '<section class="xgrp"><h2 class="sh2">' + esc(g) + ' <span class="small muted">· ' + groups[g].length + ' option' + (groups[g].length > 1 ? 's' : '') + '</span></h2><div class="xcards">' + groups[g].map(function (e) {
             var coming = e.status !== 'live' || !e.items;
-            return '<a class="xcard' + (coming ? ' dim' : '') + '" href="/e/' + esc(e.id) + '" data-link><span class="xorg">' + esc(e.family || e.org) + ' · ' + esc(e.branch || '') + '</span><b>' + esc(e.title) + '</b>' +
+            return '<a class="xcard' + (coming ? ' dim' : '') + '" href="/e/' + esc(e.id) + '" data-link>' + (function () { var tl = String(e.title || '').toLowerCase(), b = String(e.branch || ''); var show = b && b.split(/[^a-z]+/i).filter(function (w) { return w.length > 3; }).some(function (w) { return tl.indexOf(w.toLowerCase()) < 0; }); return show ? '<span class="xorg">' + esc(b) + '</span>' : ''; })() + '<b>' + esc(e.title) + '</b>' +
               '<span class="small muted">' + esc(e.description || '') + '</span>' +
               '<span class="xmeta">' + (coming ? '<span class="xb soon">Syllabus mapping · coming soon</span>' : '<span class="xb ok">' + e.ready + ' of ' + e.items + ' topics ready</span>') +
               (e.level_note ? '<span class="xb lvl">Level: ' + esc(e.level_note) + '</span>' : '') + '</span></a>';
@@ -1001,12 +1004,12 @@
     var steps = [];
     steps.push('<b>Understand the job.</b> ' + esc((p.role && p.role.summary) || '') + (p.company && p.company.products ? ' <b>' + esc(p.company.name) + '</b> makes: ' + esc(p.company.products) + '.' : ''));
     if (p.level === 'student' || p.level === 'fresher') steps.push('<b>Clear the online test.</b> Practise aptitude, reasoning and English daily (30–45 minutes) until you score 70%+.');
-    steps.push('<b>Master the most important topics</b> listed below. Learn each topic, then take the practice quiz; repeat the weak ones.');
+    steps.push('<b>Master the most important topics</b> listed below. Learn each topic, then take a test; repeat the weak ones.');
     steps.push('<b>Strengthen the normal-level topics</b> once tier 1 scores are steady.');
     steps.push('<b>Refresh fundamentals</b> one or two per day so basic questions never trip you.');
     if (sw.length) steps.push('<b>Learn the software</b> to the target level and finish at least one practical task you can show or explain.');
     steps.push('<b>Prepare HR answers and company knowledge.</b> Write your "tell me about yourself", two project stories, and three facts about the company.');
-    steps.push('<b>Final week:</b> take mixed timed quizzes daily, revise mistakes from your Dashboard, and rest well before the interview.');
+    steps.push('<b>Final week:</b> take mixed timed testzes daily, revise mistakes from your Dashboard, and rest well before the interview.');
     var mix = p.mix || {};
     var html = '<section class="stack" style="margin-top:28px">' +
       '<div class="card jp-sum"><p class="eyebrow">Your preparation plan</p><h2 style="margin:4px 0">' + esc(p.role ? p.role.name : 'Your target role') + '</h2>' +
@@ -1451,7 +1454,12 @@
       Array.prototype.forEach.call(e.querySelectorAll ? e.querySelectorAll('.cnt') : [], function (c) { var to = +c.getAttribute('data-to'), t0 = performance.now(); (function tick(t) { var k = Math.min(1, (t - t0) / 900); c.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(tick); })(t0); }); }); }, { threshold: 0.08 });
     Array.prototype.forEach.call(els, function (e) { if (!e.classList.contains('rv-in')) { e.classList.add('rv'); io.observe(e); } });
   }
-  new MutationObserver(function () { clearTimeout(animateIn.t); animateIn.t = setTimeout(animateIn, 60); }).observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
+  function pageTitle() {
+    var h1 = $view.querySelector('h1'), t = h1 ? h1.textContent.replace(/\s+/g, ' ').trim() : '';
+    var want = location.pathname === '/' || !t ? 'VKV Sir Test Lab: free practice, tests and job prep' : t.slice(0, 70) + ' · VKV Sir Test Lab';
+    if (document.title !== want) document.title = want;
+  }
+  new MutationObserver(function () { clearTimeout(animateIn.t); animateIn.t = setTimeout(function () { animateIn(); pageTitle(); }, 60); }).observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
   window.addEventListener('scroll', function () { var b = document.getElementById('bar'); if (b) b.classList.toggle('scrolled', scrollY > 8); }, { passive: true });
 
   /* ---------- About VKV Sir: achievements strip ---------- */
@@ -1842,13 +1850,13 @@
         '<p>' + (v.global ? 'You rushed through questions again today. Please attempt questions only when you have time to read them. You can resume this session exactly where you left it in:' : (v.warns >= 3 ? 'Please attempt practice when you have time to read the questions, not to hunt and guess. If it happens again today, everything locks for 10 minutes. Resumes in:' : 'You were answering faster than the questions can be read. Practice resumes in:')) + '</p><div class="big mono" id="pz"></div>' +
         '<div class="pz-f" id="pzf" aria-live="polite"></div><p class="small muted" id="pzn"></p></div>');
       var FEAT = [
-        ['📘', 'Practice & learn', 'No timer on any question. After you answer, you see the correct option and its explanation or solution, then move on with Next at your own pace.'],
-        ['📝', 'Test yourself', 'A timed quiz like a real exam. Your score, correct answers and explanations come at the end, and it counts on the leaderboard.'],
-        ['🧪', 'Quiz after practice', 'After every 3 practice sessions in a unit, a short quiz shows how much really stuck and unlocks more practice.'],
+        ['📘', 'Practice', 'No timer on any question. After you answer, you see the correct option and its explanation or solution, then move on with Next at your own pace.'],
+        ['📝', 'Test', 'A timed test like a real exam. Your score, correct answers and explanations come at the end, and it counts on the leaderboard.'],
+        ['🧪', 'Test after practice', 'After every 3 practice sessions in a unit, a short test shows how much really stuck and unlocks more practice.'],
         ['🧭', 'Explore by your goal', 'Choose your university syllabus or a competitive exam such as GATE, JEN or RTO/MVI, and practise topics in that exam’s order and level.'],
         ['📸', 'Save & share a question', 'Save a few hard questions to WhatsApp to discuss with a friend or teacher. Your friend can try it from the link and see the solution.'],
         ['🚩', 'Report a question', 'Found a typo, an unclear equation or a doubtful answer? Tap 👎 under the question. Our team reviews every report.'],
-        ['📊', 'Your dashboard', 'Quiz and practice history are kept separately, with accuracy by unit and your weakest topics first.'],
+        ['📊', 'Your dashboard', 'Test and practice history are kept separately, with accuracy by unit and your weakest topics first.'],
         ['🏢', 'Job Prep', 'Enter a company, role and level to get the topics to master, software to learn and interview questions asked there.'],
         ['📄', 'Resume Builder', 'Start from a template for your branch and role, or upload your old resume. It becomes ATS-friendly, and you can download PDF or Word free.'],
         ['🐢', 'Why read slowly?', 'Reading every question fully is how concepts stick. Guessing quickly feels productive but leaves gaps that show up in the real exam.']
@@ -1926,7 +1934,7 @@
         else if (x.correct == null) { y += 6; L('Can you answer it? Open the link to try and see the solution.', 'italic 29px Arial', '#5B6576', 40); }
         y += 24; if (draw) { ctx.fillStyle = '#0F172A'; ctx.fillRect(0, y, W, 170); }
         y += 58; L('Try it: ' + x.link.replace(/^https?:\/\//, ''), 'bold 34px Arial', '#fff', 46);
-        L('Free practice · Quizzes · Job prep · Resume builder', '28px Arial', '#c7d2fe', 40);
+        L('Free practice · Tests · Job prep · Resume builder', '28px Arial', '#c7d2fe', 40);
         return y + 40;
       }
       c.width = W; c.height = 2000; var H = layout(false); c.height = Math.min(4000, H); layout(true);
@@ -1980,12 +1988,12 @@
       h('<div class="narrow stack"><div class="card"><p class="eyebrow">A friend shared this question with you · ' + esc(x.subject) + '</p><p class="small muted" style="margin:0 0 10px">' + esc(x.topic) + ' · Choose an option to see the answer and explanation.</p>' +
         (x.image ? zimg(x.image, '', 'Figure') : '') + '<div class="qbody" id="qb">' + esc(x.body) + '</div><div class="opts practice" id="opts">' +
         x.options.map(function (o, k) { return '<button type="button" class="opt" data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') + '</div><div id="sx"></div><div id="sfb"></div></div>' +
-        '<div class="card center stack"><b>VKV Sir Test Lab</b><p class="muted small" style="margin:0">Free topic-wise practice with explanations, timed quizzes, exam-wise preparation (GATE, JEN, university), job prep and an ATS resume builder.</p><div class="row" style="justify-content:center;gap:8px"><button type="button" class="btn" id="more1">📘 Practise more like this</button><a class="btn ghost" href="/exams" data-link>Explore exams</a></div></div></div>');
+        '<div class="card center stack"><b>VKV Sir Test Lab</b><p class="muted small" style="margin:0">Free topic-wise practice with explanations, timed testzes, exam-wise preparation (GATE, JEN, university), job prep and an ATS resume builder.</p><div class="row" style="justify-content:center;gap:8px"><button type="button" class="btn" id="more1">📘 Practise more like this</button><a class="btn ghost" href="/exams" data-link>Explore exams</a></div></div></div>');
       renderMath($view);
       function goMore() {
         track('shared_more', { code: code });
         if (session && !isGuest()) return go(topicLink);
-        var g = gmodal('<div class="gm-ic">📘</div><h2>Practise more ' + esc(x.topic) + '</h2><p class="gm-lead">Sign in with Gmail (10 seconds, free) and you will land on this topic, ready to choose your time and start a practice session or a quiz.</p><button type="button" class="btn block" id="gm-g">' + G_ICON + ' Continue with Google</button><button type="button" class="link-btn" id="gm-n" style="margin-top:8px">Not now</button>');
+        var g = gmodal('<div class="gm-ic">📘</div><h2>Practise more ' + esc(x.topic) + '</h2><p class="gm-lead">Sign in with Gmail (10 seconds, free) and you will land on this topic, ready to choose your time and start a practice session or a test.</p><button type="button" class="btn block" id="gm-g">' + G_ICON + ' Continue with Google</button><button type="button" class="link-btn" id="gm-n" style="margin-top:8px">Not now</button>');
         g.el.querySelector('#gm-g').onclick = function () { googleSignIn(topicLink); };
         g.el.querySelector('#gm-n').onclick = function () { g.close(); };
       }
@@ -2155,7 +2163,7 @@
         var link = a.status === 'done' ? '/result/' + a.id : '/practice/' + a.id;
         var right = a.status !== 'done' ? '<span class="pill accent">Continue</span>' : '<span class="mono">' + (a.score || 0) + '/' + (a.n || 0) + '</span>';
         return '<a href="' + link + '" data-link><span><b>' + esc(a.title) + '</b><br><span class="small muted">' + esc(fmtDate(a.date)) + (a.timed === false ? ' · no timer' : '') + '</span></span>' + right + '</a>';
-      }).join('') || '<div class="muted">No practice sessions yet. Open any topic and choose <b>📘 Practice &amp; learn</b>.</div>';
+      }).join('') || '<div class="muted">No practice sessions yet. Open any topic and choose <b>📘 Practice</b>.</div>';
       var scored = done.filter(function (a) { return a.pct !== null && a.pct !== undefined; });
       var avg = scored.length ? Math.round(scored.reduce(function (s, a) { return s + a.pct; }, 0) / scored.length) : '–';
       var best = scored.length ? Math.max.apply(null, scored.map(function (a) { return a.pct; })) : '–';
@@ -2179,10 +2187,10 @@
           '<section class="card"><h3>Score trend</h3>' + trendChart(d.trend) + '</section></div>' : '') +
         (d.units && d.units.length ? '<section class="card"><h3>Accuracy by unit</h3>' + unitBars(d.units) + '</section>' : '') +
         (weak ? '<section class="card"><h3>Focus areas</h3><p class="small muted">Your weakest topics first. Practise these next.</p><div class="bars">' + weak + '</div></section>' : '') +
-        '<section class="card"><div class="spread"><h2 style="margin:0">History</h2><div class="tabs" id="hx"><button type="button" class="on" data-h="q">📝 Test yourself · ' + at.length + '</button><button type="button" data-h="p">📘 Practice · ' + prac.length + '</button></div></div>' +
+        '<section class="card"><div class="spread"><h2 style="margin:0">History</h2><div class="tabs" id="hx"><button type="button" class="on" data-h="q">📝 Test · ' + at.length + '</button><button type="button" data-h="p">📘 Practice · ' + prac.length + '</button></div></div>' +
           '<div class="list" style="margin-top:8px" data-hp="q">' + hist + '</div>' +
           '<div data-hp="p" hidden><div class="tiles" style="margin:8px 0"><div class="tile"><b>' + pdone.length + '</b><span>Practice sessions</span></div><div class="tile"><b>' + pq + '</b><span>Questions practised</span></div><div class="tile"><b>' + (pq ? Math.round(100 * pok / pq) + '%' : '–') + '</b><span>Practice accuracy</span></div></div>' +
-          '<p class="small muted">Practice is for learning, so it is not counted on the leaderboard or in the test scores above. After every 3 practice sessions in a unit, take a <b>Test yourself</b> quiz to check your progress.</p><div class="list">' + phist + '</div></div></section>' +
+          '<p class="small muted">Practice is for learning, so it is not counted on the leaderboard or in the test scores above. After every 3 practice sessions in a unit, take a <b>Test</b> to check your progress.</p><div class="list">' + phist + '</div></div></section>' +
         '<section class="dash-cat"><h2>Start a new test</h2><p class="small muted">Open a track, tick a subject, units or topics, then choose your time.</p><div id="cat"></div></section>' +
         '<a class="wa-card" href="https://whatsapp.com/channel/0029Va5ka1rFHWq4y4OcYy3U" target="_blank" rel="noopener"><svg viewBox=\"0 0 32 32\" width=\"30\" height=\"30\" aria-hidden=\"true\" style=\"vertical-align:-4px\"><path fill=\"#25D366\" d=\"M16 3C9 3 3.3 8.6 3.3 15.6c0 2.4.7 4.6 1.9 6.6L3 29l7-2.2c1.9 1 4 1.6 6.1 1.6 7 0 12.7-5.7 12.7-12.7S23 3 16 3z\"/><path fill=\"#fff\" d=\"M22.6 18.9c-.3-.2-2-1-2.3-1.1-.3-.1-.5-.2-.8.2-.2.3-.9 1.1-1.1 1.3-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.7-1.7-1-.9-1.7-2-1.9-2.3-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.4 0-.6l-1-2.5c-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.4 1.4 3.6c.2.2 2.4 3.7 5.9 5.2.8.4 1.5.6 2 .7.8.3 1.6.2 2.2.1.7-.1 2-.8 2.3-1.6.3-.8.3-1.5.2-1.6-.1-.1-.3-.2-.6-.4z\"/></svg><span><b>Follow VKV Sir on WhatsApp</b><small>Openings, opportunities, new tests &amp; updates</small></span><span>&rarr;</span></a>' + suggestBox() + boardCard(board, 'Top performers') + shareBar(location.origin + '/', 'I practise with VKV Sir Test Lab. Free quizzes with instant results:', 'Invite friends:') + '</div>');
       mountCatalog(q('#cat'));
@@ -2863,7 +2871,7 @@
       '<div class="note" id="t-restore" hidden style="color:var(--ink);background:var(--soft)">You have unsaved changes from earlier. <button class="link-btn" id="t-rs">Restore them</button> or <button class="link-btn" id="t-dc">discard</button>.</div>' +
 
       '<section class="sec"><h3><span class="num">1</span> Basics</h3>' +
-      fld('Test title', inp('t-title', t.title, 'placeholder="e.g. ME III Sem: Unit 5 quiz"'), 'Students see this name.') +
+      fld('Test title', inp('t-title', t.title, 'placeholder="e.g. ME III Sem: Unit 5 test"'), 'Students see this name.') +
       fld('Short description <span class="optl">(optional)</span>', inp('t-desc', t.description, 'placeholder="e.g. Covers forging, rolling and extrusion"')) +
       fld('Test link', '<div class="slug"><span class="mono small muted">' + esc(location.host) + '/t/</span>' + inp('t-slug', t.slug, (isNew ? '' : 'readonly ') + 'placeholder="auto from title"') + '</div>', isNew ? 'Made automatically from the title. You can edit it now; it cannot be changed later.' : 'Link names cannot be changed after creation.') +
       '</section>' +
@@ -3000,7 +3008,7 @@
           '<section class="card"><div class="g3"><div><label class="f" for="g-n">Group name</label><input class="in" id="g-n" value="' + esc(g.name) + '"></div>' +
           '<div><label class="f" for="g-s">Links work from</label><input class="in" id="g-s" type="datetime-local" value="' + toLocalInput(g.starts_at) + '"></div>' +
           '<div><label class="f" for="g-e">Links stop working after</label><input class="in" id="g-e" type="datetime-local" value="' + toLocalInput(g.ends_at) + '"></div></div>' +
-          '<label class="f" for="g-note">Message shown to students (optional)</label><input class="in" id="g-note" value="' + esc(g.note || '') + '" placeholder="e.g. Workshop quiz, 20 minutes, phones on DND">' +
+          '<label class="f" for="g-note">Message shown to students (optional)</label><input class="in" id="g-note" value="' + esc(g.note || '') + '" placeholder="e.g. Workshop test, 20 minutes, phones on DND">' +
           '<div class="row" style="margin-top:12px"><button class="btn dark" id="g-save" style="min-height:44px">Save group</button><button class="btn ghost" id="g-del" style="min-height:44px">Delete group</button></div></section>' +
           '<section class="card"><div class="spread"><h3 style="margin:0">Tests for this group</h3><button class="btn" id="g-test" style="min-height:40px;padding:8px 14px">+ Create class test</button></div><p style="margin-top:10px">' + testsHtml + '</p>' +
           '<p class="small muted" style="margin:0">Class tests are hidden from the public. Only this group sees them, through their personal links. Edit them in the Tests tab.</p></section>' +
@@ -3049,7 +3057,7 @@
     Promise.all([rpc('catalog'), rpc('admin_tests')]).then(function (r) {
       var cat = r[0], tests = r[1];
       function row(label, url, note) { return '<tr><td>' + label + (note ? '<br><span class="small muted">' + note + '</span>' : '') + '</td><td class="mono small">' + esc(url.replace(/^https?:\/\//, '')) + '</td><td><button class="btn ghost" data-cp="' + esc(url) + '" style="min-height:34px;padding:4px 12px">Copy</button></td></tr>'; }
-      var html = '<p class="small muted">Paste these in YouTube descriptions, WhatsApp groups or posts. Each link opens straight to that quiz.</p>' +
+      var html = '<p class="small muted">Paste these in YouTube descriptions, WhatsApp groups or posts. Each link opens straight to that test.</p>' +
         '<div class="table"><table><tr><th>What it opens</th><th>Link</th><th></th></tr>' + row('<b>Home page</b>', location.origin + '/');
       cat.forEach(function (s) {
         html += row('<b>' + esc(s.name) + '</b>: full syllabus', practiceLink(s.id), s.count + ' questions');
