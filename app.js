@@ -47,27 +47,56 @@
   window.addEventListener('popstate', route);
 
   var navActive = '';
+  /* line icons (Lucide, ISC licence) */
+  var ICONS = {
+    practice: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+    test: '<line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/>',
+    exams: '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+    career: '<rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+    resume: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8M16 13H8M16 17H8"/>',
+    chart: '<path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/>',
+    admin: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
+    trophy: '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z"/>',
+    check: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+    target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>',
+    moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+    auto: '<rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    user: '<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>'
+  };
+  function icon(n, cls) { return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[n] || '') + '</svg>'; }
+  /* theme: Light / Dark / System (stored per device) */
+  function themeGet() { try { return localStorage.getItem('vkv-theme') || 'auto'; } catch (e) { return 'auto'; } }
+  function themeSet(t) {
+    try { if (t === 'auto') localStorage.removeItem('vkv-theme'); else localStorage.setItem('vkv-theme', t); } catch (e) {}
+    if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+    document.querySelectorAll('.theme-btn').forEach(function (b) { b.innerHTML = icon({ auto: 'auto', light: 'sun', dark: 'moon' }[t]); b.title = 'Theme: ' + ({ auto: 'System', light: 'Light', dark: 'Dark' })[t]; b.setAttribute('aria-label', b.title + '. Tap to change.'); });
+    document.querySelectorAll('.theme-seg button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-t') === t); });
+  }
   function setNav(active) {
     if (active !== undefined) navActive = active;
     active = navActive;
-    var items = [['home', '/', 'Practice & Tests', '🎯', 'Learn with practice, then take a test', 'Practice'], ['career', '/career', 'Job Prep', '🏢', 'Company-wise plan, software & interviews', 'Job Prep'], ['resume', '/resume', 'Resume Builder', '📄', 'ATS-ready resume, PDF & Word', 'Resume']];
-    if (session && !isGuest()) items.push(['me', '/me', 'Dashboard', '📊', 'Your results and progress', 'My tests']);
-    if (session && profile && profile.is_admin) items.push(['admin', '/admin', 'Admin', '🛠', 'Control room', 'Admin']);
+    var items = [['home', '/', 'Practice & Tests', icon('practice'), 'Learn with practice, then take a test', 'Practice'], ['career', '/career', 'Job Prep', icon('career'), 'Company-wise plan, software & interviews', 'Job Prep'], ['resume', '/resume', 'Resume Builder', icon('resume'), 'ATS-ready resume, PDF & Word', 'Resume']];
+    if (session && !isGuest()) items.push(['me', '/me', 'Dashboard', icon('chart'), 'Your results and progress', 'My tests']);
+    if (session && profile && profile.is_admin) items.push(['admin', '/admin', 'Admin', icon('admin'), 'Control room', 'Admin']);
     var ini = ((profile && (profile.full_name || profile.email)) || '?').charAt(0).toUpperCase();
     var acct = session && !isGuest() ? '<a href="/profile" data-link class="avatar" title="Profile and sign out" aria-label="Profile and sign out">' + esc(ini) + '</a>'
       : '<a href="/login" data-link class="nav-cta' + (active === 'login' ? ' on' : '') + '">Sign in</a>';
     $nav.innerHTML = '<div class="nav-links">' + items.map(function (x) { return '<a href="' + x[1] + '" data-link class="' + (active === x[0] ? 'on' : '') + '"><i aria-hidden="true">' + x[3] + '</i><span class="nl">' + x[2] + '</span><span class="ns">' + x[5] + '</span></a>'; }).join('') + '</div>' +
-      '<div class="nav-right"><a href="https://www.vkvsir.com" class="site-link" title="Go to vkvsir.com">vkvsir.com ↗</a>' + acct +
+      '<div class="nav-right"><a href="https://www.vkvsir.com" class="site-link" title="Go to vkvsir.com">vkvsir.com ↗</a><button type="button" class="theme-btn"></button>' + acct +
       '<button type="button" class="menu-btn" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span></button></div>';
     // mobile drawer
     var dr = document.getElementById('drawer');
     if (!dr) { dr = document.createElement('div'); dr.id = 'drawer'; dr.className = 'drawer'; dr.setAttribute('aria-hidden', 'true'); document.body.appendChild(dr); }
     dr.innerHTML = '<div class="drawer-bg" data-close></div><aside class="drawer-p" role="dialog" aria-label="Menu"><div class="drawer-h"><b>Menu</b><button type="button" class="drawer-x" data-close aria-label="Close menu">✕</button></div>' +
       '<nav class="drawer-n">' + items.map(function (x) { return '<a href="' + x[1] + '" data-link class="' + (active === x[0] ? 'on' : '') + '"><span class="di">' + x[3] + '</span><span><b>' + x[2] + '</b><small>' + x[4] + '</small></span></a>'; }).join('') + '</nav>' +
-      '<div class="drawer-f">' + (session ? '<a class="btn ghost block" href="/profile" data-link>👤 My profile</a>' : '<a class="btn block" href="/login" data-link>Sign in / Create free account</a>') +
+      '<div class="drawer-f"><p class="small muted" style="margin:0">Appearance</p><div class="theme-seg">' + [['light', 'Light'], ['dark', 'Dark'], ['auto', 'System']].map(function (t) { return '<button type="button" data-t="' + t[0] + '">' + icon({ auto: 'auto', light: 'sun', dark: 'moon' }[t[0]]) + t[1] + '</button>'; }).join('') + '</div>' + (session ? '<a class="btn ghost block" href="/profile" data-link>👤 My profile</a>' : '<a class="btn block" href="/login" data-link>Sign in / Create free account</a>') +
       '<a class="drawer-site" href="https://www.vkvsir.com">Visit vkvsir.com ↗</a><a class="drawer-site" href="/why" data-link>Why VKV Sir Test Lab</a></div></aside>';
     function openD(o) { dr.classList.toggle('open', o); dr.setAttribute('aria-hidden', o ? 'false' : 'true'); document.body.classList.toggle('noscroll', o); var b = $nav.querySelector('.menu-btn'); if (b) b.setAttribute('aria-expanded', o); }
     $nav.querySelector('.menu-btn').onclick = function () { openD(true); };
+    $nav.querySelector('.theme-btn').onclick = function () { var order = ['auto', 'light', 'dark'], t = themeGet(); themeSet(order[(order.indexOf(t) + 1) % 3]); };
+    dr.querySelectorAll('.theme-seg button').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); themeSet(b.getAttribute('data-t')); }; });
+    themeSet(themeGet());
     dr.onclick = function (e) { if (e.target.closest('[data-close]') || e.target.closest('a')) openD(false); };
     if (!window._drawerEsc) { window._drawerEsc = 1; document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { var d = document.getElementById('drawer'); if (d && d.classList.contains('open')) { d.classList.remove('open'); document.body.classList.remove('noscroll'); } } }); }
     $bar.classList.toggle('exam-mode', active === 'exam');
@@ -182,7 +211,7 @@
     if ((m = p.match(/^\/result\/([0-9a-f-]{36})$/))) return viewResult(m[1]);
     setNav('');
     h('<div class="nf narrow stack"><div class="card center stack"><p class="eyebrow">Error 404</p><h1>Page not found</h1><p class="muted">The link may be old or mistyped. Try one of these instead.</p></div>' +
-      '<div class="nf-doors">' + [['📘', 'Practice', 'Subjects, units and topics', '/exams?k=university'], ['⏱️', 'Tests', 'Timed papers and mock tests', '/exams?k=competitive'], ['🎓', 'Exams', 'GATE, SSC, PSU and more', '/exams?k=competitive'], ['🏢', 'Job Prep', 'Company-wise plan', '/career']].map(function (d) {
+      '<div class="nf-doors">' + [[icon('practice', 'ic-lg'), 'Practice', 'Subjects, units and topics', '/exams?k=university'], [icon('test', 'ic-lg'), 'Tests', 'Timed papers and mock tests', '/exams?k=competitive'], [icon('exams', 'ic-lg'), 'Exams', 'GATE, SSC, PSU and more', '/exams?k=competitive'], [icon('career', 'ic-lg'), 'Job Prep', 'Company-wise plan', '/career']].map(function (d) {
         return '<a class="card nf-d" href="' + d[3] + '" data-link><span class="nf-i" aria-hidden="true">' + d[0] + '</span><b>' + d[1] + '</b><span class="small muted">' + d[2] + '</span></a>'; }).join('') + '</div>' +
       '<p class="center"><a class="btn" href="/" data-link>Go to home</a></p></div>');
   }
@@ -220,9 +249,9 @@
   }
   setTimeout(function () { var ff = document.getElementById('ff'); if (ff && !ff.innerHTML) ff.innerHTML = '<span class="ffl">Follow VKV Sir</span>' + FOLLOW.map(function (f) { return '<a href="' + f[1] + '" target="_blank" rel="noopener" title="' + f[0] + '" aria-label="' + f[0] + '" class="fi ' + f[2] + '">' + f[3] + '</a>'; }).join(''); }, 0);
   var TRACKS = [
-    { k: 'foundation', ic: '📘', t: 'Fundamentals', d: 'Unit and topic MCQs for semester exams, practicals and viva: Diploma, UG, PG and PhD.' },
-    { k: 'competitive', ic: '🏆', t: 'Competitive exams', d: 'GATE, ESE, PSU, ISRO, RTO/MVI, SSC, aptitude, reasoning and more, by level and domain.' },
-    { k: 'career', ic: '🚀', t: 'Interview & career', d: 'Company-wise prep, job-profile plan, placement mock tests, aptitude, branch core and HR for freshers to experienced.' }
+    { k: 'foundation', ic: icon('practice', 'ic-lg'), t: 'Fundamentals', d: 'Unit and topic MCQs for semester exams, practicals and viva: Diploma, UG, PG and PhD.' },
+    { k: 'competitive', ic: icon('trophy', 'ic-lg'), t: 'Competitive exams', d: 'GATE, ESE, PSU, ISRO, RTO/MVI, SSC, aptitude, reasoning and more, by level and domain.' },
+    { k: 'career', ic: icon('career', 'ic-lg'), t: 'Interview & career', d: 'Company-wise prep, job-profile plan, placement mock tests, aptitude, branch core and HR for freshers to experienced.' }
   ];
   function viewHome() {
     setNav('home'); loading();
@@ -616,7 +645,7 @@
         '<div class="card stack">' +
         (t.active_attempt ? '<div class="note">You have an unfinished attempt. Continue where you left off.</div><a class="btn block" href="/exam/' + t.active_attempt + '" data-link>Resume test</a>' :
           '<div><p class="f" style="margin-top:0;font-weight:700">How much time do you have?</p><div class="seg" id="seg">' + segs + '</div></div>' +
-          '<div class="tw">' + [['⏱', 'Fair time', t.sec_per_q + ' s per question'], ['✅', 'Instant answers', 'with explanations'], ['📊', 'Unit analysis', 'strong & weak areas'], ['🎯', 'Next steps', 'what to practise']].map(function (x) { return '<div><span>' + x[0] + '</span><b>' + x[1] + '</b><small>' + x[2] + '</small></div>'; }).join('') + '</div>' +
+          '<div class="tw">' + [[icon('test', 'ic-lg'), 'Fair time', t.sec_per_q + ' s per question'], [icon('check', 'ic-lg'), 'Instant answers', 'with explanations'], [icon('chart', 'ic-lg'), 'Unit analysis', 'strong & weak areas'], [icon('target', 'ic-lg'), 'Next steps', 'what to practise']].map(function (x) { return '<div><span>' + x[0] + '</span><b>' + x[1] + '</b><small>' + x[2] + '</small></div>'; }).join('') + '</div>' +
           '<ul class="rules small"><li>' + t.sec_per_q + ' seconds per question, one question at a time.</li><li>No going back once you move on.</li>' +
           '<li>The paper submits automatically when time ends.</li><li>' + (t.show_result ? 'You will see your score and answers right after submitting.' : 'Results will be released by your teacher.') + '</li></ul>' +
           (opens ? '<div class="note">Opens ' + esc(fmtDate(t.open_at)) + '</div>' : '') +
@@ -693,8 +722,8 @@
       var args = { p_subject: n.subj.id, p_unit: n.unit ? n.unit.unit : null, p_topic: n.topic ? n.topic.id : null };
       h('<div class="narrow stack focus"><div class="card center stack">' +
         '<p class="eyebrow">' + (exam ? 'Exam-level paper · ' + esc(exam.toUpperCase().replace(/-/g, ' ')) : 'Free practice & tests') + '</p><h1>' + esc(title) + '</h1>' + (crumbs && crumbs !== title ? '<p class="muted" style="margin:0">' + esc(crumbs) + '</p>' : '') +
-        (cnt >= READY ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>📘 Practice</b><span>No pressure: see the right answer and explanation after each question</span></button>' +
-          '<button type="button" data-m="quiz" aria-pressed="' + (mode === 'quiz') + '"><b>⏱️ Test</b><span>Timed like an exam: score at the end, counts on the leaderboard</span></button></div>' +
+        (cnt >= READY ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>' + icon('practice') + ' Practice</b><span>No pressure: see the right answer and explanation after each question</span></button>' +
+          '<button type="button" data-m="quiz" aria-pressed="' + (mode === 'quiz') + '"><b>' + icon('test') + ' Test</b><span>Timed like an exam: score at the end, counts on the leaderboard</span></button></div>' +
           '<div id="pm"><p class="f">Do you want a timer?</p><div class="seg" id="pd">' + [[0, 'No timer', 'Learn at your own pace'], [5, '5 min', 'Quick revision'], [15, '15 min', 'Short session'], [60, '1 hour', 'Deep practice'], [180, '3 hours', 'Full study session']].map(function (d) { return '<button type="button" data-d="' + d[0] + '" aria-pressed="' + (d[0] === pdur) + '"><b>' + d[1] + '</b><span>' + d[2] + '</span></button>'; }).join('') + '</div>' +
           '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Rushing through questions without reading is detected: a warning, then short pauses of 1–2 minutes. Repeating it on the same day locks all practice and quizzes for 10 minutes.</li><li>After <b>3 practice sessions</b> in a unit, take a short <b>Test</b> to check what stuck and unlock more practice.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
           '<div id="qm" hidden>' + (ds.length ? '<p class="f">How much time do you have?</p><div class="seg" id="fd">' + ds.map(function (d) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + Math.floor(d * 60 / 45) + ' questions</span></button>'; }).join('') + '</div>' +

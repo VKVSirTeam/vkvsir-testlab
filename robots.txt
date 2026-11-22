@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /exam/
+Disallow: /result/
+Disallow: /practice/
+Disallow: /g/
+Sitemap: https://test.vkvsir.com/sitemap.xml
