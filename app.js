@@ -1713,7 +1713,7 @@
         '<div id="chips" hidden><p class="small" style="margin:12px 0 0">What is wrong? Tap all that apply:</p><div class="chips">' + FLAGS.map(function (f) { return '<button type="button" class="chip" aria-pressed="false" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div></div>' +
         '<div class="note" id="leave" hidden>Leaving the exam screen is recorded.</div>' +
         '<div class="exam-foot"><button class="btn block" id="nx" disabled>' + (last ? 'Submit paper' : 'Next question') + '</button></div>' + (tok ? '' : '<button type="button" class="qshare" id="qsh" aria-label="Save this question to WhatsApp">📸<span>Save &amp; share</span><small id="qshn"></small></button>') + '</div>');
-      renderMath($view);
+      renderMath($view); addTranslation(id, v.idx);
       if (!tok) { shareQuota(id, q('#qshn')); q('#qsh').onclick = function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); }; }
       q('#opts').addEventListener('click', function (e) {
         var b = e.target.closest('.opt'); if (!b || busy) return;
@@ -1763,6 +1763,49 @@
     ['⏸️ Paused for 90 seconds', 'You are still moving faster than anyone can read these questions. Practice is paused for 90 seconds. After this, the <b>Next</b> button waits until you have had time to read.'],
     ['⏸️ Paused for 2 minutes', 'Please attempt practice sessions when you have time to read the questions, not to hunt for answers or guess. Our system notices this pattern. <b>If it happens again today, all practice and quizzes will lock for 10 minutes.</b>'],
     ['🔒 Locked for 10 minutes', 'You rushed through questions again today, so practice and quizzes are locked for 10 minutes. After that you can resume this session exactly where you left it. Please read each question before answering.']];
+  /* ---------- live translation shown below the English (GK subjects first) ---------- */
+  var TR_LANGS = [['', 'English only'], ['hi', 'हिन्दी (Hindi)'], ['mr', 'मराठी (Marathi)'], ['bn', 'বাংলা (Bengali)'], ['ta', 'தமிழ் (Tamil)'], ['te', 'తెలుగు (Telugu)'],
+    ['gu', 'ગુજરાતી (Gujarati)'], ['kn', 'ಕನ್ನಡ (Kannada)'], ['ml', 'മലയാളം (Malayalam)'], ['pa', 'ਪੰਜਾਬੀ (Punjabi)'], ['or', 'ଓଡ଼ିଆ (Odia)'], ['as', 'অসমীয়া (Assamese)'],
+    ['ur', 'اردو (Urdu)'], ['ne', 'नेपाली (Nepali)'], ['es', 'Español'], ['fr', 'Français'], ['de', 'Deutsch'], ['ar', 'العربية (Arabic)'], ['ru', 'Русский'], ['pt', 'Português'], ['zh-Hans', '中文'], ['ja', '日本語']];
+  function trLang() { try { return localStorage.getItem('vkv-lang') || ''; } catch (e) { return ''; } }
+  function addTranslation(att, idx) {
+    var qb = q('#qb'); if (!qb) return;
+    var cur = trLang(), bar = document.createElement('div');
+    bar.className = 'trbar';
+    bar.innerHTML = '<label>🌐 <span class="small muted">Also show in</span> <select id="trsel" aria-label="Show a translation below the English">' +
+      TR_LANGS.map(function (l) { return '<option value="' + l[0] + '"' + (l[0] === cur ? ' selected' : '') + '>' + l[1] + '</option>'; }).join('') + '</select></label>';
+    qb.parentNode.insertBefore(bar, qb);
+    function clear() { Array.prototype.forEach.call($view.querySelectorAll('.qtr,.otr,.trnote'), function (e) { e.remove(); }); }
+    function load(lang) {
+      var note = document.createElement('div'); note.className = 'trnote small muted'; note.textContent = 'Translating…'; qb.after(note);
+      fetch(SB_URL + '/functions/v1/translate', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SB_KEY }, body: JSON.stringify({ attempt: att, idx: idx, lang: lang }) })
+        .then(function (r) { return r.json(); }).then(function (t) {
+          if (!document.body.contains(qb) || trLang() !== lang) return;
+          if (!t.ok) { note.textContent = t.enabled === false ? 'Translation is available for GK subjects for now; more subjects soon.' : 'Translation is not available right now.'; return; }
+          note.remove();
+          var d = document.createElement('div'); d.className = 'qtr'; d.lang = lang; d.textContent = t.body; qb.after(d);
+          Array.prototype.forEach.call($view.querySelectorAll('#opts .opt'), function (b, k) {
+            var s = b.children[1]; if (!s || !t.options[k]) return;
+            var o = document.createElement('span'); o.className = 'otr'; o.lang = lang; o.textContent = t.options[k]; s.appendChild(o);
+          });
+          var f = document.createElement('div'); f.className = 'trnote small muted';
+          f.innerHTML = 'Auto-translated · the English is final if meanings differ · <button type="button" class="linkbtn" id="trbad">Wrong translation?</button>';
+          d.after(f);
+          f.querySelector('#trbad').onclick = function () {
+            rpc('report_translation', { p_attempt: att, p_idx: idx, p_lang: lang }).catch(function () {});
+            d.remove(); Array.prototype.forEach.call($view.querySelectorAll('.otr'), function (e) { e.remove(); });
+            f.textContent = '✓ Thank you. This translation is hidden and will be redone.';
+          };
+        }).catch(function () { note.textContent = 'Translation is not available right now.'; });
+    }
+    bar.querySelector('#trsel').onchange = function () {
+      try { localStorage.setItem('vkv-lang', this.value); } catch (e) {}
+      clear(); if (this.value) load(this.value);
+      track('translate_lang', { lang: this.value || 'en' });
+    };
+    if (cur) load(cur);
+  }
+
   function viewPractice(id) {
     setNav('exam');
     if (!session) return go('/login?next=' + encodeURIComponent('/practice/' + id), true);
@@ -1825,7 +1868,7 @@
         '<div class="exam-foot prow">' + (r ? '<button class="btn block" id="nx">Next question →</button>' : '<button class="btn ghost" id="sk" type="button">🤔 Show answer</button>') +
         '<button class="linkbtn" id="end" type="button">End practice &amp; see summary</button></div>' + '<button type="button" class="qshare" id="qsh" aria-label="Save this question to WhatsApp">📸<span>Save &amp; share</span><small id="qshn"></small></button>' +
         (v.slow && !r ? '<p class="small muted center" id="slowmsg">Take your time: read the question fully before answering.</p>' : '') + '</div>');
-      renderMath($view);
+      renderMath($view); addTranslation(id, v.idx);
       shareQuota(id, q('#qshn')); q('#qsh').onclick = function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); };
       if (!r) {
         q('#opts').addEventListener('click', function (e) { var b = e.target.closest('.opt'); if (b) answer(+b.getAttribute('data-k')); });

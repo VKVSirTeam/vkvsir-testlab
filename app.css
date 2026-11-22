@@ -1339,3 +1339,13 @@ a.nx-i:hover{border-color:var(--accent)}
 .pz-f span{font-size:28px;display:block} .pz-f b{font-size:17px} .pz-f p{margin:6px 0 0;font-size:15px;line-height:1.55}
 @keyframes pzin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .xbr{margin-top:8px;align-items:center}
+
+/* live translation below the English */
+.trbar{display:flex;justify-content:flex-end;margin:6px 0 -4px}
+.trbar label{display:inline-flex;align-items:center;gap:6px;font-size:14px}
+.trbar select{font:inherit;font-size:14px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);max-width:190px}
+.qtr{margin:-8px 0 8px;padding:8px 12px;background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:8px;font-size:17px;line-height:1.55;font-weight:500;color:var(--ink);user-select:none;-webkit-user-select:none}
+.otr{display:block;margin-top:3px;font-size:15px;line-height:1.45;font-weight:400;color:var(--muted)}
+.opt.ok .otr,.opt.bad .otr{color:inherit;opacity:.85}
+.trnote{margin:0 0 12px}
+.exam.has-img .qtr{font-size:15px;margin:-4px 0 6px}
