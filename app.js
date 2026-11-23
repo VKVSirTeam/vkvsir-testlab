@@ -295,7 +295,8 @@
       var nQ = cat.reduce(function (a, x) { return a + (x.count || 0); }, 0), nS = cat.filter(function (x) { return (x.count || 0) >= READY; }).length;
       var fmtN = function (n) { return Number(n || 0).toLocaleString('en-IN'); };
       var today = { slug: 'daily', title: 'Daily test · ' + new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long' }), description: 'Same 20 questions for everyone today: aptitude, reasoning, English and science. One attempt; ranked by score and time.', durations: [15] };
-      var fam = {}; exams.forEach(function (e) { var f = e.family || e.org; if (!fam[f]) fam[f] = { n: 0, k: e.kind }; fam[f].n++; });
+      var fam = {}; exams.forEach(function (e) { var t = e.kind === 'university' || !!(e.branch && !/^(general|all)/i.test(e.branch)), f = (t ? 'T|' : 'N|') + (e.family || e.org); if (!fam[f]) fam[f] = { n: 0, k: e.kind, tech: t }; fam[f].n++; });
+      var famChips = function (t) { return Object.keys(fam).filter(function (f) { return fam[f].tech === t; }).map(function (f) { return '<a class="chip" href="/exams?k=' + fam[f].k + '" data-link>' + esc(f.slice(2)) + ' <small class="muted">' + fam[f].n + '</small></a>'; }).join(''); };
       var doors = [
         ['practice', 'Practice', 'Learn topic by topic. See the right answer and explanation after every question.', '/practice', 'Start practice'],
         ['test', 'Test', 'Timed like a real exam. Score, explanations and your rank at the end.', '/test', 'Take a test'],
@@ -315,15 +316,26 @@
       var si = 0; try { si = (+(sessionStorage.getItem('vkv-sample') || -1) + 1 + Math.floor(Math.random() * (SAMPLES.length - 1))) % SAMPLES.length; sessionStorage.setItem('vkv-sample', si); } catch (e) { si = Math.floor(Math.random() * SAMPLES.length); }
       var sample = SAMPLES[si];
       var top5 = (lb.top || []).slice(0, 5);
+      var byId = {}; cat.forEach(function (x) { byId[x.id] = x; });
+      var br = branchGet(), core = [], gen = [];
+      SUBJ_GROUPS.forEach(function (g) { if (g[0] === 'apt' || g[0] === 'gk' || /general|gk|aptitude/i.test(g[1])) gen = gen.concat(g[2]); else if (br === 'all' ? g[0] === 'me' : g[0] === br) core = core.concat(g[2]); });
+      if (!gen.length) gen = ['QA', 'LR', 'VA', 'GSC'];
+      var pickU = function (ids) { var pool = []; ids.forEach(function (id) { var x = byId[id]; if (x) (x.units || []).forEach(function (u) { if ((u.count || 0) >= READY) pool.push({ s: x, u: u }); }); }); return pool; };
+      var rnd = function (a, k) { a = a.slice(); var o = []; while (a.length && o.length < k) o.push(a.splice(Math.floor(Math.random() * a.length), 1)[0]); return o; };
+      var ready = rnd(pickU(core), 2).concat(rnd(pickU(gen), 1)); if (ready.length < 3) ready = ready.concat(rnd(pickU(Object.keys(byId)), 3 - ready.length));
+      var readyHtml = ready.length ? '<section class="hm-ready"><div class="spread"><h2>Ready for you</h2><div class="seg mini hm-rm" role="tablist"><button type="button" class="chip" data-m="p" aria-pressed="true">Practice</button><button type="button" class="chip" data-m="t" aria-pressed="false">Test</button></div></div>' +
+        '<p class="muted" style="margin:-6px 0 10px">A 5-minute session, prepared for you. Tap one to start.</p><div class="hm-rc">' + ready.map(function (x) {
+          var base = '/p/' + x.s.id.toLowerCase() + '/' + x.u.unit;
+          return '<a class="card hm-rcard" data-base="' + base + '" href="' + base + '?auto=1" data-link><small>' + esc(x.s.name) + ' · Unit ' + x.u.unit + '</small><b>' + esc(x.u.name) + '</b><span class="hm-rgo">' + icon('practice') + ' <i>Start 5-min practice</i></span></a>'; }).join('') + '</div></section>' : '';
       h('<div class="hm">' +
         '<section class="hm-hero"><div class="hm-copy"><p class="eyebrow">Free for every student</p><h1>Practise. Test. <em>Get placed.</em></h1>' +
           '<p class="hm-lead">For semester exams, GATE, SSC, PSU and placements, with every answer explained.</p>' +
           '<div class="hm-cta"><a class="btn" href="/practice" data-link>' + icon('practice') + ' Start practice</a><a class="btn ghost" href="/test" data-link>' + icon('test') + ' Take a test</a></div>' +
           '<p class="hm-pool">' + icon('check') + '<span>Every paper is prepared instantly from a pool of <b class="cnt-up" data-to="100000">1,00,000+</b> questions</span></p></div>' +
-          '<div class="hm-try card" aria-label="Try a question"><p class="hm-try-h">' + icon('practice') + ' Try one · ' + esc(sample.s) + '</p><p class="hm-q">' + esc(sample.q) + '</p><div class="hm-opts">' +
+          '<div class="hm-try card" aria-label="Try a question"><p class="hm-try-h">' + icon('practice') + ' Try one · ' + esc(sample.s) + '<button type="button" class="qs-share hm-sh" id="hm-sh" aria-label="Share this question">' + SHARE_IC + '<span class="qs-sl">Share</span></button></p><p class="hm-q">' + esc(sample.q) + '</p><div class="hm-opts">' +
             sample.o.map(function (o, i) { return '<button type="button" class="opt" data-i="' + i + '"><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(o) + '</span></button>'; }).join('') +
           '</div><p class="hm-exp" id="hm-exp" hidden></p></div></section>' +
-        continueCard() +
+        continueCard() + readyHtml +
         '<section class="hm-doors">' + doors.map(function (d) {
           return '<a class="door card door-' + d[0] + '" href="' + d[3] + '" data-link><span class="door-i">' + icon(d[0], 'ic-lg') + '</span><b>' + d[1] + '</b><span class="muted">' + d[2] + '</span><span class="door-go">' + d[4] + ' ' + icon('chevron') + '</span></a>'; }).join('') + '</section>' +
         '<section class="hm-two">' +
@@ -331,7 +343,7 @@
           '<div class="card hm-board"><div class="spread"><h2>Top this month</h2><a href="/leaderboard" data-link>Full leaderboard ' + icon('chevron') + '</a></div>' +
             (top5.length ? '<ol class="board">' + top5.map(function (b) { return '<li><span class="bd-r">' + b.rank + '</span><span class="bd-n"><b>' + esc(b.name) + '</b>' + (b.college ? '<span class="bd-c">' + esc(b.college) + '</span>' : '') + '</span><span class="mono">' + b.pct + '%</span></li>'; }).join('') + '</ol>'
               : '<p class="muted">Be the first: take any test this month to appear here.</p>') + '</div></section>' +
-        '<section class="hm-strip"><h2>Exams covered</h2><div class="chips">' + Object.keys(fam).map(function (f) { return '<a class="chip" href="/exams?k=' + fam[f].k + '" data-link>' + esc(f) + ' <small class="muted">' + fam[f].n + '</small></a>'; }).join('') + '</div></section>' +
+        '<section class="hm-strip"><h2>Exams covered</h2><div class="hm-xb"><h3>' + icon('practice') + ' Technical</h3><div class="chips">' + famChips(true) + '</div></div><div class="hm-xb"><h3>' + icon('test') + ' Non-technical</h3><div class="chips">' + famChips(false) + '</div></div></section>' +
         '<section class="hm-strip"><h2>Prepare for companies like</h2><div class="marq"><div class="marq-in">' + COMPANY_STRIP.concat(COMPANY_STRIP).map(function (c, i) { return '<a class="chip" href="/career?company=' + encodeURIComponent(c) + '" data-link' + (i >= COMPANY_STRIP.length ? ' aria-hidden="true" tabindex="-1"' : '') + '>' + esc(c) + '</a>'; }).join('') + '</div></div></section>' +
         '<section class="hm-how"><h2>How it works</h2><ol class="hm-steps">' +
           '<li><b>Pick your branch and subject</b><span class="muted">We remember it, so your subjects come first every time.</span></li>' +
@@ -339,6 +351,15 @@
           '<li><b>Test and track your rank</b><span class="muted">Timed papers, topic-wise results and a fair leaderboard.</span></li></ol>' +
           '<p class="center"><a href="/why" data-link>Why VKV Sir Test Lab ' + icon('chevron') + '</a></p></section>' +
         '</div>');
+      var rm = q('.hm-rm'); if (rm) rm.onclick = function (e) { var b = e.target.closest('[data-m]'); if (!b) return; var t = b.getAttribute('data-m') === 't';
+        rm.querySelectorAll('[data-m]').forEach(function (c) { c.setAttribute('aria-pressed', c === b); });
+        $view.querySelectorAll('.hm-rcard').forEach(function (a) { a.setAttribute('href', a.getAttribute('data-base') + (t ? '?m=quiz&auto=1' : '?auto=1')); a.querySelector('.hm-rgo').innerHTML = icon(t ? 'test' : 'practice') + ' <i>Start 5-min ' + (t ? 'test' : 'practice') + '</i>'; }); };
+      var hs = q('#hm-sh'); if (hs) hs.onclick = function () {
+        var txt = 'Can you answer this? ' + sample.q + '\n' + sample.o.map(function (o, i) { return 'ABCD'[i] + ') ' + o; }).join('\n') + '\nTry it free on VKV Sir Test Lab: ' + location.origin + sample.p;
+        if (navigator.share) navigator.share({ title: 'VKV Sir Test Lab', text: txt }).catch(function () {});
+        else window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
+        track('share_sample', { s: sample.s });
+      };
       (function () {
         var el = q('.cnt-up'); if (!el) return; var seen = false; try { seen = sessionStorage.getItem('vkv-cnt') === '1'; sessionStorage.setItem('vkv-cnt', '1'); } catch (e) {}
         if (seen || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
@@ -914,7 +935,9 @@
       }
       pdur = 5; Array.prototype.forEach.call((q('#pd') || { children: [] }).children, function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-d') === '5'); });
       applyUnlock();
-      if (session && !isGuest()) rpc('unlock_status', { p_subject: n.subj.id }).then(applyUnlock).catch(function () {});
+      var auto = new URLSearchParams(location.search).get('auto') === '1';
+      var autoGo = function () { if (!auto) return; auto = false; if (mode === 'quiz' && ds.indexOf(5) >= 0) { dur = 5; } else pdur = 5; var gg = q('#fgo'); if (gg && !gg.disabled) gg.click(); };
+      if (session && !isGuest()) rpc('unlock_status', { p_subject: n.subj.id }).then(function (u) { applyUnlock(u); autoGo(); }).catch(autoGo); else autoGo();
       var g = q('#fgo'); if (g) g.onclick = function () {
         if (!requireAuth(location.pathname + location.search, function () { q('#fgo').click(); })) return;
         var lbl = g.textContent; g.disabled = true; g.textContent = 'Preparing…'; track(mode === 'practice' ? 'start_practice' : 'start_quiz', { s: n.subj.id, u: args.p_unit, x: exam });
@@ -1833,6 +1856,16 @@
     var list = [['Home', '/']]; if (sec && sec[0] !== here) list.push(sec); list.push([here, '']);
     $view.insertAdjacentHTML('afterbegin', '<div class="crumb-auto">' + crumbBar(list) + '</div>');
   }
+  function fitTiles(root) {
+    (root || $view).querySelectorAll('.res-tiles,.tiles').forEach(function (g) {
+      var it = [].filter.call(g.children, function (c) { return !c.hidden; }), n = it.length; if (!n) return;
+      var max = innerWidth < 560 ? (n === 5 || n > 6 ? 4 : 3) : 5, c = n <= max ? n : 0;
+      if (!c) { for (var k = max; k >= 3; k--) if (n % k === 0) { c = k; break; } if (!c) c = max; }
+      var full = Math.floor(n / c) * c, last = n - full;
+      g.classList.add('fit'); g.style.setProperty('--fit', 60);
+      it.forEach(function (x, i) { x.style.gridColumn = 'span ' + (i < full ? 60 / c : 60 / last); });
+    });
+  }
   function balanceSegs() {
     $view.querySelectorAll('.seg:not(.mini)').forEach(function (sg) { var n = sg.children.length, c = n % 3 === 0 ? 3 : n % 2 === 0 ? 2 : 3; if (n === 4) c = 2; sg.style.setProperty('--cols', c); });
   }
@@ -1840,7 +1873,7 @@
     var h1 = $view.querySelector('h1'), t = h1 ? h1.textContent.replace(/\s+/g, ' ').trim() : '';
     var want = location.pathname === '/' || !t ? 'VKV Sir Test Lab: free practice, tests and job prep' : t.slice(0, 70) + ' · VKV Sir Test Lab';
     if (document.title !== want) document.title = want;
-    autoCrumbs(t); balanceSegs();
+    autoCrumbs(t); balanceSegs(); fitTiles();
     if (/^\/(p|t)\//.test(location.pathname) && t) { try { localStorage.setItem('vkv-last', JSON.stringify({ u: location.pathname + location.search, t: t.slice(0, 90), at: Date.now() })); } catch (e) {} }
   }
   new MutationObserver(function () { clearTimeout(animateIn.t); animateIn.t = setTimeout(function () { animateIn(); pageTitle(); }, 60); }).observe(document.getElementById('app') || document.body, { childList: true, subtree: true });
@@ -1980,10 +2013,10 @@
       draw();
     }).catch(function () {});
   }
+  var SHARE_IC = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>';
   function shareTab(b, run) {
     if (!b) return;
-    b.onclick = function (e) { e.stopPropagation(); if (!b.classList.contains('open')) { b.classList.add('open'); return; } b.classList.remove('open'); run(); };
-    document.addEventListener('click', function off(e) { if (!document.body.contains(b)) return document.removeEventListener('click', off); if (!b.contains(e.target)) b.classList.remove('open'); });
+    b.onclick = function (e) { e.stopPropagation(); run(); };
   }
   function lockText(m) {
     var r = /^LOCKED:(\d+)/.exec(m || '');
@@ -2110,7 +2143,7 @@
           '<span class="qs-n">' + (v.idx + 1) + '<small>/' + v.n + '</small></span></header>' +
         '<div class="track qs-track"><div class="fill" id="fl"></div></div>' +
         '<article class="qs-card"><div class="qs-meta"><span class="qs-qn">Question ' + (v.idx + 1) + ' <span class="qtime" id="qt"></span></span><span class="qs-tools" id="qtools">' +
-          (tok ? '' : '<button type="button" class="qs-share" id="qsh" title="Save this question as an image to share" aria-label="Save and share this question">' + icon('resume') + '<small id="qshn"></small><span class="qs-sl">Save &amp; share</span></button>') + '</span></div>' +
+          (tok ? '' : '<button type="button" class="qs-share" id="qsh" title="Save this question as an image to share" aria-label="Share this question">' + SHARE_IC + '<span class="qs-sl">Share</span><small id="qshn"></small></button>') + '</span></div>' +
           (v.image ? zimg(v.image, '', 'Figure for this question') : '') +
           '<div class="qbody" id="qb">' + esc(v.body) + '</div><div class="opts' + (v.image && v.options.every(function (o) { return String(o).length <= 14; }) ? ' opts-grid' : '') + '" role="radiogroup" aria-labelledby="qb" id="opts">' +
           v.options.map(function (o, k) { return '<button type="button" class="opt" role="radio" aria-checked="false" data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') + '</div>' +
@@ -2348,7 +2381,7 @@
           '<div class="qs-t"><small>Practice · ' + esc(String(v.title || '').replace(/^Practice · /, '')) + '</small><b>' + esc(v.topic || '') + '</b></div>' +
           '<span class="qs-n">' + (v.idx + 1) + '<small>/' + v.n + '</small></span></header>' +
         '<div class="qs-prog" aria-hidden="true"><i style="width:' + pctDone + '%"></i></div>' +
-        '<article class="qs-card"><div class="qs-meta"><span class="qs-qn">Question ' + (v.idx + 1) + (v.timed && !r ? ' <span class="qs-qt" id="pqt"></span>' : '') + '</span><span class="qs-tools" id="qtools"><button type="button" class="qs-share" id="qsh" title="Save this question as an image to share" aria-label="Save and share this question">' + icon('resume') + '<small id="qshn"></small><span class="qs-sl">Save &amp; share</span></button></span></div>' +
+        '<article class="qs-card"><div class="qs-meta"><span class="qs-qn">Question ' + (v.idx + 1) + (v.timed && !r ? ' <span class="qs-qt" id="pqt"></span>' : '') + '</span><span class="qs-tools" id="qtools"><button type="button" class="qs-share" id="qsh" title="Save this question as an image to share" aria-label="Share this question">' + SHARE_IC + '<span class="qs-sl">Share</span><small id="qshn"></small></button></span></div>' +
           (v.image ? zimg(v.image, '', 'Figure for this question') : '') +
           '<div class="qbody" id="qb">' + esc(v.body) + '</div><div class="opts" role="radiogroup" aria-labelledby="qb" id="opts">' +
           v.options.map(function (o, k) {
@@ -2430,7 +2463,7 @@
     return new Promise(function (ok) { var im = new Image(); im.crossOrigin = 'anonymous'; im.onload = function () { x._img = im; ok(x); }; im.onerror = function () { ok(x); }; im.src = x.image; });
   }
   function shareQuota(attemptId, el) {
-    if (!el) return; rpc('share_quota', { p_id: attemptId }).then(function (r) { el.textContent = r.left + ' left'; el.parentNode.disabled = r.left <= 0; el.parentNode.title = r.left + ' saves left in this session (max ' + r.per_session + ' per session, ' + r.per_day + ' per day)'; }).catch(function () {});
+    if (!el) return; rpc('share_quota', { p_id: attemptId }).then(function (r) { el.textContent = r.left; el.parentNode.disabled = r.left <= 0; el.parentNode.title = r.left + ' saves left in this session (max ' + r.per_session + ' per session, ' + r.per_day + ' per day)'; }).catch(function () {});
   }
   function shareFlow(attemptId, idx, onDone) {
     var wa = ''; try { wa = localStorage.getItem('vkv-wa') || ''; } catch (e) {}
@@ -2634,7 +2667,7 @@
         '<p class="res-msg">' + V[2] + '</p>' + tipHtml('result') +
         '<div class="res-tiles"><div><b class="g">' + r.score + '</b><span>Correct</span></div><div><b class="b">' + wrong + '</b><span>Wrong</span></div><div><b class="w">' + skip + '</b><span>Not answered</span></div><div><b>' + acc + '%</b><span>Accuracy</span></div><div><b>' + att + '%</b><span>Attempted</span></div></div>' +
         (tip ? '<div class="res-tip">💡 ' + tip + '</div>' : '') +
-        '<div class="row res-act">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/practice" data-link>Practise again</a><button type="button" class="btn ghost" id="shsc">Share my score</button><a class="btn ghost" href="/me" data-link>My dashboard</a>') + '</div></div>' +
+        '<div class="row res-act">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/practice" data-link>Practise again</a><button type="button" class="btn ghost" id="shsc">Share my score</button><a class="btn ghost" href="/me" data-link>Dashboard</a>') + '</div></div>' +
         (rev ? '<div class="res-rv"><div class="spread res-rvh"><div><h2>Learn from your mistakes</h2><p class="small muted">Questions you missed, with the right answer and explanation. Read these first.</p></div>' +
           '<div class="tabs" id="rvf"><button type="button" class="on" data-f="all">All</button><button type="button" data-f="no">Wrong · ' + wrong + '</button><button type="button" data-f="skip">Not answered · ' + skip + '</button></div></div>' + rev + '</div>'
           : '<div class="card center"><h2>Perfect score! 🎉</h2><p class="muted">Every answer was correct.</p></div>') +
@@ -2646,7 +2679,7 @@
       var rvf = q('#rvf'); if (rvf) rvf.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; rvf.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); var f = b.dataset.f; $view.querySelectorAll('.review').forEach(function (rw) { rw.hidden = f !== 'all' && !rw.classList.contains(f); }); };
       (function () {
         var res = q('.res'); if (!res) return;
-        if (r.total_ms) { var tiles = res.querySelector('.res-tiles'); if (tiles) tiles.insertAdjacentHTML('beforeend', '<div><b>' + mmss(r.total_ms) + '</b><span>Time taken</span></div>' + (r.avg_ms ? '<div><b>' + Math.round(r.avg_ms / 1000) + ' s</b><span>Per question</span></div>' : '')); }
+        if (r.total_ms) { var tiles = res.querySelector('.res-tiles'); if (tiles) { tiles.insertAdjacentHTML('beforeend', '<div><b>' + mmss(r.total_ms) + '</b><span>Time taken</span></div>' + (r.avg_ms ? '<div><b>' + Math.round(r.avg_ms / 1000) + ' s</b><span>Per question</span></div>' : '') + (r.avg_ms && r.n ? '<div><b>' + r.n + '</b><span>Questions</span></div>' : '')); fitTiles(res); } }
         if (!tok && r.kind === 'practice' && r.subject && session && !isGuest()) rpc('quiz_gate', { p_subject: r.subject, p_unit: r.unit == null ? null : r.unit }).then(function (gte) {
           if (!gte || gte.due < 2) return; var href = '/p/' + String(r.subject).toLowerCase() + (r.unit ? '/' + r.unit : '') + '?m=quiz', must = false;
           res.insertAdjacentHTML('afterbegin', '<div class="card qgate' + (must ? ' must' : '') + '"><div><b>' + (must ? 'Time for a test on this unit' : 'Ready for a quick test?') + '</b><p class="small">' +
