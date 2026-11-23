@@ -1864,6 +1864,13 @@
     var list = [['Home', '/']]; if (sec && sec[0] !== here) list.push(sec); list.push([here, '']);
     $view.insertAdjacentHTML('afterbegin', '<div class="crumb-auto">' + crumbBar(list) + '</div>');
   }
+  function markDetails() {
+    document.querySelectorAll('details>summary:not(.has-ar)').forEach(function (sm) {
+      if (sm.querySelector('.caret,.sj-c,.dt-ar') || sm.closest('.faq-l,.rb-menu,.jpr-t,.softinfo')) { sm.classList.add('has-ar'); return; }
+      sm.classList.add('has-ar', 'dt-s'); sm.insertAdjacentHTML('beforeend', '<span class="dt-ar" aria-hidden="true"></span>');
+    });
+  }
+  (function () { var tm; new MutationObserver(function () { clearTimeout(tm); tm = setTimeout(markDetails, 60); }).observe(document.documentElement, { childList: true, subtree: true }); })();
   function fitTiles(root) {
     (root || $view).querySelectorAll('.res-tiles,.tiles').forEach(function (g) {
       var it = [].filter.call(g.children, function (c) { return !c.hidden; }), n = it.length; if (!n) return;
@@ -3160,14 +3167,36 @@
         '<details open><summary><b>Month by month</b></summary>' + tbl(m, 'm', 'Month') + '</details><details><summary><b>Day by day (60 days)</b></summary>' + tbl(f.daily || [], 'd', 'Day') + '</details>';
     }).catch(function (e) { box.textContent = errMsg(e); });
   }
+  function liveVisitors(box) {
+    var bots = false, seen = {}, prev = null, timer = null, first = true;
+    var ago = function (t) { var s = Math.max(0, Math.round((Date.now() - new Date(t)) / 1000)); return s < 60 ? s + ' s ago' : s < 3600 ? Math.floor(s / 60) + ' min ago' : fmtDate(t); };
+    var page = function (p) { p = String(p || '/').split('?')[0]; return p === '/' ? 'Home' : p.replace(/^\/p\//, 'Practice: ').replace(/^\/exam\//, 'Doing a test').replace(/^\/result\/.*/, 'Result page').replace(/^\/admin.*/, 'Admin'); };
+    function tick() {
+      if (!document.body.contains(box)) return clearInterval(timer);
+      if (document.hidden) return;
+      rpc('admin_live', { p_bots: bots }).then(function (r) {
+        var K = [['m5', 'Active now', '(last 5 min)'], ['m30', 'Last 30 min', ''], ['today', 'People today', ''], ['today_new', 'New today', ''], ['mob', '📱 Mobile today', ''], ['desk', '💻 Desktop today', ''], ['signed', '👤 Signed in today', '']];
+        var rows = r.rows || [];
+        box.innerHTML = '<div class="spread"><h3 style="margin:0"><span class="live-dot"></span> Live now</h3><label class="small"><input type="checkbox" id="lv-b"' + (bots ? ' checked' : '') + '> show crawlers</label></div>' +
+          '<p class="small muted" style="margin:4px 0 10px">Updates every 10 seconds by itself; newest on top. Each device counts once. ' + (r.bots ? Number(r.bots).toLocaleString('en-IN') + ' one-page crawler hits today are left out.' : '') + '</p>' +
+          '<div class="adm-stats live-k">' + K.map(function (k) { var ch = prev && r[k[0]] > prev[k[0]]; return '<div class="card' + (ch ? ' up' : '') + '"><b>' + Number(r[k[0]] || 0).toLocaleString('en-IN') + (ch ? ' <small>▲' + (r[k[0]] - prev[k[0]]) + '</small>' : '') + '</b><span class="small muted">' + k[1] + ' ' + k[2] + '</span></div>'; }).join('') + '</div>' +
+          (rows.length ? '<div class="table live-t"><table><tr><th>Who</th><th>Device</th><th>Now on</th><th>Pages</th><th>Came from</th><th>Last seen</th></tr>' + rows.map(function (v) {
+            var fresh = !first && !seen[v.vid + v.last];
+            return '<tr class="' + (fresh ? 'fresh' : '') + (v.bot ? ' muted' : '') + '"><td>' + (v.name || v.email ? '<b>' + esc(v.name || v.email) + '</b>' + (v.college ? '<br><small class="muted">' + esc(v.college) + '</small>' : '') : 'Guest · ' + esc(v.vid) + (v.new ? ' <span class="pill accent">new</span>' : '')) + '</td><td>' + esc(v.dev || '–') + '</td><td>' + esc(page(v.page)) + '</td><td>' + v.views + '</td><td class="small">' + esc(({ 'com.google.android.gm': 'Gmail app', 'com.whatsapp': 'WhatsApp', 'org.telegram.messenger': 'Telegram', 'com.linkedin.android': 'LinkedIn app', 'com.google.android.googlequicksearchbox': 'Google app' })[v.ref] || String(v.ref || 'direct').replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</td><td class="small" data-t="' + esc(v.last) + '">' + ago(v.last) + '</td></tr>'; }).join('') + '</table></div>' : '<p class="muted">Nobody yet today.</p>');
+        seen = {}; rows.forEach(function (v) { seen[v.vid + v.last] = 1; }); prev = r; first = false;
+        var cb = box.querySelector('#lv-b'); if (cb) cb.onchange = function () { bots = cb.checked; first = true; tick(); };
+      }).catch(function (e) { if (first) box.textContent = errMsg(e); });
+    }
+    box.innerHTML = '<div class="spinner"></div>'; tick(); timer = setInterval(tick, 10000);
+  }
   function admVisitors(box) {
     var days = 30;
     function load() {
       box.innerHTML = '<div class="spinner"></div>';
       rpc('admin_visitors', { p_days: days }).then(function (r) {
         var st = r.stats || {}, rows = r.rows || [];
-        setTimeout(function () { var ffb = box.querySelector('#ffall'); if (ffb) footfall(ffb); }, 0);
-        box.innerHTML = '<div id="ffall" class="card"></div><div id="vlog"></div><h3 style="margin-top:18px">Guest-ID accounts</h3><p class="small muted">Visitors use the website with a private guest ID before signing in (needs “Allow anonymous sign-ins” on in Supabase Auth). When they sign in with Google, they move to Students with their history.</p>' +
+        setTimeout(function () { var lv = box.querySelector('#lvis'); if (lv) liveVisitors(lv); var ffb = box.querySelector('#ffall'); if (ffb) footfall(ffb); }, 0);
+        box.innerHTML = '<div id="lvis" class="card"></div><div id="ffall" class="card"></div><div id="vlog"></div><h3 style="margin-top:18px">Guest-ID accounts</h3><p class="small muted">Visitors use the website with a private guest ID before signing in (needs “Allow anonymous sign-ins” on in Supabase Auth). When they sign in with Google, they move to Students with their history.</p>' +
           '<div class="row" style="gap:8px;margin:8px 0">' + [7, 30, 90].map(function (d) { return '<button class="btn ' + (d === days ? '' : 'ghost') + ' small" data-d="' + d + '">' + d + ' days</button>'; }).join('') + '</div>' +
           '<div class="adm-stats">' + [['Visitors', st.visitors], ['Signed up with Google', st.converted], ['Tests by visitors', st.tests], ['Visitor resumes', st.resumes]].map(function (x) { return '<div class="card"><b>' + (x[1] || 0) + '</b><span class="small muted">' + x[0] + '</span></div>'; }).join('') + '</div>' +
           (rows.length ? '<div class="vis-l">' + rows.map(function (v) {

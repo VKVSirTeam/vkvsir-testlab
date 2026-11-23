@@ -1963,3 +1963,15 @@ body:has(.qs) .sitefoot{display:none}
 .ff-chart text{font-size:10px;fill:var(--muted)}
 .ffm{fill:var(--accent);background:var(--accent)} .ffd{fill:var(--accent-2);background:var(--accent-2)} .ffo{fill:var(--line);background:var(--line)}
 .ff-key i{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 10px}
+/* collapsible sections always show an arrow */
+summary.dt-s{list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer}
+summary.dt-s::-webkit-details-marker{display:none}
+.dt-ar{margin-left:auto;flex:none;width:26px;height:26px;border-radius:50%;background:var(--soft,rgba(14,147,132,.08));display:inline-grid;place-items:center}
+.dt-ar::before{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg);transition:transform .2s;opacity:.75}
+details[open]>summary>.dt-ar::before{transform:translateY(2px) rotate(-135deg)}
+/* live visitors */
+.live-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#e5484d;margin-right:4px;animation:lvp 1.4s infinite}
+@keyframes lvp{50%{opacity:.25}}
+.live-k .card.up{outline:2px solid var(--good,#1a9b5a)}.live-k .card.up small{color:var(--good,#1a9b5a);font-size:13px}
+.live-t tr.fresh td{animation:lvf 3s ease-out}
+@keyframes lvf{0%{background:rgba(245,197,66,.45)}100%{background:transparent}}
