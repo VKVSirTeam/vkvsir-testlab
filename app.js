@@ -190,6 +190,8 @@
            ['resume2', '📄 Keep one resume per company: duplicate it and change a few keywords.', '/resume', 'My resumes'],
            ['resume-pause', '⏯️ Unfinished practice? Look for <b>Continue</b> in the Practice tab to pick up where you left off.', null, null]]
   };
+  var RANK_MIN = 40; // rule: ranks show only for a meaningful score, and we never show how many people take part
+  function rankShow(me) { return !!(me && me.rank && (me.pct == null || me.pct >= RANK_MIN)); }
   function tipHtml(ctx) {
     var list = TIPS[ctx] || [], seen = {};
     try { seen = JSON.parse(localStorage.getItem('vkv-tips') || '{}'); } catch (e) {}
@@ -209,6 +211,7 @@
     setTimeout(function () { track('view'); }, 300);
     setTimeout(function () { if (session && !isGuest() && profile && !/^\/(exam|g)\//.test(location.pathname)) checkNotice(false); else nudgeOnOpen(); }, 1200);
     if (cleanup) { try { cleanup(); } catch (e) {} cleanup = null; }
+    var hl0 = document.querySelector('.hdr-lang'); if (hl0) hl0.remove();
     var p = location.pathname.replace(/\/+$/, '') || '/';
     var m;
     if (p === '/') return viewHome();
@@ -331,7 +334,8 @@
         '<section class="hm-hero"><div class="hm-copy"><p class="eyebrow">Free for every student</p><h1>Practise. Test. <em>Get placed.</em></h1>' +
           '<p class="hm-lead">For semester exams, GATE, SSC, PSU and placements, with every answer explained.</p>' +
           '<div class="hm-cta"><a class="btn" href="/practice" data-link>' + icon('practice') + ' Start practice</a><a class="btn ghost" href="/test" data-link>' + icon('test') + ' Take a test</a></div>' +
-          '<p class="hm-pool">' + icon('check') + '<span>Every paper is prepared instantly from a pool of <b class="cnt-up" data-to="100000">1,00,000+</b> questions</span></p></div>' +
+          '<p class="hm-pool">' + icon('check') + '<span>Every paper is prepared instantly from a pool of <b class="cnt-up" data-to="100000">1,00,000+</b> questions</span></p>' +
+          '<p class="hm-pool hm-lang">🌐<span>Read questions in <b>your own language</b>: हिन्दी, मराठी, বাংলা, தமிழ், తెలుగు, ગુજરાતી and international languages, shown right below the English.</span></p></div>' +
           '<div class="hm-try card" aria-label="Try a question"><p class="hm-try-h">' + icon('practice') + ' Try one · ' + esc(sample.s) + '<button type="button" class="qs-share hm-sh" id="hm-sh" aria-label="Share this question">' + SHARE_IC + '<span class="qs-sl">Share</span></button></p><p class="hm-q">' + esc(sample.q) + '</p><div class="hm-opts">' +
             sample.o.map(function (o, i) { return '<button type="button" class="opt" data-i="' + i + '"><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(o) + '</span></button>'; }).join('') +
           '</div><p class="hm-exp" id="hm-exp" hidden></p></div></section>' +
@@ -350,10 +354,13 @@
           '<li><b>Practise with explanations</b><span class="muted">Learn from every answer, at your own pace.</span></li>' +
           '<li><b>Test and track your rank</b><span class="muted">Timed papers, topic-wise results and a fair leaderboard.</span></li></ol>' +
           '<p class="center"><a href="/why" data-link>Why VKV Sir Test Lab ' + icon('chevron') + '</a></p></section>' +
+        '<p class="hm-visits" id="hm-visits" hidden>' + icon('user') + ' <span></span> visitors so far</p>' +
         '</div>');
       var rm = q('.hm-rm'); if (rm) rm.onclick = function (e) { var b = e.target.closest('[data-m]'); if (!b) return; var t = b.getAttribute('data-m') === 't';
         rm.querySelectorAll('[data-m]').forEach(function (c) { c.setAttribute('aria-pressed', c === b); });
         $view.querySelectorAll('.hm-rcard').forEach(function (a) { a.setAttribute('href', a.getAttribute('data-base') + (t ? '?m=quiz&auto=1' : '?auto=1')); a.querySelector('.hm-rgo').innerHTML = icon(t ? 'test' : 'practice') + ' <i>Start 5-min ' + (t ? 'test' : 'practice') + '</i>'; }); };
+      rpc('visitor_count').then(function (n) { var el = q('#hm-visits'); if (!el || !n) return; el.querySelector('span').textContent = Number(n).toLocaleString('en-IN'); el.hidden = false;
+        if (profile && profile.is_admin) { el.classList.add('adm'); el.onclick = function () { go('/admin?tab=visitors'); }; el.title = 'Open footfall (admin)'; } }).catch(function () {});
       var hs = q('#hm-sh'); if (hs) hs.onclick = function () {
         var txt = 'Can you answer this? ' + sample.q + '\n' + sample.o.map(function (o, i) { return 'ABCD'[i] + ') ' + o; }).join('\n') + '\nTry it free on VKV Sir Test Lab: ' + location.origin + sample.p;
         if (navigator.share) navigator.share({ title: 'VKV Sir Test Lab', text: txt }).catch(function () {});
@@ -399,17 +406,18 @@
     Promise.all([rpc('leaderboard_page', { p_days: days, p_subject: subj || null }), rpc('catalog').catch(function () { return []; })]).then(function (r) {
       var lb = r[0] || { top: [] }, cat = r[1] || [], top = lb.top || [];
       var url = function (d, s2) { return '/leaderboard?d=' + d + (s2 ? '&s=' + s2 : ''); };
+      top = top.filter(function (b) { return b.pct >= RANK_MIN; }).slice(0, 10);
       var pod = top.slice(0, 3), rest = top.slice(3);
       var podHtml = pod.length ? '<div class="podium">' + [1, 0, 2].filter(function (i) { return pod[i]; }).map(function (i) { var b = pod[i];
         return '<div class="pod pod-' + (i + 1) + (b.me ? ' me' : '') + '"><span class="pod-m">' + (i + 1) + '</span><b>' + esc(b.name) + '</b><small>' + esc(b.college || '') + '</small><span class="pod-s">' + b.pct + '%</span><small class="muted">' + b.tests + ' test' + (b.tests > 1 ? 's' : '') + '</small></div>'; }).join('') + '</div>' : '';
       var me = lb.me;
       h('<div class="hub stack">' + crumbBar([['Home', '/'], ['Leaderboard', '']]) +
-        '<div><p class="eyebrow">Leaderboard</p><h1>Top students</h1><p class="muted">' + fmtNum(lb.total || 0) + ' students ranked · first attempt of each test · at least 20 questions.</p></div>' +
+        '<div><p class="eyebrow">Leaderboard</p><h1>Top students</h1><p class="muted">First attempt of each test · at least 20 questions · ' + RANK_MIN + '% or more to be ranked.</p></div>' +
         '<div class="lb-f"><div class="seg mini" role="group" aria-label="View"><a class="chip" href="/leaderboard?d=' + days + '" data-link aria-pressed="true">Students</a><a class="chip" href="/leaderboard?v=colleges&d=' + days + '" data-link aria-pressed="false">Colleges</a></div><div class="seg mini" role="group" aria-label="Period">' + [[7, 'This week'], [30, 'This month'], [365, 'This year']].map(function (d) { return '<a class="chip" href="' + url(d[0], subj) + '" data-link aria-pressed="' + (days === d[0]) + '">' + d[1] + '</a>'; }).join('') + '</div>' +
           '<label class="lb-sel"><span class="small muted">Subject</span><select class="in" id="lb-s"><option value="">All subjects</option>' + cat.filter(function (x) { return (x.count || 0) >= READY; }).map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === subj ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') + '</select></label></div>' +
         (top.length ? podHtml + '<ol class="board lb-list" start="4">' + rest.map(function (b) { return '<li class="' + (b.me ? 'me' : '') + '"><span class="bd-r">' + b.rank + '</span><span class="bd-n"><b>' + esc(b.name) + (b.me ? ' (you)' : '') + '</b>' + (b.college ? '<span class="bd-c">' + esc(b.college) + '</span>' : '') + '</span><span class="mono">' + b.pct + '%</span></li>'; }).join('') + '</ol>'
           : '<div class="card center"><p>No ranked students for this choice yet.</p><a class="btn" href="/test" data-link>Take a test</a></div>') +
-        (me ? '<div class="lb-me mine card"><span>Your rank</span><b>#' + me.rank + '</b><span class="mono">' + me.pct + '%</span><span class="muted small">' + me.tests + ' tests · ' + me.qs + ' questions</span></div>'
+        (rankShow(me) ? '<div class="lb-me mine card"><span>Your rank</span><b>#' + me.rank + '</b><span class="mono">' + me.pct + '%</span><span class="muted small">' + me.tests + ' tests · ' + me.qs + ' questions</span></div>'
           : (session && !isGuest() ? '<div class="lb-me card"><span class="muted">Answer 20+ questions in tests this period to get your rank.</span><a class="btn small" href="/test" data-link>Take a test</a></div>'
             : '<div class="lb-me card"><span class="muted">Sign in and take tests to see your rank here.</span><a class="btn small" href="/login" data-link>Sign in</a></div>')) +
         '<p class="small muted">Scores are smoothed so one lucky short test cannot top the board. Practice sessions do not count.</p></div>');
@@ -800,7 +808,7 @@
           n.insertAdjacentHTML('beforeend', '<section class="card"><div class="spread"><h2 style="margin:0">Today\'s leaderboard</h2><span class="small muted">' + d.total + ' taken today</span></div>' +
             (d.top && d.top.length ? '<ol class="board">' + d.top.map(function (b) { return '<li class="' + (b.me ? 'me' : '') + '"><span class="bd-r">' + b.rank + '</span><span class="bd-n"><b>' + esc(b.name) + (b.me ? ' (you)' : '') + '</b>' + (b.college ? '<span class="bd-c">' + esc(b.college) + '</span>' : '') + '</span><span class="mono">' + b.score + '/' + b.n + ' · ' + mm(b.secs) + '</span></li>'; }).join('') + '</ol>' : '<p class="muted">Be the first today.</p>') +
             '<p class="small muted">Ranked by score, then time taken. First attempt only. A new paper opens at midnight.</p></section>');
-          if (d.taken) { var go0 = q('.tpage .btn.block, .narrow .btn.block'); if (go0) { go0.disabled = true; go0.textContent = d.me ? 'Done today: rank #' + d.me.rank + ' · come back tomorrow' : 'Done today · come back tomorrow'; } }
+          if (d.taken) { var go0 = q('.tpage .btn.block, .narrow .btn.block'); if (go0) { go0.disabled = true; go0.textContent = rankShow(d.me) ? 'Done today: rank #' + d.me.rank + ' · come back tomorrow' : 'Done today · come back tomorrow'; } }
         }).catch(function () {}); }, 400);
       else if (t) setTimeout(function () { rpc('leaderboard', { p_subject: null, p_test: slug }).then(function (b) { var n = q('.narrow'); if (n && b && b.length) n.insertAdjacentHTML('beforeend', boardCard(b, 'Top performers in this test')); }).catch(function () {}); }, 600);
       if (!t) { h('<div class="narrow card center"><h2>Test not found</h2><p class="muted">It may have been closed.</p><a class="btn" href="/" data-link>See all tests</a></div>'); return; }
@@ -902,7 +910,7 @@
         (cnt >= READY ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>' + icon('practice') + ' Practice</b><span>No pressure: see the right answer and explanation after each question</span></button>' +
           '<button type="button" data-m="quiz" aria-pressed="' + (mode === 'quiz') + '"><b>' + icon('test') + ' Test</b><span>Timed like an exam: score at the end, counts on the leaderboard</span></button></div>' +
           '<div id="pm"><p class="f">Do you want a timer?</p><div class="seg" id="pd">' + [[0, 'No timer', 'Learn at your own pace'], [5, '5 min', 'Quick revision'], [15, '15 min', 'Short session'], [30, '30 min', 'Focused session'], [60, '1 hour', 'Deep practice'], [180, '3 hours', 'Full study session']].map(function (d) { return '<button type="button" data-d="' + d[0] + '" aria-pressed="' + (d[0] === pdur) + '"><b>' + d[1] + '</b><span>' + d[2] + '</span></button>'; }).join('') + '</div>' +
-          '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Several quick <b>wrong</b> answers in a row (guessing) bring a warning, then short pauses of 1–2 minutes. Quick correct answers are fine. Repeating it on the same day locks all practice and tests for 10 minutes.</li><li>Practise more in a subject to unlock longer practice and tests. A short test after a few practice rounds helps you see what stuck.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
+          '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Several quick <b>wrong</b> answers in a row (guessing) bring a warning, then short pauses of 1–2 minutes. Quick correct answers are fine. Repeating it on the same day locks all practice and tests for 10 minutes.</li><li>Practise more in a subject to unlock longer practice and tests. A short test after a few practice rounds helps you see what stuck.</li><li>🌐 Want it in your language? Choose <b>Language</b> at the top of the question screen.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
           '<div id="qm" hidden>' + (ds.length ? '<p class="f">How much time do you have?</p><div class="seg" id="fd">' + ds.map(function (d) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + Math.floor(d * 60 / 45) + ' questions</span></button>'; }).join('') + '</div>' +
             '<ul class="rules small" style="text-align:left"><li>A fresh, balanced paper every time.</li><li>One question at a time, 45 seconds each.</li><li>Score, correct answers and explanations at the end. Counts on the leaderboard.</li></ul>' : '<p class="muted small">Not enough questions for a test here yet. Use Practice for now.</p>') + '</div>' +
           '<div class="err" id="fe" role="alert"></div><button class="btn block" id="fgo"></button>' +
@@ -940,7 +948,7 @@
       if (session && !isGuest()) rpc('unlock_status', { p_subject: n.subj.id }).then(function (u) { applyUnlock(u); autoGo(); }).catch(autoGo); else autoGo();
       var g = q('#fgo'); if (g) g.onclick = function () {
         if (!requireAuth(location.pathname + location.search, function () { q('#fgo').click(); })) return;
-        var lbl = g.textContent; g.disabled = true; g.textContent = 'Preparing…'; track(mode === 'practice' ? 'start_practice' : 'start_quiz', { s: n.subj.id, u: args.p_unit, x: exam });
+        var lbl = g.textContent; g.disabled = true; g.innerHTML = '<svg class="prep-ring" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke-width="3"/></svg> Preparing your questions…'; track(mode === 'practice' ? 'start_practice' : 'start_quiz', { s: n.subj.id, u: args.p_unit, x: exam });
         var call = mode === 'practice' ? rpc('start_practice', Object.assign({ p_duration: pdur || null, p_exam: exam }, args)).then(function (v) { go('/practice/' + v.attempt); })
           : rpc('start_custom', Object.assign({ p_duration: dur, p_exam: exam }, args)).then(function (v) { go('/exam/' + v.attempt); });
         call.catch(function (e) {
@@ -2284,13 +2292,26 @@
     ['ur', 'اردو (Urdu)'], ['ne', 'नेपाली (Nepali)'], ['es', 'Español'], ['fr', 'Français'], ['de', 'Deutsch'], ['ar', 'العربية (Arabic)'], ['ru', 'Русский'], ['pt', 'Português'], ['zh-Hans', '中文'], ['ja', '日本語']];
   function trLang() { try { return localStorage.getItem('vkv-lang') || ''; } catch (e) { return ''; } }
   var TR_MEM = {}; // translations already fetched in this visit: re-drawn screens (e.g. after answering) show them instantly
+  function gentleScroll(el) {
+    // hold for a moment so the student sees what they tapped and the right answer, then glide down slowly
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setTimeout(function () {
+      if (!document.body.contains(el)) return;
+      var bar = document.querySelector('.qs-bar'), barH = bar ? bar.offsetHeight : 0;
+      var target = Math.max(0, el.getBoundingClientRect().bottom + scrollY - innerHeight + barH + 16), from = scrollY, dist = target - from;
+      if (dist <= 0) return; if (reduce) return scrollTo(0, target);
+      var dur = Math.min(2500, Math.max(1500, dist * 4)), t0 = performance.now(), stop = false;
+      var cancel = function () { stop = true; }; addEventListener('wheel', cancel, { once: true, passive: true }); addEventListener('touchstart', cancel, { once: true, passive: true });
+      (function step(t) { if (stop) return; var k = Math.min(1, (t - t0) / dur), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; scrollTo(0, from + dist * e); if (k < 1) setTimeout(function () { step(performance.now()); }, 16); })(t0);
+    }, 1200);
+  }
   function addTranslation(att, idx) {
     var qb = q('#qb'); if (!qb) return;
-    var cur = trLang(), bar = document.createElement('div');
-    bar.className = 'trbar';
-    bar.innerHTML = '<label>🌐 <span class="small muted">Also show in</span> <select id="trsel" aria-label="Show a translation below the English">' +
+    var cur = trLang(), bar = document.createElement('div'), old = document.querySelector('.hdr-lang'); if (old) old.remove();
+    bar.className = 'trbar hdr-lang';
+    bar.innerHTML = '<label title="Read this question in your own language as well">🌐 <span class="hl-t">Language</span> <select id="trsel" aria-label="Show a translation below the English">' +
       TR_LANGS.map(function (l) { return '<option value="' + l[0] + '"' + (l[0] === cur ? ' selected' : '') + '>' + l[1] + '</option>'; }).join('') + '</select></label>';
-    var tools = q('#qtools'); if (tools) tools.insertBefore(bar, tools.firstChild); else qb.parentNode.insertBefore(bar, qb);
+    var hb = document.getElementById('bar'); if (hb) hb.appendChild(bar); else qb.parentNode.insertBefore(bar, qb);
     function clear() { Array.prototype.forEach.call($view.querySelectorAll('.qtr,.otr,.trnote'), function (e) { e.remove(); }); }
     function load(lang) {
       var key = att + '|' + idx + '|' + lang;
@@ -2299,7 +2320,7 @@
         .then(function (r) { return r.json(); }).then(function (t) { if (t.ok) TR_MEM[key] = t; return t; }))
         .then(function (t) {
           if (!document.body.contains(qb) || trLang() !== lang) return;
-          if (!t.ok) { note.textContent = t.enabled === false ? 'Translation is available for GK subjects for now; more subjects soon.' : 'Translation is not available right now.'; return; }
+          if (!t.ok) { note.textContent = t.enabled === false ? 'Translation for this subject is coming soon. It works now in GK and general subjects.' : 'Translation is not available right now.'; return; }
           note.remove();
           var d = document.createElement('div'); d.className = 'qtr'; d.lang = lang; d.textContent = t.body; qb.after(d);
           Array.prototype.forEach.call($view.querySelectorAll('#opts .opt'), function (b, k) {
@@ -2361,6 +2382,7 @@
         ['🧪', 'Test after practice', 'After your 2nd or 3rd practice in a unit we suggest a short 5-minute test. Practise more in a subject to unlock longer practice and tests.'],
         ['🧭', 'Explore by your goal', 'Choose your university syllabus or a competitive exam such as GATE, JEN or RTO/MVI, and practise topics in that exam’s order and level.'],
         ['📸', 'Save & share a question', 'Save a few hard questions to WhatsApp to discuss with a friend or teacher. Your friend can try it from the link and see the solution.'],
+        ['🌐', 'Your own language', 'Read any question in Hindi, Marathi, Bengali, Tamil, Telugu, Gujarati and other Indian and international languages, shown right below the English. Pick it from Language at the top of the question screen.'],
         ['🚩', 'Report a question', 'Found a typo, an unclear equation or a doubtful answer? Tap 👎 under the question. Our team reviews every report.'],
         ['📊', 'Your dashboard', 'Test and practice history are kept separately, with accuracy by unit and your weakest topics first.'],
         ['🏢', 'Job Prep', 'Enter a company, role and level to get the topics to master, software to learn and interview questions asked there.'],
@@ -2395,7 +2417,7 @@
         '</article>' +
         '<footer class="qs-bar"><button class="btn ghost" id="end" type="button">End</button>' +
           (r ? '<button class="btn" id="nx">Next question</button>' : '<button class="btn ghost qs-show" id="sk" type="button">Show answer</button>') + '</footer></div>');
-      renderMath($view); if (r) { var pxe = q('.px'); if (pxe) setTimeout(function () { pxe.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 60); } addTranslation(id, v.idx);
+      renderMath($view); if (r) { var pxe = q('.px'); if (pxe) gentleScroll(pxe); } addTranslation(id, v.idx);
       shareQuota(id, q('#qshn')); shareTab(q('#qsh'), function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); });
       if (!r) {
         q('#opts').addEventListener('click', function (e) { var b = e.target.closest('.opt'); if (b) answer(+b.getAttribute('data-k')); });
@@ -2664,10 +2686,10 @@
         '<text x="66" y="76" text-anchor="middle">' + pct + '%</text></svg>' +
         '<div class="res-h"><p class="eyebrow">' + esc(r.title) + '</p><div class="res-v">' + V[1] + '</div><div class="big">' + r.score + '<span class="muted"> / ' + r.n + '</span></div>' +
         '<p class="muted small">' + esc(r.end_reason || '') + ' · ' + esc(fmtDate(r.finished_at)) + (r.strikes ? ' · ' + r.strikes + ' penalty pause(s)' : '') + '</p></div></div>' +
-        '<p class="res-msg">' + V[2] + '</p>' + tipHtml('result') +
+        '<p class="res-msg">' + V[2] + '</p>' +
         '<div class="res-tiles"><div><b class="g">' + r.score + '</b><span>Correct</span></div><div><b class="b">' + wrong + '</b><span>Wrong</span></div><div><b class="w">' + skip + '</b><span>Not answered</span></div><div><b>' + acc + '%</b><span>Accuracy</span></div><div><b>' + att + '%</b><span>Attempted</span></div></div>' +
         (tip ? '<div class="res-tip">💡 ' + tip + '</div>' : '') +
-        '<div class="row res-act">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/practice" data-link>Practise again</a><button type="button" class="btn ghost" id="shsc">Share my score</button><a class="btn ghost" href="/me" data-link>Dashboard</a>') + '</div></div>' +
+        '<div class="row res-act">' + (tok ? '<a class="btn" href="' + home + '" data-link>Back to my tests</a>' : '<a class="btn" href="/practice" data-link>Practise again</a><button type="button" class="btn ghost" id="shsc">Share my score</button><a class="btn ghost" href="/me" data-link>Dashboard</a>') + '</div>' + tipHtml('result') + '</div>' +
         (rev ? '<div class="res-rv"><div class="spread res-rvh"><div><h2>Learn from your mistakes</h2><p class="small muted">Questions you missed, with the right answer and explanation. Read these first.</p></div>' +
           '<div class="tabs" id="rvf"><button type="button" class="on" data-f="all">All</button><button type="button" data-f="no">Wrong · ' + wrong + '</button><button type="button" data-f="skip">Not answered · ' + skip + '</button></div></div>' + rev + '</div>'
           : '<div class="card center"><h2>Perfect score! 🎉</h2><p class="muted">Every answer was correct.</p></div>') +
@@ -2693,8 +2715,8 @@
         var fg = res.querySelector('.res-top .ring .fg'); if (fg) { var to = fg.getAttribute('stroke-dashoffset'); fg.setAttribute('stroke-dashoffset', String(2 * Math.PI * 54)); requestAnimationFrame(function () { requestAnimationFrame(function () { fg.style.transition = 'stroke-dashoffset .9s ease-out'; fg.setAttribute('stroke-dashoffset', to); }); }); }
         if (!tok && session && !isGuest()) rpc('leaderboard_page', { p_days: 30, p_subject: null }).then(function (lb) {
           var h = res.querySelector('.res-h'); if (!h || !lb) return;
-          h.insertAdjacentHTML('beforeend', lb.me ? '<p class="res-rank"><a href="/leaderboard" data-link>' + icon('trophy') + ' Your rank this month: <b>#' + lb.me.rank + '</b> of ' + lb.total + '</a></p>'
-            : '<p class="res-rank muted small">Answer 20+ test questions this month to get a rank.</p>');
+          h.insertAdjacentHTML('beforeend', rankShow(lb.me) ? '<p class="res-rank"><a href="/leaderboard" data-link>' + icon('trophy') + ' Your rank this month: <b>#' + lb.me.rank + '</b></a></p>'
+            : '<p class="res-rank muted small">Score ' + RANK_MIN + '% or more in tests (20+ questions) to see your rank.</p>');
         }).catch(function () {});
       })();
       var rv = q('.res'); if (rv) rv.insertAdjacentHTML('beforeend', '<p class="small muted" style="text-align:center;margin:4px 0 0">Questions are expert-prepared and double-checked. Although every answer is carefully reviewed, if you find any ambiguity in an answer or in the wording, use 🚩 <b>Report</b> on that question; our team reviews every report. <a href="/disclaimer" data-link>Terms of use</a></p>' + suggestBox());
@@ -3122,13 +3144,30 @@
   }
 
   /* ---------- admin: what visitors (not signed in) are doing ---------- */
+  function footfall(box) {
+    box.innerHTML = '<div class="spinner"></div>';
+    rpc('admin_footfall').then(function (f) {
+      var d = (f.daily || []).slice(0, 30), m = f.monthly || [], mx = Math.max.apply(null, d.map(function (x) { return x.v; }).concat([1]));
+      var W = 600, H = 160, bw = W / Math.max(d.length, 1), rev = d.slice().reverse();
+      var chart = '<svg class="ff-chart" viewBox="0 0 ' + W + ' ' + (H + 18) + '" role="img" aria-label="Daily visitors, last 30 days">' + rev.map(function (x, i) {
+        var hm = H * x.m / mx, hd = H * x.dk / mx, ho = Math.max(0, H * x.v / mx - hm - hd);
+        return '<g><title>' + x.d + ': ' + x.v + ' visitors (' + x.m + ' mobile, ' + x.dk + ' desktop)</title><rect x="' + (i * bw + 2) + '" y="' + (H - hm) + '" width="' + (bw - 4) + '" height="' + hm + '" class="ffm"/><rect x="' + (i * bw + 2) + '" y="' + (H - hm - hd) + '" width="' + (bw - 4) + '" height="' + hd + '" class="ffd"/><rect x="' + (i * bw + 2) + '" y="' + (H - hm - hd - ho) + '" width="' + (bw - 4) + '" height="' + ho + '" class="ffo"/></g>' +
+          (i % 5 === 0 ? '<text x="' + (i * bw + bw / 2) + '" y="' + (H + 14) + '" text-anchor="middle">' + x.d.slice(5) + '</text>' : ''); }).join('') + '</svg>';
+      var tbl = function (rows, k, lbl) { return '<div class="table"><table><tr><th>' + lbl + '</th><th>Visitors</th>' + (k === 'd' ? '<th>New</th>' : '') + '<th>Mobile</th><th>Desktop</th><th>Page views</th></tr>' +
+        rows.map(function (x) { return '<tr><td>' + esc(x[k === 'd' ? 'd' : 'mo']) + '</td><td><b>' + x.v + '</b></td>' + (k === 'd' ? '<td>' + (x.nw || 0) + '</td>' : '') + '<td>' + x.m + '</td><td>' + x.dk + '</td><td>' + x.pv + '</td></tr>'; }).join('') + '</table></div>'; };
+      box.innerHTML = '<h3 style="margin:0">Footfall</h3><p class="small muted">Public counter = ' + Number(f.base).toLocaleString('en-IN') + ' (starting number) + ' + Number(f.total).toLocaleString('en-IN') + ' real visitors. Each device counts once.</p>' +
+        '<p class="small ff-key"><i class="ffm"></i> Mobile <i class="ffd"></i> Desktop <i class="ffo"></i> Other</p>' + chart +
+        '<details open><summary><b>Month by month</b></summary>' + tbl(m, 'm', 'Month') + '</details><details><summary><b>Day by day (60 days)</b></summary>' + tbl(f.daily || [], 'd', 'Day') + '</details>';
+    }).catch(function (e) { box.textContent = errMsg(e); });
+  }
   function admVisitors(box) {
     var days = 30;
     function load() {
       box.innerHTML = '<div class="spinner"></div>';
       rpc('admin_visitors', { p_days: days }).then(function (r) {
         var st = r.stats || {}, rows = r.rows || [];
-        box.innerHTML = '<div id="vlog"></div><h3 style="margin-top:18px">Guest-ID accounts</h3><p class="small muted">Visitors use the website with a private guest ID before signing in (needs “Allow anonymous sign-ins” on in Supabase Auth). When they sign in with Google, they move to Students with their history.</p>' +
+        setTimeout(function () { var ffb = box.querySelector('#ffall'); if (ffb) footfall(ffb); }, 0);
+        box.innerHTML = '<div id="ffall" class="card"></div><div id="vlog"></div><h3 style="margin-top:18px">Guest-ID accounts</h3><p class="small muted">Visitors use the website with a private guest ID before signing in (needs “Allow anonymous sign-ins” on in Supabase Auth). When they sign in with Google, they move to Students with their history.</p>' +
           '<div class="row" style="gap:8px;margin:8px 0">' + [7, 30, 90].map(function (d) { return '<button class="btn ' + (d === days ? '' : 'ghost') + ' small" data-d="' + d + '">' + d + ' days</button>'; }).join('') + '</div>' +
           '<div class="adm-stats">' + [['Visitors', st.visitors], ['Signed up with Google', st.converted], ['Tests by visitors', st.tests], ['Visitor resumes', st.resumes]].map(function (x) { return '<div class="card"><b>' + (x[1] || 0) + '</b><span class="small muted">' + x[0] + '</span></div>'; }).join('') + '</div>' +
           (rows.length ? '<div class="vis-l">' + rows.map(function (v) {
