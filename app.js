@@ -3242,8 +3242,8 @@
     box.innerHTML = '<div class="spinner"></div>';
     rpc('admin_inbox').then(function (d) {
       var src = [
-        ['review', 'Questions waiting for review', 'Drafts the AI flagged or a teacher held back. Students do not see them.', '/admin?tab=questions', function (x) { return '<b>' + esc(x.id) + '</b> ' + esc(x.text) + (x.note ? '<br><span class="small muted">' + esc(x.note) + '</span>' : ''); }],
-        ['reported', 'Questions students reported', 'Thumbs-down or a flag on the current version. Fix the question or confirm the answer.', '/admin?tab=questions', function (x) { return '<b>' + esc(x.id) + '</b> · ' + x.reports + ' report' + (x.reports > 1 ? 's' : '') + (x.flags ? ' (' + esc(x.flags) + ')' : '') + '<br><span class="small muted">' + esc(x.text) + '</span>'; }],
+        ['review', 'Questions waiting for review', 'Drafts the AI flagged or a teacher held back. Students do not see them.', '/admin?tab=questions&st=review', function (x) { return '<b>' + esc(x.id) + '</b> ' + esc(x.text) + (x.note ? '<br><span class="small muted">' + esc(x.note) + '</span>' : ''); }],
+        ['reported', 'Questions students reported', 'Thumbs-down or a flag on the current version. Fix the question or confirm the answer.', '/admin?tab=questions&st=reported', function (x) { return '<b>' + esc(x.id) + '</b> · ' + x.reports + ' report' + (x.reports > 1 ? 's' : '') + (x.flags ? ' (' + esc(x.flags) + ')' : '') + '<br><span class="small muted">' + esc(x.text) + '</span>'; }],
         ['translations', 'Translations reported as wrong', 'Students tapped “Wrong translation?”.', null, function (x) { return '<b>' + esc(x.id) + '</b> · ' + esc(x.lang) + ' · ' + x.reports + ' report' + (x.reports > 1 ? 's' : '') + '<br><span class="small muted">' + esc(x.text) + '</span>'; }],
         ['suggestions', 'New suggestions', 'Requests for exams, subjects and topics.', '/admin?tab=suggest', function (x) { return '<span class="pill">' + esc(x.kind) + '</span> ' + esc(x.text); }],
         ['interview', 'Interview questions sent by students', 'Approve to show them in Job Prep.', '/admin/iq-reports', function (x) { return esc(x.text); }]
