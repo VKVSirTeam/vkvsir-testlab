@@ -180,7 +180,7 @@
     home: [['why-practice', '📘 New here? Start with <b>Practice</b>: you see the right answer and explanation after every question.', '/exams?k=competitive', 'Find your exam'],
            ['goal', '🧭 Preparing for GATE, JEN or your university exam? Browse topics in your own exam’s order.', '/exams?k=university', 'Explore by goal'],
            ['resume', '📄 Did you know? You can build an ATS-ready resume here for free, with PDF and Word download.', '/resume', 'Build my resume']],
-    focus: [['quiz-after', '🧪 After every 3 practice sessions in a unit, take a short <b>Test</b>. It shows what really stuck.', null, null],
+    focus: [['quiz-after', '🧪 After your 1st and 2nd practice in a unit we suggest a short <b>Test</b>; after the 3rd it is <b>required</b> (at least a quarter of the questions you practised). You can keep at most 2 units waiting for a test.', null, null],
             ['no-rush', '🐢 Read each question fully. Rushing is detected and slows your practice down; careful reading builds real understanding.', null, null],
             ['share', '👥 Studying with friends? Share this topic link in your class group so everyone practises together.', '#share', 'Share below']],
     result: [['flag', '🚩 Found a typo, a doubtful answer or an unclear equation? Tap 👎 under that question to report it. Our team checks every report.', null, null],
@@ -475,7 +475,7 @@
           
               '<p class="small muted sqx" hidden>✓ <b>cot φ − cot θ = w / l</b>, where φ and θ are the outer and inner wheel angles, w the kingpin centre distance and l the wheelbase. Want more like this? Open <b>Fundamentals → Automobile Engineering</b>.</p></div></div></div></div>' +
         tipHtml('home') + '<div class="twoway"><div class="tw2 tw-p"><b>📘 Practice</b><ul><li>Read at your own pace: no timer on any question</li><li>See the right answer and the explanation or solution right after you answer</li><li>Choose no timer, or a session of 5 min to 3 hours</li><li>For building your base. Not on the leaderboard</li></ul></div>' +
-          '<div class="tw2 tw-t"><b>📝 Test</b><ul><li>Timed: about 45 seconds per question, like a real exam</li><li>Next question opens as soon as you answer</li><li>Score, answers and explanations at the end</li><li>Counts on the leaderboard. Due after every 3 practice sessions</li></ul></div></div>' +
+          '<div class="tw2 tw-t"><b>📝 Test</b><ul><li>Timed: about 45 seconds per question, like a real exam</li><li>Next question opens as soon as you answer</li><li>Score, answers and explanations at the end</li><li>Counts on the leaderboard. Required after 3 practice sessions in a unit</li></ul></div></div>' +
           '<div class="goalbar"><p class="f">🧭 Explore by your goal</p><div class="goal-g">' +
           '<a href="/exams?k=university" data-link><span>🎓</span><b>My university syllabus</b><small>B.Tech / B.E. by branch: subject → unit → topic, common to all universities</small></a>' +
           '<a href="/exams?k=competitive" data-link><span>🏆</span><b>Competitive exams</b><small>GATE, JEN, RTO/MVI…: exam-wise sections at the right level</small></a>' +
@@ -880,7 +880,7 @@
         (cnt >= READY ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>' + icon('practice') + ' Practice</b><span>No pressure: see the right answer and explanation after each question</span></button>' +
           '<button type="button" data-m="quiz" aria-pressed="' + (mode === 'quiz') + '"><b>' + icon('test') + ' Test</b><span>Timed like an exam: score at the end, counts on the leaderboard</span></button></div>' +
           '<div id="pm"><p class="f">Do you want a timer?</p><div class="seg" id="pd">' + [[0, 'No timer', 'Learn at your own pace'], [5, '5 min', 'Quick revision'], [15, '15 min', 'Short session'], [30, '30 min', 'Focused session'], [60, '1 hour', 'Deep practice'], [180, '3 hours', 'Full study session']].map(function (d) { return '<button type="button" data-d="' + d[0] + '" aria-pressed="' + (d[0] === pdur) + '"><b>' + d[1] + '</b><span>' + d[2] + '</span></button>'; }).join('') + '</div>' +
-          '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Rushing through questions without reading is detected: a warning, then short pauses of 1–2 minutes. Repeating it on the same day locks all practice and tests for 10 minutes.</li><li>After <b>3 practice sessions</b> in a unit, take a short <b>Test</b> to check what stuck and unlock more practice.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
+          '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Several quick <b>wrong</b> answers in a row (guessing) bring a warning, then short pauses of 1–2 minutes. Quick correct answers are fine. Repeating it on the same day locks all practice and tests for 10 minutes.</li><li>After your 1st and 2nd practice in a unit we suggest a short <b>Test</b>; after the 3rd it is <b>required</b> (at least a quarter of the questions you practised). You can keep at most 2 units waiting for a test.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
           '<div id="qm" hidden>' + (ds.length ? '<p class="f">How much time do you have?</p><div class="seg" id="fd">' + ds.map(function (d) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + Math.floor(d * 60 / 45) + ' questions</span></button>'; }).join('') + '</div>' +
             '<ul class="rules small" style="text-align:left"><li>A fresh, balanced paper every time.</li><li>One question at a time, 45 seconds each.</li><li>Score, correct answers and explanations at the end. Counts on the leaderboard.</li></ul>' : '<p class="muted small">Not enough questions for a test here yet. Use Practice for now.</p>') + '</div>' +
           '<div class="err" id="fe" role="alert"></div><button class="btn block" id="fgo"></button>' +
@@ -2081,19 +2081,26 @@
       inQ = true; sel = null; rating = null; flags = [];
       var t = now(); qEnd = t + v.q_left_ms; tEnd = t + v.total_left_ms;
       var last = v.idx + 1 === v.n;
-      h('<div class="wm-layer" style="background-image:' + watermark() + '"></div><div class="exam' + (v.image ? ' has-img' : '') + '"><div class="exam-top"><div class="spread"><span class="qcount">Question ' + (v.idx + 1) + ' of ' + v.n + '</span><span class="tleft" id="tl"></span></div>' +
-        '<div class="track"><div class="fill" id="fl"></div></div><div class="qtime" id="qt"></div></div>' +
-        (v.image ? zimg(v.image, '', 'Figure for this question') : '') +
-        '<div class="qbody" id="qb">' + esc(v.body) + '</div><div class="opts' + (v.image && v.options.every(function (o) { return String(o).length <= 14; }) ? ' opts-grid' : '') + '" role="radiogroup" aria-labelledby="qb" id="opts">' +
-        v.options.map(function (o, k) { return '<button type="button" class="opt" role="radio" aria-checked="false" data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') +
-        '</div><div class="fb"><div class="row"><span class="small muted">Rate this question (optional):</span>' +
-        '<button type="button" class="icon-btn" id="up" aria-pressed="false" aria-label="Good question">' + THUMB_UP + '</button>' +
-        '<button type="button" class="icon-btn" id="dn" aria-pressed="false" aria-label="Problem with this question">' + THUMB_DN + '</button></div>' +
-        '<div id="chips" hidden><p class="small" style="margin:12px 0 0">What is wrong? Tap all that apply:</p><div class="chips">' + FLAGS.map(function (f) { return '<button type="button" class="chip" aria-pressed="false" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div></div>' +
-        '<div class="note" id="leave" hidden>Leaving the exam screen is recorded.</div>' +
-        '<div class="exam-foot"><button class="btn block" id="nx" disabled>' + (last ? 'Submit paper' : 'Next question') + '</button></div>' + (tok ? '' : '<button type="button" class="qshare" id="qsh" aria-label="Save this question to WhatsApp">📸<span>Save &amp; share</span><small id="qshn"></small></button>') + '</div>');
+      h('<div class="wm-layer" style="background-image:' + watermark() + '"></div><div class="qs qs-test' + (v.image ? ' has-img' : '') + '">' +
+        '<header class="qs-top"><span class="qs-clock" title="Time left for the whole paper">' + icon('test') + '<b id="tl"></b></span>' +
+          '<div class="qs-t"><small>Test</small><b>' + esc(v.title || '') + '</b></div>' +
+          '<span class="qs-n">' + (v.idx + 1) + '<small>/' + v.n + '</small></span></header>' +
+        '<div class="track qs-track"><div class="fill" id="fl"></div></div>' +
+        '<article class="qs-card"><div class="qs-meta"><span class="qs-qn">Question ' + (v.idx + 1) + ' <span class="qtime" id="qt"></span></span><span class="qs-tools" id="qtools">' +
+          (tok ? '' : '<button type="button" class="qs-share" id="qsh" title="Save this question as an image to share" aria-label="Save and share this question">' + icon('resume') + '<small id="qshn"></small></button>') + '</span></div>' +
+          (v.image ? zimg(v.image, '', 'Figure for this question') : '') +
+          '<div class="qbody" id="qb">' + esc(v.body) + '</div><div class="opts' + (v.image && v.options.every(function (o) { return String(o).length <= 14; }) ? ' opts-grid' : '') + '" role="radiogroup" aria-labelledby="qb" id="opts">' +
+          v.options.map(function (o, k) { return '<button type="button" class="opt" role="radio" aria-checked="false" data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') + '</div>' +
+          '<details class="qs-rep"><summary>Report a problem with this question</summary><div class="fb"><div class="row"><span class="small muted">Rate it:</span>' +
+            '<button type="button" class="icon-btn" id="up" aria-pressed="false" aria-label="Good question">' + THUMB_UP + '</button>' +
+            '<button type="button" class="icon-btn" id="dn" aria-pressed="false" aria-label="Problem with this question">' + THUMB_DN + '</button></div>' +
+            '<div id="chips" hidden><p class="small" style="margin:12px 0 0">What is wrong? Tap all that apply:</p><div class="chips">' + FLAGS.map(function (f) { return '<button type="button" class="chip" aria-pressed="false" data-f="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div></div></div></details>' +
+          '<div class="note" id="leave" hidden>Leaving the exam screen is recorded.</div>' +
+          (v.warns ? '<p class="qs-warn">' + icon('target') + 'Several quick wrong answers in a row. Read each question fully: guessing lowers your score.</p>' : '') +
+        '</article>' +
+        '<footer class="qs-bar"><span class="small muted">Select an option, then continue</span><button class="btn" id="nx" disabled>' + (last ? 'Submit paper' : 'Next question') + '</button></footer></div>');
       renderMath($view); addTranslation(id, v.idx);
-      if (!tok) { shareQuota(id, q('#qshn')); q('#qsh').onclick = function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); }; }
+      if (!tok && q('#qsh')) { shareQuota(id, q('#qshn')); q('#qsh').onclick = function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); }; }
       q('#opts').addEventListener('click', function (e) {
         var b = e.target.closest('.opt'); if (!b || busy) return;
         sel = +b.getAttribute('data-k');
@@ -2192,7 +2199,7 @@
       var fl = q('#fl'), qt = q('#qt'), tle = q('#tl'); if (!fl) return;
       var low = ql <= 10000;
       fl.style.width = (100 * ql / st.per_ms) + '%'; fl.classList.toggle('low', low);
-      qt.classList.toggle('low', low); qt.textContent = Math.ceil(ql / 1000) + ' s for this question';
+      qt.classList.toggle('low', low); qt.textContent = Math.ceil(ql / 1000) + ' s';
       tle.textContent = mmss(tl) + ' left'; tle.classList.toggle('low', tl <= 120000);
       if (busy) return;
       if (tl <= 0) send(true); else if (ql <= 0) send(false);
@@ -2227,7 +2234,7 @@
     bar.className = 'trbar';
     bar.innerHTML = '<label>🌐 <span class="small muted">Also show in</span> <select id="trsel" aria-label="Show a translation below the English">' +
       TR_LANGS.map(function (l) { return '<option value="' + l[0] + '"' + (l[0] === cur ? ' selected' : '') + '>' + l[1] + '</option>'; }).join('') + '</select></label>';
-    qb.parentNode.insertBefore(bar, qb);
+    var tools = q('#qtools'); if (tools) tools.insertBefore(bar, tools.firstChild); else qb.parentNode.insertBefore(bar, qb);
     function clear() { Array.prototype.forEach.call($view.querySelectorAll('.qtr,.otr,.trnote'), function (e) { e.remove(); }); }
     function load(lang) {
       var key = att + '|' + idx + '|' + lang;
@@ -2295,7 +2302,7 @@
       var FEAT = [
         ['📘', 'Practice', 'No timer on any question. After you answer, you see the correct option and its explanation or solution, then move on with Next at your own pace.'],
         ['📝', 'Test', 'A timed test like a real exam. Your score, correct answers and explanations come at the end, and it counts on the leaderboard.'],
-        ['🧪', 'Test after practice', 'After every 3 practice sessions in a unit, a short test shows how much really stuck and unlocks more practice.'],
+        ['🧪', 'Test after practice', 'Suggested after your 1st and 2nd practice in a unit, required after the 3rd: a test of at least a quarter of the questions you practised.'],
         ['🧭', 'Explore by your goal', 'Choose your university syllabus or a competitive exam such as GATE, JEN or RTO/MVI, and practise topics in that exam’s order and level.'],
         ['📸', 'Save & share a question', 'Save a few hard questions to WhatsApp to discuss with a friend or teacher. Your friend can try it from the link and see the solution.'],
         ['🚩', 'Report a question', 'Found a typo, an unclear equation or a doubtful answer? Tap 👎 under the question. Our team reviews every report.'],
@@ -2312,20 +2319,26 @@
       inQ = true; shownAt = now() - (v.elapsed_ms || 0);
       tEnd = v.timed ? now() + v.total_left_ms : 0;
       var r = v.reveal;
-      h('<div class="wm-layer" style="background-image:' + watermark() + '"></div><div class="exam practice' + (v.image ? ' has-img' : '') + '"><div class="exam-top"><div class="spread"><span class="qcount">📘 Practice · Q' + (v.idx + 1) + ' <span class="muted small">(' + v.done_count + ' done)</span></span>' +
-        '<span class="tleft" id="tl">' + (v.timed ? '' : 'No timer') + '</span></div><p class="small muted" style="margin:4px 0 0">' + esc(v.title) + ' · ' + esc(v.topic || '') + '</p></div>' +
-        (v.image ? zimg(v.image, '', 'Figure for this question') : '') +
-        '<div class="qbody" id="qb">' + esc(v.body) + '</div><div class="opts" role="radiogroup" aria-labelledby="qb" id="opts">' +
-        v.options.map(function (o, k) {
-          var cls = r ? (k === r.correct ? ' ok' : (k === r.chosen ? ' bad' : ' dim')) : '';
-          return '<button type="button" class="opt' + cls + '"' + (r ? ' disabled' : '') + ' data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span>' + (r && k === r.correct ? '<span class="tick">✓</span>' : '') + '</button>';
-        }).join('') + '</div>' +
-        (r ? '<div class="px ' + (r.chosen === r.correct ? 'good' : 'bad') + '" role="status"><div class="px-h">' + icon(r.chosen === r.correct ? 'check' : 'target') + '<b>' + (r.chosen == null ? 'Here is the answer' : r.chosen === r.correct ? 'Correct' : 'Not quite') + '</b></div>' +
-          (r.chosen !== r.correct && v.options && v.options[r.correct] != null ? '<p class="px-a">Correct answer: <b>' + 'ABCD'[r.correct] + '. ' + esc(v.options[r.correct]) + '</b></p>' : '') +
-          (r.explanation ? '<div class="px-w"><span>Why</span><p>' + esc(r.explanation) + '</p></div>' : '') + '</div>' : '') +
-        '<div class="exam-foot prow">' + (r ? '<button class="btn block" id="nx">Next question →</button>' : '<button class="btn ghost" id="sk" type="button">🤔 Show answer</button>') +
-        '<button class="linkbtn" id="end" type="button">End practice &amp; see summary</button></div>' + '<button type="button" class="qshare" id="qsh" aria-label="Save this question to WhatsApp">📸<span>Save &amp; share</span><small id="qshn"></small></button>' +
-        (v.slow && !r ? '<p class="small muted center" id="slowmsg">Take your time: read the question fully before answering.</p>' : '') + '</div>');
+      var pctDone = v.n ? Math.round(100 * (v.done_count || 0) / v.n) : 0;
+      h('<div class="wm-layer" style="background-image:' + watermark() + '"></div><div class="qs qs-practice' + (v.image ? ' has-img' : '') + '">' +
+        '<header class="qs-top"><span class="qs-clock" id="tl" title="' + (v.timed ? 'Time left' : 'Time spent in this session') + '">' + icon('test') + '<b id="tlv">' + (v.timed ? '' : mmss(v.session_ms || 0)) + '</b></span>' +
+          '<div class="qs-t"><small>Practice · ' + esc(String(v.title || '').replace(/^Practice · /, '')) + '</small><b>' + esc(v.topic || '') + '</b></div>' +
+          '<span class="qs-n">' + (v.idx + 1) + '<small>/' + v.n + '</small></span></header>' +
+        '<div class="qs-prog" aria-hidden="true"><i style="width:' + pctDone + '%"></i></div>' +
+        '<article class="qs-card"><div class="qs-meta"><span class="qs-qn">Question ' + (v.idx + 1) + '</span><span class="qs-tools" id="qtools"><button type="button" class="qs-share" id="qsh" title="Save this question as an image to share" aria-label="Save and share this question">' + icon('resume') + '<small id="qshn"></small></button></span></div>' +
+          (v.image ? zimg(v.image, '', 'Figure for this question') : '') +
+          '<div class="qbody" id="qb">' + esc(v.body) + '</div><div class="opts" role="radiogroup" aria-labelledby="qb" id="opts">' +
+          v.options.map(function (o, k) {
+            var cls = r ? (k === r.correct ? ' ok' : (k === r.chosen ? ' bad' : ' dim')) : '';
+            return '<button type="button" class="opt' + cls + '"' + (r ? ' disabled' : '') + ' data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span>' + (r && k === r.correct ? '<span class="tick">✓</span>' : '') + '</button>';
+          }).join('') + '</div>' +
+          (r ? '<div class="px ' + (r.chosen === r.correct ? 'good' : 'bad') + '" role="status"><div class="px-h">' + icon(r.chosen === r.correct ? 'check' : 'target') + '<b>' + (r.chosen == null ? 'Here is the answer' : r.chosen === r.correct ? 'Correct' : 'Not quite') + '</b></div>' +
+            (r.chosen !== r.correct && v.options && v.options[r.correct] != null ? '<p class="px-a">Correct answer: <b>' + 'ABCD'[r.correct] + '. ' + esc(v.options[r.correct]) + '</b></p>' : '') +
+            (r.explanation ? '<div class="px-w"><span>Why</span><p>' + esc(r.explanation) + '</p></div>' : '') + '</div>' : '') +
+          (v.slow && !r ? '<p class="small muted center" id="slowmsg">Take your time: read the question fully before answering.</p>' : '') +
+        '</article>' +
+        '<footer class="qs-bar"><button class="btn ghost" id="end" type="button">End</button>' +
+          (r ? '<button class="btn" id="nx">Next question</button>' : '<button class="btn ghost qs-show" id="sk" type="button">Show answer</button>') + '</footer></div>');
       renderMath($view); if (r) { var pxe = q('.px'); if (pxe) setTimeout(function () { pxe.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 60); } addTranslation(id, v.idx);
       shareQuota(id, q('#qshn')); q('#qsh').onclick = function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); };
       if (!r) {
@@ -2333,11 +2346,14 @@
         q('#sk').onclick = function () { answer(-1); };
       } else {
         var nx = q('#nx'), wait = v.slow ? Math.max(0, v.min_read * 1000 - (now() - shownAt)) : 0;
-        if (wait > 0) { nx.disabled = true; var until = now() + wait; var iv = setInterval(function () { var l = until - now(); if (l <= 0 || !document.body.contains(nx)) { clearInterval(iv); nx.disabled = false; nx.textContent = 'Next question →'; } else nx.textContent = 'Read the explanation… ' + Math.ceil(l / 1000) + 's'; }, 250); }
+        if (wait > 0) { nx.disabled = true; var until = now() + wait; var iv = setInterval(function () { var l = until - now(); if (l <= 0 || !document.body.contains(nx)) { clearInterval(iv); nx.disabled = false; nx.textContent = 'Next question'; } else nx.textContent = 'Read the explanation… ' + Math.ceil(l / 1000) + 's'; }, 250); }
         nx.onclick = function () { if (busy) return; busy = true; nx.disabled = true; rpc('practice_next', { p_id: id }).then(render).catch(fail); };
       }
       q('#end').onclick = function () { if (busy) return; if (!confirm('End this practice session and see your summary?')) return; busy = true; rpc('practice_finish', { p_id: id }).then(render).catch(fail); };
-      if (v.timed) { ticker = setInterval(function () { var tl = Math.max(0, tEnd - now()), el = q('#tl'); if (!el) return; el.textContent = mmss(tl) + ' left'; el.classList.toggle('low', tl <= 120000); if (tl <= 0 && !busy) { clearInterval(ticker); busy = true; load(); } }, 250); }
+      var sessStart = now() - (v.session_ms || 0);
+      ticker = setInterval(function () { var el = q('#tlv'), box = q('#tl'); if (!el) return;
+        if (v.timed) { var tl = Math.max(0, tEnd - now()); el.textContent = mmss(tl) + ' left'; box.classList.toggle('low', tl <= 120000); if (tl <= 0 && !busy) { clearInterval(ticker); busy = true; load(); } }
+        else el.textContent = mmss(now() - sessStart); }, 500);
     }
     function answer(k) {
       if (busy || !st) return; busy = true;
@@ -2607,6 +2623,16 @@
       var rvf = q('#rvf'); if (rvf) rvf.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; rvf.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); var f = b.dataset.f; $view.querySelectorAll('.review').forEach(function (rw) { rw.hidden = f !== 'all' && !rw.classList.contains(f); }); };
       (function () {
         var res = q('.res'); if (!res) return;
+        if (r.total_ms) { var tiles = res.querySelector('.res-tiles'); if (tiles) tiles.insertAdjacentHTML('beforeend', '<div><b>' + mmss(r.total_ms) + '</b><span>Time taken</span></div>' + (r.avg_ms ? '<div><b>' + Math.round(r.avg_ms / 1000) + ' s</b><span>Per question</span></div>' : '')); }
+        if (!tok && r.kind === 'practice' && r.subject && session && !isGuest()) rpc('quiz_gate', { p_subject: r.subject, p_unit: r.unit == null ? null : r.unit }).then(function (gte) {
+          if (!gte || !gte.due) return; var minQ = Math.max(5, Math.ceil((gte.practised || 0) / 4)), href = '/p/' + String(r.subject).toLowerCase() + (r.unit ? '/' + r.unit : '') + '?m=quiz';
+          var must = gte.due >= 3;
+          res.insertAdjacentHTML('afterbegin', '<div class="card qgate' + (must ? ' must' : '') + '"><div><b>' + (must ? 'Time for a test on this unit' : 'Ready for a quick test?') + '</b><p class="small">' +
+            (must ? 'You have practised this unit ' + gte.due + ' times. Take a test of at least ' + minQ + ' questions (a quarter of what you practised) to continue practising here.'
+                  : 'Practice ' + gte.due + ' of 3 in this unit. A short test now shows what really stuck. After 3 practice sessions a test of at least a quarter of the questions is required.') +
+            '</p></div><div class="row"><a class="btn" href="' + href + '" data-link>Take a test</a>' + (must ? '' : '<button type="button" class="btn ghost" data-later>Later</button>') + '</div></div>');
+          var lt = res.querySelector('.qgate [data-later]'); if (lt) lt.onclick = function () { lt.closest('.qgate').remove(); };
+        }).catch(function () {});
         var review = res.querySelector('.res-rv'), cards = [].slice.call(res.querySelectorAll(':scope > .card'));
         var analysis = cards.filter(function (c) { var h2 = c.querySelector('h2'); return h2 && /Unit-wise analysis|Your next steps/.test(h2.textContent); });
         if (review) analysis.forEach(function (c) { res.insertBefore(c, review); });
@@ -2681,7 +2707,7 @@
         '<section class="card"><div class="spread"><h2 style="margin:0">History</h2><div class="tabs" id="hx"><button type="button" class="on" data-h="q">📝 Test · ' + at.length + '</button><button type="button" data-h="p">📘 Practice · ' + prac.length + '</button></div></div>' +
           '<div class="list" style="margin-top:8px" data-hp="q">' + hist + '</div>' +
           '<div data-hp="p" hidden><div class="tiles" style="margin:8px 0"><div class="tile"><b>' + pdone.length + '</b><span>Practice sessions</span></div><div class="tile"><b>' + pq + '</b><span>Questions practised</span></div><div class="tile"><b>' + (pq ? Math.round(100 * pok / pq) + '%' : '–') + '</b><span>Practice accuracy</span></div></div>' +
-          '<p class="small muted">Practice is for learning, so it is not counted on the leaderboard or in the test scores above. After every 3 practice sessions in a unit, take a <b>Test</b> to check your progress.</p><div class="list">' + phist + '</div></div></section>' +
+          '<p class="small muted">Practice is for learning, so it is not counted on the leaderboard or in the test scores above. After the 3rd practice session in a unit a <b>Test</b> is required before you continue there.</p><div class="list">' + phist + '</div></div></section>' +
         '<a class="wa-card" href="https://whatsapp.com/channel/0029Va5ka1rFHWq4y4OcYy3U" target="_blank" rel="noopener"><svg viewBox=\"0 0 32 32\" width=\"30\" height=\"30\" aria-hidden=\"true\" style=\"vertical-align:-4px\"><path fill=\"#25D366\" d=\"M16 3C9 3 3.3 8.6 3.3 15.6c0 2.4.7 4.6 1.9 6.6L3 29l7-2.2c1.9 1 4 1.6 6.1 1.6 7 0 12.7-5.7 12.7-12.7S23 3 16 3z\"/><path fill=\"#fff\" d=\"M22.6 18.9c-.3-.2-2-1-2.3-1.1-.3-.1-.5-.2-.8.2-.2.3-.9 1.1-1.1 1.3-.2.2-.4.2-.7.1-.3-.2-1.4-.5-2.7-1.7-1-.9-1.7-2-1.9-2.3-.2-.3 0-.5.1-.7l.5-.6c.2-.2.2-.4.3-.6.1-.2 0-.4 0-.6l-1-2.5c-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.4 1.4 3.6c.2.2 2.4 3.7 5.9 5.2.8.4 1.5.6 2 .7.8.3 1.6.2 2.2.1.7-.1 2-.8 2.3-1.6.3-.8.3-1.5.2-1.6-.1-.1-.3-.2-.6-.4z\"/></svg><span><b>Follow VKV Sir on WhatsApp</b><small>Openings, opportunities, new tests &amp; updates</small></span><span>&rarr;</span></a>' + suggestBox() + boardCard(board, 'Top performers') + shareBar(location.origin + '/', 'I practise with VKV Sir Test Lab. Free tests with instant results:', 'Invite friends:') + '</div>');
       (function () {
         var root = $view.firstElementChild; if (!root) return;
