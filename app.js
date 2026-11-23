@@ -180,7 +180,7 @@
     home: [['why-practice', '📘 New here? Start with <b>Practice</b>: you see the right answer and explanation after every question.', '/exams?k=competitive', 'Find your exam'],
            ['goal', '🧭 Preparing for GATE, JEN or your university exam? Browse topics in your own exam’s order.', '/exams?k=university', 'Explore by goal'],
            ['resume', '📄 Did you know? You can build an ATS-ready resume here for free, with PDF and Word download.', '/resume', 'Build my resume']],
-    focus: [['quiz-after', '🧪 After your 1st and 2nd practice in a unit we suggest a short <b>Test</b>; after the 3rd it is <b>required</b> (at least a quarter of the questions you practised). You can keep at most 2 units waiting for a test.', null, null],
+    focus: [['quiz-after', '🧪 Practise more in a subject to unlock longer practice and tests. A short test after a few practice rounds helps you see what stuck.', null, null],
             ['no-rush', '🐢 Read each question fully. Rushing is detected and slows your practice down; careful reading builds real understanding.', null, null],
             ['share', '👥 Studying with friends? Share this topic link in your class group so everyone practises together.', '#share', 'Share below']],
     result: [['flag', '🚩 Found a typo, a doubtful answer or an unclear equation? Tap 👎 under that question to report it. Our team checks every report.', null, null],
@@ -875,12 +875,13 @@
       if (n.unit || n.topic) cr.push([n.subj.name, '/p/' + n.subj.id.toLowerCase() + qs]);
       if (n.topic) cr.push(['Unit ' + n.unit.unit, '/p/' + n.subj.id.toLowerCase() + '/' + n.unit.unit + qs]);
       cr.push([n.topic ? n.topic.name : n.unit ? 'Unit ' + n.unit.unit : n.subj.name, '']);
+      var UL = { pmax: 5, qmax: 15, untimed_q: 6 };
       h('<div class="narrow stack focus">' + crumbBar(cr) + '<div class="card center stack">' +
         '<p class="eyebrow">' + (exam ? 'Exam-level paper · ' + esc(exam.toUpperCase().replace(/-/g, ' ')) : 'Free practice & tests') + '</p><h1>' + esc(title) + '</h1>' + (crumbs && crumbs !== title ? '<p class="muted" style="margin:0">' + esc(crumbs) + '</p>' : '') +
         (cnt >= READY ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>' + icon('practice') + ' Practice</b><span>No pressure: see the right answer and explanation after each question</span></button>' +
           '<button type="button" data-m="quiz" aria-pressed="' + (mode === 'quiz') + '"><b>' + icon('test') + ' Test</b><span>Timed like an exam: score at the end, counts on the leaderboard</span></button></div>' +
           '<div id="pm"><p class="f">Do you want a timer?</p><div class="seg" id="pd">' + [[0, 'No timer', 'Learn at your own pace'], [5, '5 min', 'Quick revision'], [15, '15 min', 'Short session'], [30, '30 min', 'Focused session'], [60, '1 hour', 'Deep practice'], [180, '3 hours', 'Full study session']].map(function (d) { return '<button type="button" data-d="' + d[0] + '" aria-pressed="' + (d[0] === pdur) + '"><b>' + d[1] + '</b><span>' + d[2] + '</span></button>'; }).join('') + '</div>' +
-          '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Several quick <b>wrong</b> answers in a row (guessing) bring a warning, then short pauses of 1–2 minutes. Quick correct answers are fine. Repeating it on the same day locks all practice and tests for 10 minutes.</li><li>After your 1st and 2nd practice in a unit we suggest a short <b>Test</b>; after the 3rd it is <b>required</b> (at least a quarter of the questions you practised). You can keep at most 2 units waiting for a test.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
+          '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Several quick <b>wrong</b> answers in a row (guessing) bring a warning, then short pauses of 1–2 minutes. Quick correct answers are fine. Repeating it on the same day locks all practice and tests for 10 minutes.</li><li>Practise more in a subject to unlock longer practice and tests. A short test after a few practice rounds helps you see what stuck.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
           '<div id="qm" hidden>' + (ds.length ? '<p class="f">How much time do you have?</p><div class="seg" id="fd">' + ds.map(function (d) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + Math.floor(d * 60 / 45) + ' questions</span></button>'; }).join('') + '</div>' +
             '<ul class="rules small" style="text-align:left"><li>A fresh, balanced paper every time.</li><li>One question at a time, 45 seconds each.</li><li>Score, correct answers and explanations at the end. Counts on the leaderboard.</li></ul>' : '<p class="muted small">Not enough questions for a test here yet. Use Practice for now.</p>') + '</div>' +
           '<div class="err" id="fe" role="alert"></div><button class="btn block" id="fgo"></button>' +
@@ -893,11 +894,27 @@
         Array.prototype.forEach.call(mt.children, function (c) { c.setAttribute('aria-pressed', c.getAttribute('data-m') === m); });
         q('#pm').hidden = m !== 'practice'; q('#qm').hidden = m !== 'quiz';
         var g0 = q('#fgo'); g0.textContent = m === 'practice' ? '📘 Start practice' : '⏱️ Start the test'; g0.disabled = m === 'quiz' && !ds.length;
-        q('#fe').innerHTML = '';
+        q('#fe').innerHTML = ''; g0.classList.remove('dim');
       }
       var mt = q('#mt'); if (mt) { mt.onclick = function (e) { var b = e.target.closest('button'); if (b) setMode(b.getAttribute('data-m')); }; setMode(mode); }
       function segPick(id, cb) { var el = q(id); if (el) el.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; cb(+b.getAttribute('data-d')); Array.prototype.forEach.call(el.children, function (c) { c.setAttribute('aria-pressed', c === b); }); }; }
+      ['#pd', '#fd'].forEach(function (id) { var el = q(id); if (el) el.addEventListener('click', function (e) { var b = e.target.closest('.lk'); if (b) { e.stopImmediatePropagation(); var nt = el.nextElementSibling; if (nt && nt.classList.contains('lk-note')) { nt.classList.remove('pulse'); void nt.offsetWidth; nt.classList.add('pulse'); } } }, true); });
       segPick('#fd', function (d) { dur = d; }); segPick('#pd', function (d) { pdur = d; });
+      function applyUnlock(u) {
+        UL = u || UL;
+        [['#pd', UL.pmax, function (d) { pdur = d; }, function () { return pdur; }], ['#fd', UL.qmax, function (d) { dur = d; }, function () { return dur; }]].forEach(function (x) {
+          var el = q(x[0]); if (!el) return; var cur = x[3](), best = null;
+          Array.prototype.forEach.call(el.children, function (b) { var d = +b.getAttribute('data-d'), lk = d > x[1]; b.classList.toggle('lk', lk); b.setAttribute('aria-disabled', lk); if (!lk && d) best = d; });
+          if (cur > x[1] || cur == null) { x[2](best); Array.prototype.forEach.call(el.children, function (b) { b.setAttribute('aria-pressed', +b.getAttribute('data-d') === best); }); }
+          var nt = el.nextElementSibling && el.nextElementSibling.classList.contains('lk-note') ? el.nextElementSibling : null;
+          if (!nt) { el.insertAdjacentHTML('afterend', '<p class="lk-note"></p>'); nt = el.nextElementSibling; }
+          nt.textContent = el.querySelector('.lk') ? '🔒 Practise more to unlock bigger practice and tests.' : '';
+        });
+        var nb = q('#pd [data-d="0"] span'); if (nb) nb.textContent = 'Your pace · up to ' + UL.untimed_q + ' questions';
+      }
+      pdur = 5; Array.prototype.forEach.call((q('#pd') || { children: [] }).children, function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-d') === '5'); });
+      applyUnlock();
+      if (session && !isGuest()) rpc('unlock_status', { p_subject: n.subj.id }).then(applyUnlock).catch(function () {});
       var g = q('#fgo'); if (g) g.onclick = function () {
         if (!requireAuth(location.pathname + location.search, function () { q('#fgo').click(); })) return;
         var lbl = g.textContent; g.disabled = true; g.textContent = 'Preparing…'; track(mode === 'practice' ? 'start_practice' : 'start_quiz', { s: n.subj.id, u: args.p_unit, x: exam });
@@ -907,9 +924,10 @@
           var m = errMsg(e); g.disabled = false; g.textContent = lbl;
           if (/^QUIZ_DUE:/.test(m)) {
             q('#fe').innerHTML = '<div class="qdue"><b>🧪 Time for a quick check</b><p>' + esc(m.replace(/^QUIZ_DUE:/, '')) + '</p><p class="small muted">Your test score does not stop you; it shows what you have really learnt and where to practise more.</p><button type="button" class="btn" id="qd-go">📝 Take the test now</button></div>';
-            q('#qd-go').onclick = function () { setMode('quiz'); q('#fgo').click(); };
+            g.classList.add('dim'); q('#qd-go').onclick = function () { setMode('quiz'); q('#fgo').click(); };
             return;
           }
+          if (/^LOCKED:\D/.test(m)) { m = m.slice(7); rpc('unlock_status', { p_subject: n.subj.id }).then(applyUnlock).catch(function () {}); }
           if (gateErr(m, location.pathname)) m = ''; q('#fe').textContent = lockText(m);
         });
       };
@@ -1962,9 +1980,14 @@
       draw();
     }).catch(function () {});
   }
+  function shareTab(b, run) {
+    if (!b) return;
+    b.onclick = function (e) { e.stopPropagation(); if (!b.classList.contains('open')) { b.classList.add('open'); return; } b.classList.remove('open'); run(); };
+    document.addEventListener('click', function off(e) { if (!document.body.contains(b)) return document.removeEventListener('click', off); if (!b.contains(e.target)) b.classList.remove('open'); });
+  }
   function lockText(m) {
     var r = /^LOCKED:(\d+)/.exec(m || '');
-    return r ? 'You are temporarily locked for leaving a test screen. Try again in ' + mmss(+r[1] * 1000) + '.' : m;
+    return r ? 'You are temporarily locked for leaving a test screen. Try again in ' + mmss(+r[1] * 1000) + '.' : String(m || '').replace(/^LOCKED:(?=\D)/, '');
   }
 
   /* ---------- exam ---------- */
@@ -2071,7 +2094,7 @@
         var left = Math.max(0, readyAt - now()), rs = q('#rs'); if (!rs) return;
         rs.textContent = left > 0 ? Math.ceil(left / 1000) + 's' : 'Go';
         q('#arc').setAttribute('stroke-dashoffset', String(C * (1 - left / total)));
-        if (left <= 0) { clearInterval(ticker); var b = q('#begin'); b.disabled = false; b.textContent = 'I have read the instructions. Begin'; }
+        if (left <= 0) { clearInterval(ticker); var b = q('#begin'); b.disabled = false; b.textContent = 'I have read the instructions. Begin'; var rg = q('svg.ring'); rg.classList.add('go'); rg.setAttribute('role', 'button'); rg.setAttribute('aria-label', 'Begin the test'); rg.onclick = function () { if (!b.disabled) b.click(); }; }
       }
       ticker = setInterval(step, 200); step();
       q('#begin').onclick = function () { this.disabled = true; this.textContent = 'Starting…'; A('begin', { p_id: id }).then(render).catch(fail); };
@@ -2082,12 +2105,12 @@
       var t = now(); qEnd = t + v.q_left_ms; tEnd = t + v.total_left_ms;
       var last = v.idx + 1 === v.n;
       h('<div class="wm-layer" style="background-image:' + watermark() + '"></div><div class="qs qs-test' + (v.image ? ' has-img' : '') + '">' +
-        '<header class="qs-top"><span class="qs-clock" title="Time left for the whole paper">' + icon('test') + '<b id="tl"></b></span>' +
+        '<header class="qs-top"><span class="qs-clock" title="Time left for the whole paper"><i>Left</i><b id="tl"></b></span>' +
           '<div class="qs-t"><small>Test</small><b>' + esc(v.title || '') + '</b></div>' +
           '<span class="qs-n">' + (v.idx + 1) + '<small>/' + v.n + '</small></span></header>' +
         '<div class="track qs-track"><div class="fill" id="fl"></div></div>' +
         '<article class="qs-card"><div class="qs-meta"><span class="qs-qn">Question ' + (v.idx + 1) + ' <span class="qtime" id="qt"></span></span><span class="qs-tools" id="qtools">' +
-          (tok ? '' : '<button type="button" class="qs-share" id="qsh" title="Save this question as an image to share" aria-label="Save and share this question">' + icon('resume') + '<small id="qshn"></small></button>') + '</span></div>' +
+          (tok ? '' : '<button type="button" class="qs-share" id="qsh" title="Save this question as an image to share" aria-label="Save and share this question">' + icon('resume') + '<small id="qshn"></small><span class="qs-sl">Save &amp; share</span></button>') + '</span></div>' +
           (v.image ? zimg(v.image, '', 'Figure for this question') : '') +
           '<div class="qbody" id="qb">' + esc(v.body) + '</div><div class="opts' + (v.image && v.options.every(function (o) { return String(o).length <= 14; }) ? ' opts-grid' : '') + '" role="radiogroup" aria-labelledby="qb" id="opts">' +
           v.options.map(function (o, k) { return '<button type="button" class="opt" role="radio" aria-checked="false" data-k="' + k + '"><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') + '</div>' +
@@ -2100,7 +2123,7 @@
         '</article>' +
         '<footer class="qs-bar"><span class="small muted">Select an option, then continue</span><button class="btn" id="nx" disabled>' + (last ? 'Submit paper' : 'Next question') + '</button></footer></div>');
       renderMath($view); addTranslation(id, v.idx);
-      if (!tok && q('#qsh')) { shareQuota(id, q('#qshn')); q('#qsh').onclick = function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); }; }
+      if (!tok && q('#qsh')) { shareQuota(id, q('#qshn')); shareTab(q('#qsh'), function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); }); }
       q('#opts').addEventListener('click', function (e) {
         var b = e.target.closest('.opt'); if (!b || busy) return;
         sel = +b.getAttribute('data-k');
@@ -2200,7 +2223,7 @@
       var low = ql <= 10000;
       fl.style.width = (100 * ql / st.per_ms) + '%'; fl.classList.toggle('low', low);
       qt.classList.toggle('low', low); qt.textContent = Math.ceil(ql / 1000) + ' s';
-      tle.textContent = mmss(tl) + ' left'; tle.classList.toggle('low', tl <= 120000);
+      tle.textContent = mmss(tl); tle.classList.toggle('low', tl <= 120000);
       if (busy) return;
       if (tl <= 0) send(true); else if (ql <= 0) send(false);
     }
@@ -2302,7 +2325,7 @@
       var FEAT = [
         ['📘', 'Practice', 'No timer on any question. After you answer, you see the correct option and its explanation or solution, then move on with Next at your own pace.'],
         ['📝', 'Test', 'A timed test like a real exam. Your score, correct answers and explanations come at the end, and it counts on the leaderboard.'],
-        ['🧪', 'Test after practice', 'Suggested after your 1st and 2nd practice in a unit, required after the 3rd: a test of at least a quarter of the questions you practised.'],
+        ['🧪', 'Test after practice', 'After your 2nd or 3rd practice in a unit we suggest a short 5-minute test. Practise more in a subject to unlock longer practice and tests.'],
         ['🧭', 'Explore by your goal', 'Choose your university syllabus or a competitive exam such as GATE, JEN or RTO/MVI, and practise topics in that exam’s order and level.'],
         ['📸', 'Save & share a question', 'Save a few hard questions to WhatsApp to discuss with a friend or teacher. Your friend can try it from the link and see the solution.'],
         ['🚩', 'Report a question', 'Found a typo, an unclear equation or a doubtful answer? Tap 👎 under the question. Our team reviews every report.'],
@@ -2321,11 +2344,11 @@
       var r = v.reveal;
       var pctDone = v.n ? Math.round(100 * (v.done_count || 0) / v.n) : 0;
       h('<div class="wm-layer" style="background-image:' + watermark() + '"></div><div class="qs qs-practice' + (v.image ? ' has-img' : '') + '">' +
-        '<header class="qs-top"><span class="qs-clock" id="tl" title="' + (v.timed ? 'Time left' : 'Time spent in this session') + '">' + icon('test') + '<b id="tlv">' + (v.timed ? '' : mmss(v.session_ms || 0)) + '</b></span>' +
+        '<header class="qs-top"><span class="qs-clock" id="tl" title="' + (v.timed ? 'Time left' : 'Time spent in this session') + '"><i>' + (v.timed ? 'Left' : 'Time') + '</i><b id="tlv">' + (v.timed ? '' : mmss(v.session_ms || 0)) + '</b></span>' +
           '<div class="qs-t"><small>Practice · ' + esc(String(v.title || '').replace(/^Practice · /, '')) + '</small><b>' + esc(v.topic || '') + '</b></div>' +
           '<span class="qs-n">' + (v.idx + 1) + '<small>/' + v.n + '</small></span></header>' +
         '<div class="qs-prog" aria-hidden="true"><i style="width:' + pctDone + '%"></i></div>' +
-        '<article class="qs-card"><div class="qs-meta"><span class="qs-qn">Question ' + (v.idx + 1) + '</span><span class="qs-tools" id="qtools"><button type="button" class="qs-share" id="qsh" title="Save this question as an image to share" aria-label="Save and share this question">' + icon('resume') + '<small id="qshn"></small></button></span></div>' +
+        '<article class="qs-card"><div class="qs-meta"><span class="qs-qn">Question ' + (v.idx + 1) + (v.timed && !r ? ' <span class="qs-qt" id="pqt"></span>' : '') + '</span><span class="qs-tools" id="qtools"><button type="button" class="qs-share" id="qsh" title="Save this question as an image to share" aria-label="Save and share this question">' + icon('resume') + '<small id="qshn"></small><span class="qs-sl">Save &amp; share</span></button></span></div>' +
           (v.image ? zimg(v.image, '', 'Figure for this question') : '') +
           '<div class="qbody" id="qb">' + esc(v.body) + '</div><div class="opts" role="radiogroup" aria-labelledby="qb" id="opts">' +
           v.options.map(function (o, k) {
@@ -2340,7 +2363,7 @@
         '<footer class="qs-bar"><button class="btn ghost" id="end" type="button">End</button>' +
           (r ? '<button class="btn" id="nx">Next question</button>' : '<button class="btn ghost qs-show" id="sk" type="button">Show answer</button>') + '</footer></div>');
       renderMath($view); if (r) { var pxe = q('.px'); if (pxe) setTimeout(function () { pxe.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 60); } addTranslation(id, v.idx);
-      shareQuota(id, q('#qshn')); q('#qsh').onclick = function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); };
+      shareQuota(id, q('#qshn')); shareTab(q('#qsh'), function () { shareFlow(id, v.idx, function () { shareQuota(id, q('#qshn')); }); });
       if (!r) {
         q('#opts').addEventListener('click', function (e) { var b = e.target.closest('.opt'); if (b) answer(+b.getAttribute('data-k')); });
         q('#sk').onclick = function () { answer(-1); };
@@ -2352,7 +2375,7 @@
       q('#end').onclick = function () { if (busy) return; if (!confirm('End this practice session and see your summary?')) return; busy = true; rpc('practice_finish', { p_id: id }).then(render).catch(fail); };
       var sessStart = now() - (v.session_ms || 0);
       ticker = setInterval(function () { var el = q('#tlv'), box = q('#tl'); if (!el) return;
-        if (v.timed) { var tl = Math.max(0, tEnd - now()); el.textContent = mmss(tl) + ' left'; box.classList.toggle('low', tl <= 120000); if (tl <= 0 && !busy) { clearInterval(ticker); busy = true; load(); } }
+        if (v.timed) { var tl = Math.max(0, tEnd - now()); el.textContent = mmss(tl); box.classList.toggle('low', tl <= 120000); var pq = q('#pqt'); if (pq) pq.textContent = '· ' + Math.floor((now() - shownAt) / 1000) + ' s'; if (tl <= 0 && !busy) { clearInterval(ticker); busy = true; load(); } }
         else el.textContent = mmss(now() - sessStart); }, 500);
     }
     function answer(k) {
@@ -2625,12 +2648,10 @@
         var res = q('.res'); if (!res) return;
         if (r.total_ms) { var tiles = res.querySelector('.res-tiles'); if (tiles) tiles.insertAdjacentHTML('beforeend', '<div><b>' + mmss(r.total_ms) + '</b><span>Time taken</span></div>' + (r.avg_ms ? '<div><b>' + Math.round(r.avg_ms / 1000) + ' s</b><span>Per question</span></div>' : '')); }
         if (!tok && r.kind === 'practice' && r.subject && session && !isGuest()) rpc('quiz_gate', { p_subject: r.subject, p_unit: r.unit == null ? null : r.unit }).then(function (gte) {
-          if (!gte || !gte.due) return; var minQ = Math.max(5, Math.ceil((gte.practised || 0) / 4)), href = '/p/' + String(r.subject).toLowerCase() + (r.unit ? '/' + r.unit : '') + '?m=quiz';
-          var must = gte.due >= 3;
+          if (!gte || gte.due < 2) return; var href = '/p/' + String(r.subject).toLowerCase() + (r.unit ? '/' + r.unit : '') + '?m=quiz', must = false;
           res.insertAdjacentHTML('afterbegin', '<div class="card qgate' + (must ? ' must' : '') + '"><div><b>' + (must ? 'Time for a test on this unit' : 'Ready for a quick test?') + '</b><p class="small">' +
-            (must ? 'You have practised this unit ' + gte.due + ' times. Take a test of at least ' + minQ + ' questions (a quarter of what you practised) to continue practising here.'
-                  : 'Practice ' + gte.due + ' of 3 in this unit. A short test now shows what really stuck. After 3 practice sessions a test of at least a quarter of the questions is required.') +
-            '</p></div><div class="row"><a class="btn" href="' + href + '" data-link>Take a test</a>' + (must ? '' : '<button type="button" class="btn ghost" data-later>Later</button>') + '</div></div>');
+            'You have practised this unit ' + gte.due + ' times. A quick 5-minute test now shows what really stuck, and helps unlock longer practice and tests.' +
+            '</p></div><div class="row"><a class="btn" href="' + href + '" data-link>Take a 5-min test</a>' + (must ? '' : '<button type="button" class="btn ghost" data-later>Later</button>') + '</div></div>');
           var lt = res.querySelector('.qgate [data-later]'); if (lt) lt.onclick = function () { lt.closest('.qgate').remove(); };
         }).catch(function () {});
         var review = res.querySelector('.res-rv'), cards = [].slice.call(res.querySelectorAll(':scope > .card'));

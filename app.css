@@ -1805,8 +1805,11 @@ a.sj.ex-row:hover{border-color:var(--accent);text-decoration:none}
 .hm-pool b{color:var(--accent);font-variant-numeric:tabular-nums}
 /* selected tabs / chips stay readable in every theme */
 .tabs a.on,.tabs button.on{background:var(--accent)!important;color:var(--accent-ink)!important}
-:root[data-theme="dark"] :is(.tabs a.on,.tabs button.on,[aria-pressed="true"].chip,[aria-selected="true"]){color:#0B1020!important}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) :is(.tabs a.on,.tabs button.on,[aria-pressed="true"].chip,[aria-selected="true"]){color:#0B1020!important}}
+:root[data-theme="dark"] :is(.tabs a.on,.tabs button.on,.chip[aria-pressed="true"],[role="tab"][aria-selected="true"],.xtabs a.on,.rbg-tabs button.on,.seg button[aria-pressed="true"],.mtabs button[aria-pressed="true"],.theme-seg button[aria-pressed="true"]){background:var(--accent)!important;border-color:var(--accent)!important;color:#0B1020!important}
+:root[data-theme="dark"] :is(.tabs a.on,.tabs button.on,.chip[aria-pressed="true"],[role="tab"][aria-selected="true"],.xtabs a.on,.rbg-tabs button.on,.seg button[aria-pressed="true"],.mtabs button[aria-pressed="true"],.theme-seg button[aria-pressed="true"]) :is(b,span,small,.ic){color:#0B1020!important}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) :is(.tabs a.on,.tabs button.on,.chip[aria-pressed="true"],[role="tab"][aria-selected="true"],.xtabs a.on,.rbg-tabs button.on,.seg button[aria-pressed="true"],.mtabs button[aria-pressed="true"],.theme-seg button[aria-pressed="true"]){background:var(--accent)!important;border-color:var(--accent)!important;color:#0B1020!important}
+:root:not([data-theme="light"]) :is(.tabs a.on,.tabs button.on,.chip[aria-pressed="true"],[role="tab"][aria-selected="true"],.xtabs a.on,.rbg-tabs button.on,.seg button[aria-pressed="true"],.mtabs button[aria-pressed="true"],.theme-seg button[aria-pressed="true"]) :is(b,span,small,.ic){color:#0B1020!important}}
+
 /* footer: icons in one line, links in an even 2-line grid, less empty space above */
 .sitefoot.sf2{margin-top:20px}
 .sf2-row .ff{flex-wrap:nowrap;gap:6px}
@@ -1900,3 +1903,24 @@ body:has(.qs) .sitefoot{display:none}
 .qs-qn{white-space:nowrap}
 .qs-qn .qtime{padding:2px 8px;border-radius:var(--r-pill);background:var(--soft)}
 @media(max-width:560px){.qs-bar>.small{display:none}}
+/* ===== unlock round ===== */
+/* locked (not yet unlocked) durations */
+.seg button.lk{opacity:.42;cursor:not-allowed;border-style:dashed}
+.seg button.lk b::after{content:" \1F512";font-size:.75em}
+.lk-note{margin:6px 0 0;font-size:var(--fs-14);color:var(--muted)}
+#fgo.dim{opacity:.35}
+.ring.go{cursor:pointer} .ring.go:hover{filter:brightness(1.1)}
+/* clock: small label above the time */
+.qs-clock{flex-direction:column;align-items:flex-start;gap:2px;padding:5px 10px}
+.qs-clock>.ic{display:none}
+.qs-clock i{font:700 10px/1 var(--sans,inherit);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-style:normal}
+.qs-qt{font:600 12px/1 var(--mono);color:var(--muted)}
+/* share: floating tab on the right edge */
+.qs-share{position:fixed;right:0;top:42%;z-index:30;width:auto;height:auto;min-height:44px;border-radius:12px 0 0 12px;border-right:0;padding:8px 10px;display:flex;align-items:center;gap:6px;background:var(--card);box-shadow:var(--shadow);color:var(--accent)}
+.qs-share small{position:static;background:var(--good)}
+.qs-share[disabled]{opacity:.7}
+.qs-share .qs-sl{display:none;font-weight:700;font-size:var(--fs-14);white-space:nowrap}
+.qs-share.open .qs-sl{display:inline}
+.qs-share.open{color:var(--accent-ink);background:var(--accent);border-color:var(--accent)}
+.lk-note.pulse{animation:lkp .6s}
+@keyframes lkp{50%{color:var(--accent)}}
