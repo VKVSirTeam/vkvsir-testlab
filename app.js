@@ -336,9 +336,7 @@
           '<div class="hm-cta"><a class="btn" href="/practice" data-link>' + icon('practice') + ' Start practice</a><a class="btn ghost" href="/test" data-link>' + icon('test') + ' Take a test</a></div>' +
           '<p class="hm-pool">' + icon('check') + '<span>Every paper is prepared instantly from a pool of <b class="cnt-up" data-to="100000">1,00,000+</b> questions</span></p>' +
           '<p class="hm-pool hm-lang">🌐<span>Read questions in <b>your own language</b>: हिन्दी, मराठी, বাংলা, தமிழ், తెలుగు, ગુજરાતી and international languages, shown right below the English.</span></p></div>' +
-          '<div class="hm-try card" aria-label="Try a question"><p class="hm-try-h">' + icon('practice') + ' Try one · ' + esc(sample.s) + '<button type="button" class="qs-share hm-sh" id="hm-sh" aria-label="Share this question">' + SHARE_IC + '<span class="qs-sl">Share</span></button></p><p class="hm-q">' + esc(sample.q) + '</p><div class="hm-opts">' +
-            sample.o.map(function (o, i) { return '<button type="button" class="opt" data-i="' + i + '"><span class="k">' + 'ABCD'[i] + '</span><span>' + esc(o) + '</span></button>'; }).join('') +
-          '</div><p class="hm-exp" id="hm-exp" hidden></p></div></section>' +
+          '<div class="hm-try card wr" id="wr" aria-label="Free warm-up questions"><p class="hm-try-h">' + icon('practice') + ' Free warm-up</p><div class="spinner"></div></div></section>' +
         continueCard() + readyHtml +
         '<section class="hm-doors">' + doors.map(function (d) {
           return '<a class="door card door-' + d[0] + '" href="' + d[3] + '" data-link><span class="door-i">' + icon(d[0], 'ic-lg') + '</span><b>' + d[1] + '</b><span class="muted">' + d[2] + '</span><span class="door-go">' + d[4] + ' ' + icon('chevron') + '</span></a>'; }).join('') + '</section>' +
@@ -361,12 +359,7 @@
         $view.querySelectorAll('.hm-rcard').forEach(function (a) { a.setAttribute('href', a.getAttribute('data-base') + (t ? '?m=quiz&auto=1' : '?auto=1')); a.querySelector('.hm-rgo').innerHTML = icon(t ? 'test' : 'practice') + ' <i>Start 5-min ' + (t ? 'test' : 'practice') + '</i>'; }); };
       rpc('visitor_count').then(function (n) { var el = q('#hm-visits'); if (!el || !n) return; el.querySelector('span').textContent = Number(n).toLocaleString('en-IN'); el.hidden = false;
         if (profile && profile.is_admin) { el.classList.add('adm'); el.onclick = function () { go('/admin?tab=visitors'); }; el.title = 'Open footfall (admin)'; } }).catch(function () {});
-      var hs = q('#hm-sh'); if (hs) hs.onclick = function () {
-        var txt = 'Can you answer this? ' + sample.q + '\n' + sample.o.map(function (o, i) { return 'ABCD'[i] + ') ' + o; }).join('\n') + '\nTry it free on VKV Sir Test Lab: ' + location.origin + sample.p;
-        if (navigator.share) navigator.share({ title: 'VKV Sir Test Lab', text: txt }).catch(function () {});
-        else window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
-        track('share_sample', { s: sample.s });
-      };
+      welcomeRound(q('#wr'), SAMPLES);
       (function () {
         var el = q('.cnt-up'); if (!el) return; var seen = false; try { seen = sessionStorage.getItem('vkv-cnt') === '1'; sessionStorage.setItem('vkv-cnt', '1'); } catch (e) {}
         if (seen || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
@@ -376,14 +369,59 @@
           el.textContent = k < 1 ? Math.min(v, to - 1).toLocaleString('en-IN') : '1,00,000+'; if (k < 1) requestAnimationFrame(tick); })(t0);
       })();
       var ff = q('#ff2'); if (ff) ff.innerHTML = FOLLOW.map(function (f) { return '<a href="' + f[1] + '" target="_blank" rel="noopener" title="' + f[0] + '" aria-label="' + f[0] + '" class="fi ' + f[2] + '">' + f[3] + '</a>'; }).join('');
-      var opts = q('.hm-opts');
-      if (opts) opts.addEventListener('click', function (e) {
-        var b = e.target.closest('.opt'); if (!b || opts.classList.contains('done')) return; opts.classList.add('done');
-        var i = +b.getAttribute('data-i');
-        opts.querySelectorAll('.opt').forEach(function (o) { var k = +o.getAttribute('data-i'); o.disabled = true; if (k === sample.a) o.classList.add('ok'); else if (k === i) o.classList.add('bad'); });
-        var ex = q('#hm-exp'); ex.hidden = false; ex.innerHTML = '<b>' + (i === sample.a ? 'Correct.' : 'Not quite.') + '</b> ' + esc(sample.e) + ' <a href="' + sample.p + '" data-link>Practise this subject ' + icon('chevron') + '</a>';
-      });
+
     }).catch(function (e) { h('<div class="narrow card center"><p>' + esc(errMsg(e)) + '</p><button class="btn" onclick="location.reload()">Try again</button></div>'); });
+  }
+
+
+  /* ---------- Welcome round: 15 free questions, a fresh set every visit, auto-advance ---------- */
+  function welcomeRound(box, fallback) {
+    if (!box) return;
+    var set = [], i = 0, ans = {}, right = 0, timer = null;
+    var CHEER = { 3: 'Nice start! Keep going.', 6: 'You are doing really well.', 9: 'Great focus. A few more to go!', 12: 'Almost there, wonderful effort!' };
+    function shareQ(x) {
+      var txt = 'Can you answer this? ' + x.q + '\n' + x.o.map(function (o, k) { return 'ABCD'[k] + ') ' + o; }).join('\n') + '\nTry it free on VKV Sir Test Lab: ' + location.origin + '/';
+      if (navigator.share) navigator.share({ title: 'VKV Sir Test Lab', text: txt }).catch(function () {}); else window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank', 'noopener');
+      track('share_sample', { s: x.s });
+    }
+    function done() {
+      var pct = Math.round(100 * right / set.length), msg = pct >= 80 ? 'Outstanding! You are a natural.' : pct >= 50 ? 'Wonderful first attempt!' : 'Good start! Every expert began exactly here.';
+      box.innerHTML = '<p class="hm-try-h">🎉 Warm-up complete</p><div class="wr-end"><b class="wr-score">' + right + ' / ' + set.length + '</b><p><b>' + msg + '</b></p><p class="muted">You tried reasoning, English, GK, science and engineering. Let’s explore more together, one subject at a time.</p>' +
+        '<div class="wr-cta"><a class="btn" href="/practice" data-link>' + icon('practice') + ' Choose a subject</a><button type="button" class="btn ghost" id="wr-again">New warm-up</button></div>' +
+        '<p class="small muted">Challenge a friend: share any question with the ' + SHARE_IC + ' button and see what they answer!</p></div>';
+      q('#wr-again').onclick = load; track('welcome_done', { r: right, n: set.length });
+    }
+    function show() {
+      clearTimeout(timer);
+      if (i >= set.length) return done();
+      var x = set[i], a = ans[i];
+      box.innerHTML = '<p class="hm-try-h"><span>' + (x.tech ? '⚙️ ' : '🧠 ') + esc(x.s.replace(/\s*\((Placement|General Studies)\)/, '')) + '</span><span class="wr-n">' + (i + 1) + ' / ' + set.length + '</span>' +
+        '<button type="button" class="qs-share hm-sh" aria-label="Share this question with a friend">' + SHARE_IC + '<span class="qs-sl">Share</span></button></p>' +
+        '<div class="wr-bar"><i style="width:' + Math.round(100 * i / set.length) + '%"></i></div>' +
+        (x.img ? '<img class="wr-img" src="' + esc(x.img) + '" alt="" loading="lazy">' : '') +
+        '<p class="hm-q">' + esc(x.q) + '</p><div class="hm-opts' + (a != null ? ' done' : '') + '">' + x.o.map(function (o, k) {
+          var cl = a == null ? '' : k === x.a ? ' ok' : k === a ? ' bad' : '';
+          return '<button type="button" class="opt' + cl + '" data-i="' + k + '"' + (a != null ? ' disabled' : '') + '><span class="k">' + 'ABCD'[k] + '</span><span>' + esc(o) + '</span></button>'; }).join('') + '</div>' +
+        (a != null ? '<p class="hm-exp"><b>' + (a === x.a ? 'Correct! ' : 'Not quite. ') + '</b>' + esc(x.e) + '</p>' : '') +
+        '<div class="wr-nav"><button type="button" class="linkbtn" id="wr-prev"' + (i ? '' : ' hidden') + '>‹ Previous</button>' +
+        (CHEER[i] && a == null ? '<span class="wr-cheer">' + CHEER[i] + '</span>' : '<span></span>') +
+        '<button type="button" class="linkbtn" id="wr-next"' + (a == null ? ' hidden' : '') + '>Next ›</button></div>';
+      try { renderMath(box); } catch (e) {}
+      box.querySelector('.hm-sh').onclick = function () { shareQ(x); };
+      q('#wr-prev').onclick = function () { if (i) { i--; show(); } };
+      q('#wr-next').onclick = function () { i++; show(); };
+      box.querySelector('.hm-opts').onclick = function (e) {
+        var b = e.target.closest('.opt'); if (!b || ans[i] != null) return;
+        ans[i] = +b.getAttribute('data-i'); if (ans[i] === x.a) right++;
+        show(); timer = setTimeout(function () { if (document.body.contains(box)) { i++; show(); } }, 2600);
+      };
+    }
+    function load() {
+      i = 0; ans = {}; right = 0;
+      rpc('welcome_set').then(function (r) { set = (r && r.length) ? r : fallback.map(function (x) { return { s: x.s, q: x.q, o: x.o, a: x.a, e: x.e }; }); show(); })
+        .catch(function () { set = fallback.map(function (x) { return { s: x.s, q: x.q, o: x.o, a: x.a, e: x.e }; }); show(); });
+    }
+    load();
   }
 
   /* ---------- Leaderboard page ---------- */
@@ -1043,9 +1081,85 @@
       render();
     } };
   }
+
+  /* ---------- Explore: card shelves for Practice and Test (one wiring, many paths) ---------- */
+  var SM = { // subject id -> [emoji, short name, hue]
+    LR: ['🧩', 'Logical Reasoning', 265], QA: ['➗', 'Quantitative Aptitude', 210], VA: ['📖', 'English & Verbal', 330],
+    GSC: ['🔬', 'General Science', 160], GKS: ['🌍', 'General Knowledge', 190], CA: ['📰', 'Current Affairs', 20],
+    GHI: ['🏛️', 'Indian History', 30], GPO: ['⚖️', 'Polity & Constitution', 230], GGE: ['🗺️', 'Indian Geography', 120], GEC: ['💹', 'Indian Economy', 45],
+    TD: ['🔥', 'Thermodynamics', 10], FM: ['💧', 'Fluid Mechanics', 200], HT: ['🌡️', 'Heat Transfer', 0], SOM: ['🏗️', 'Strength of Materials', 35],
+    TOM: ['⚙️', 'Theory of Machines', 220], MD: ['🔩', 'Machine Design', 250], MP: ['🏭', 'Manufacturing', 25], EMT: ['🧱', 'Engineering Materials', 40],
+    ENM: ['📐', 'Engineering Mechanics', 215], ICE: ['🚗', 'IC Engines', 5], RAC: ['❄️', 'Refrigeration & AC', 195], PP: ['⚡', 'Power Plant', 50],
+    MET: ['📏', 'Metrology', 170], IE: ['📊', 'Industrial Engg & OR', 280], AE: ['🚙', 'Automobile Engg', 15], ED: ['🚀', 'Entrepreneurship', 300],
+    EM: ['∑', 'Engineering Maths', 240], MEC: ['🛠️', 'Mechanical Core', 25], CVC: ['🌉', 'Civil Core', 35], EEC: ['🔌', 'Electrical Core', 50],
+    ECC: ['📡', 'Electronics Core', 185], CSF: ['💻', 'CS Fundamentals', 225], INC: ['🎛️', 'Instrumentation Core', 260], CAD: ['🖥️', 'CAD Software', 205],
+    MVL: ['🚦', 'Motor Vehicle Laws', 0], RTO: ['🪪', 'RTO / MVI Exams', 20],
+    LPH: ['🔭', 'Physics Lab', 250], LCH: ['⚗️', 'Chemistry Lab', 140], LCP: ['⌨️', 'C Programming Lab', 220], LWS: ['🔨', 'Workshop', 30],
+    LEE: ['💡', 'Electrical Lab', 50], LCE: ['📍', 'Civil Lab (Survey)', 110], LEG: ['✏️', 'Engineering Graphics', 205], LMD: ['📐', 'Machine Drawing', 235],
+    LLG: ['🗣️', 'Language Lab', 320], LHV: ['🤝', 'Human Values', 150]
+  };
+  var BR = { // branch key -> [emoji, name, hue, core subjects, exam branch regex, extra]
+    me: ['⚙️', 'Mechanical', 25, ['TD', 'FM', 'HT', 'SOM', 'TOM', 'MD', 'MP', 'EMT', 'ENM', 'ICE', 'RAC', 'PP', 'MET', 'IE', 'AE'], /mechanical|automobile/i, ['MEC', 'CAD', 'ED']],
+    ce: ['🌉', 'Civil', 35, ['CVC', 'ENM', 'SOM', 'FM'], /civil/i, ['CAD']],
+    ee: ['🔌', 'Electrical', 50, ['EEC'], /electrical/i, []],
+    ec: ['📡', 'Electronics', 185, ['ECC'], /electronics/i, []],
+    cs: ['💻', 'Computer Science & IT', 225, ['CSF', 'LCP'], /computer/i, []],
+    in: ['🎛️', 'Instrumentation', 260, ['INC'], /instrumentation/i, []],
+    fy: ['🎓', 'First Year (all branches)', 280, ['EM', 'ENM'], /1st year/i, []]
+  };
+  var LABS = ['LPH', 'LCH', 'LCP', 'LWS', 'LEE', 'LCE', 'LEG', 'LMD', 'LLG', 'LHV'];
+  var FAM_EMO = { 'GATE': '🎓', 'ESE / IES': '🏛️', 'SSC JE': '📝', 'State JE / AE': '🏢', 'Railways (RRB)': '🚆', 'RTO / MVI': '🚗', 'Banking and Insurance': '🏦',
+    'SSC (Graduate / 12th / 10th level)': '📝', 'State Level Exams (all states combined)': '🏛️', 'Campus Placement and Company Tests': '💼', 'ITI / Apprenticeship': '🔧',
+    'Space, Defence and Atomic Energy': '🚀', 'B.Tech / B.E.': '🎓' };
+  function xTile(emo, hue) { return '<span class="xi" style="--h:' + (hue || 200) + '" aria-hidden="true">' + emo + '</span>'; }
+  function xCard(href, emo, hue, name, sub, extra) {
+    return '<a class="xc" href="' + href + '" data-link' + (extra || '') + '>' + xTile(emo, hue) + '<span class="xt"><b>' + esc(name) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span></a>';
+  }
+  function subjCards(ids, byId, mode) {
+    return ids.map(function (id) { var x = byId[id]; if (!x || (x.count || 0) < READY) return ''; var m = SM[id] || ['📘', x.name, 200];
+      var units = (x.units || []).filter(function (u) { return (u.count || 0) >= READY; }).slice(0, 3).map(function (u) { return u.name; }).join(' · ');
+      return xCard('/p/' + id.toLowerCase() + (mode === 'test' ? '?m=quiz' : ''), m[0], m[2], m[1], units, ' data-x="' + esc((m[1] + ' ' + x.name + ' ' + (x.units || []).map(function (u) { return u.name; }).join(' ')).toLowerCase()) + '"'); }).join('');
+  }
+  function examCards(list) {
+    return list.map(function (e) { return xCard('/e/' + e.id, FAM_EMO[e.family] || '📋', 200, e.title.replace(/\s*\(common to all branches\)/i, ''), e.ready ? 'Full syllabus, section by section' : 'Syllabus being mapped', ' data-x="' + esc((e.title + ' ' + (e.family || '')).toLowerCase()) + '"'); }).join('');
+  }
+  function shelf(id, title, note, cards, more) {
+    if (!cards) return '';
+    return '<section class="xs" id="xs-' + id + '"><div class="xs-h"><h2>' + title + '</h2>' + (more || '') + '</div>' + (note ? '<p class="muted xs-n">' + note + '</p>' : '') + '<div class="xg">' + cards + '</div></section>';
+  }
+  function exploreHtml(cat, exams, mode, b) {
+    var byId = {}; cat.forEach(function (x) { byId[x.id] = x; });
+    var isTech = function (e) { return e.kind === 'university' || (e.branch && !/^(general|all)/i.test(e.branch)); };
+    var q = mode === 'test' ? '?m=test' : '';
+    if (b && BR[b]) {
+      var d = BR[b], ex = exams.filter(function (e) { return d[4].test(e.branch || ''); });
+      var uni = ex.filter(function (e) { return e.kind === 'university'; }), comp = ex.filter(function (e) { return e.kind !== 'university'; });
+      return shelf('core', d[0] + ' ' + d[1] + ': subjects', 'Tap a subject to see its units and start.', subjCards(d[3], byId, mode)) +
+        shelf('uni', 'University syllabus, year and semester wise', '', examCards(uni)) +
+        shelf('comp', 'Competitive exams for ' + d[1], 'GATE, ESE, JE, PSU and more: the full syllabus of each exam, wired to the same question pool.', examCards(comp)) +
+        shelf('extra', 'Placement and software', '', subjCards(d[5], byId, mode)) +
+        shelf('maths', 'Maths for every branch', '', b === 'fy' ? '' : subjCards(['EM'], byId, mode)) +
+        shelf('labs', 'First-year labs', 'Experiment-wise practice and viva questions.', subjCards(LABS, byId, mode)) +
+        shelf('apt', 'Aptitude for placements', '', subjCards(['QA', 'LR', 'VA'], byId, mode));
+    }
+    var br = Object.keys(BR).map(function (k) { var d = BR[k]; return xCard((mode === 'test' ? '/test' : '/practice') + '?b=' + k, d[0], d[2], d[1], k === 'fy' ? 'Maths, mechanics and 10 labs' : d[3].length + (d[3].length > 1 ? ' subjects' : ' core subject') + ' · exams · labs', ' data-x="' + d[1].toLowerCase() + '"'); }).join('');
+    return shelf('apt', '🧠 Reasoning &amp; aptitude', 'Useful for every exam and every job. Start here.', subjCards(['LR', 'QA', 'VA'], byId, mode)) +
+      shelf('sci', '🔬 Science &amp; general knowledge', '', subjCards(['GSC', 'GKS', 'CA'], byId, mode)) +
+      shelf('india', '🇮🇳 Know India', 'History, polity, geography and economy.', subjCards(['GHI', 'GPO', 'GGE', 'GEC'], byId, mode)) +
+      shelf('nontech', '📝 Non-technical exams', 'SSC, Railways, Banking, State exams and campus tests.', examCards(exams.filter(function (e) { return !isTech(e); }))) +
+      shelf('branch', '🛠️ Engineering: choose your branch', 'Subjects, labs, university syllabus and competitive exams of your branch, all in one place.', br) +
+      shelf('labs', '🧪 First-year labs (all branches)', 'Every experiment: theory, apparatus, procedure, calculations and viva.', subjCards(LABS, byId, mode)) +
+      shelf('more', '🚗 Software, entrepreneurship &amp; transport', '', subjCards(['CAD', 'ED', 'MVL', 'RTO'], byId, mode));
+  }
+  function exploreSearch() {
+    var inp = document.getElementById('xq'); if (!inp) return;
+    inp.addEventListener('input', function () { var t = inp.value.trim().toLowerCase();
+      $view.querySelectorAll('.xc').forEach(function (c) { c.hidden = !!t && (c.getAttribute('data-x') || c.textContent.toLowerCase()).indexOf(t) < 0; });
+      $view.querySelectorAll('.xs').forEach(function (s) { s.hidden = !!t && !s.querySelector('.xc:not([hidden])'); }); });
+  }
   function viewHub(mode) {
     setNav(mode); loading();
-    Promise.all([rpc('catalog').catch(function () { return []; }), mode === 'test' ? rpc('list_tests').catch(function () { return []; }) : Promise.resolve([]), mode === 'test' ? rpc('exam_list').catch(function () { return []; }) : Promise.resolve([])]).then(function (r) {
+    Promise.all([rpc('catalog').catch(function () { return []; }), mode === 'test' ? rpc('list_tests').catch(function () { return []; }) : Promise.resolve([]), rpc('exam_list').catch(function () { return []; })]).then(function (r) {
       var cat = r[0] || [], tests = (r[1] || []).filter(function (t) { return t.slug !== 'daily'; }), sb = subjectBrowser(cat, mode);
       var head = mode === 'test'
         ? '<p class="eyebrow">Test</p><h1>Take a test</h1><p class="muted">Timed like a real exam. Your score and explanations come at the end, and it counts on the leaderboard.</p>'
@@ -1065,10 +1179,17 @@
         if (ex.length) mocks += '<section class="stack" id="t-ex"><h2>Exams</h2><p class="muted" style="margin-top:-8px">Open an exam to see its full syllabus, section by section, with a Test button on every ready topic.</p>' +
           '<div class="seg mini ex-tabs" role="tablist"><button type="button" class="chip" data-x="tech" aria-pressed="true">Technical</button><button type="button" class="chip" data-x="non" aria-pressed="false">Non-technical</button></div>' +
           '<div data-xp="tech" class="stack">' + exHtml(ex.filter(isTech)) + '</div><div data-xp="non" class="stack" hidden>' + exHtml(ex.filter(function (e) { return !isTech(e); })) + '</div></section>';
-        mocks += '<h2>Make a test from any subject</h2>';
+
       }
-      h('<div class="hub stack">' + crumbBar([['Home', '/'], [mode === 'test' ? 'Test' : 'Practice', '']]) + '<div>' + head + '</div>' + continueCard() + mocks + sb.html + '</div>');
-      sb.mount();
+      var bk = new URLSearchParams(location.search).get('b'); if (bk && !BR[bk]) bk = null;
+      var crumbs = [['Home', '/'], [mode === 'test' ? 'Test' : 'Practice', bk ? (mode === 'test' ? '/test' : '/practice') : '']]; if (bk) crumbs.push([BR[bk][1], '']);
+      if (bk) head = '<p class="eyebrow">' + (mode === 'test' ? 'Test' : 'Practice') + '</p><h1>' + BR[bk][0] + ' ' + esc(BR[bk][1]) + '</h1><p class="muted">Pick a subject, a lab or an exam. Everything here draws on the same question pool, so your progress counts everywhere.</p>';
+      var xp = exploreHtml(cat, r[2] && r[2].length ? r[2] : (window._exl || []), mode, bk);
+      h('<div class="hub stack">' + crumbBar(crumbs) + '<div>' + head + '</div>' + continueCard() +
+        '<label class="sb-s xq">' + icon('search') + '<input id="xq" class="in" type="search" placeholder="Search a subject, lab or exam" autocomplete="off" aria-label="Search"></label>' +
+        '<div class="xw">' + xp + '</div>' + (bk ? '' : mocks) +
+        '<details class="grp xall"><summary><b>All subjects, units and topics</b><small>full list with search</small>' + icon('chevron', 'sj-c') + '</summary><div class="grp-b">' + sb.html + '</div></details></div>');
+      sb.mount(); exploreSearch();
       var xt = q('.ex-tabs'); if (xt) xt.onclick = function (e) { var b = e.target.closest('[data-x]'); if (!b) return; xt.querySelectorAll('[data-x]').forEach(function (c) { c.setAttribute('aria-pressed', c === b); }); $view.querySelectorAll('[data-xp]').forEach(function (d) { d.hidden = d.getAttribute('data-xp') !== b.getAttribute('data-x'); }); };
     }).catch(function (e) { h('<div class="narrow card center"><p>' + esc(errMsg(e)) + '</p><button class="btn" onclick="location.reload()">Try again</button></div>'); });
   }
