@@ -213,6 +213,7 @@
     if (cleanup) { try { cleanup(); } catch (e) {} cleanup = null; }
     var hl0 = document.querySelector('.hdr-lang'); if (hl0) hl0.remove();
     var p = location.pathname.replace(/\/+$/, '') || '/';
+    selBar(p);
     var m;
     if (p === '/') return viewHome();
     if (p === '/login') return viewLogin();
@@ -236,7 +237,8 @@
     if (p === '/admin/companies') return viewCompaniesAdmin();
     if (p === '/disclaimer') return viewDisclaimer();
     if (p === '/why' || p === '/features') return viewWhy();
-    if ((m = p.match(/^\/p\/([a-z0-9]+)(?:\/(\d+))?(?:\/([a-z0-9-]+))?$/i))) return viewFocus(m[1], m[2], m[3]);
+    if (p === '/mix') return viewFocus('mix');
+    if ((m = p.match(/^\/p\/([a-z0-9]+)(?:\/(\d+))?(?:\/([a-z0-9-]+))?$/i))) { var gq = new URLSearchParams(location.search); return (m[3] || gq.get('go') || gq.get('auto')) ? viewFocus(m[1], m[2], m[3]) : viewTree(m[1], m[2]); }
     if ((m = p.match(/^\/t\/([a-z0-9-]+)$/))) return viewTest(m[1]);
     if ((m = p.match(/^\/exam\/([0-9a-f-]{36})$/))) return viewExam(m[1]);
     if ((m = p.match(/^\/g\/([0-9a-f]{20,64})\/exam\/([0-9a-f-]{36})$/))) return viewExam(m[2], m[1]);
@@ -389,7 +391,9 @@
       box.innerHTML = '<p class="hm-try-h">🎉 Warm-up complete</p><div class="wr-end"><b class="wr-score">' + right + ' / ' + set.length + '</b><p><b>' + msg + '</b></p><p class="muted">You tried reasoning, English, GK, science and engineering. Let’s explore more together, one subject at a time.</p>' +
         '<div class="wr-cta"><a class="btn" href="/practice" data-link>' + icon('practice') + ' Choose a subject</a><button type="button" class="btn ghost" id="wr-again">New warm-up</button></div>' +
         '<p class="small muted">Challenge a friend: share any question with the ' + SHARE_IC + ' button and see what they answer!</p></div>';
-      q('#wr-again').onclick = load; track('welcome_done', { r: right, n: set.length });
+      wuDone(); track('welcome_done', { r: right, n: set.length });
+      if (capped()) { var wa = q('#wr-again'); wa.outerHTML = '<a class="btn ghost" href="/login?next=/me" data-link>Sign in free to do more</a>'; box.querySelector('.wr-end').insertAdjacentHTML('beforeend', '<p class="small"><b>That was today\'s 2nd free warm-up.</b> Sign in free to keep going with any subject, choose easy or tough questions, and track your progress on your dashboard.</p>'); }
+      else q('#wr-again').onclick = load;
     }
     function show() {
       clearTimeout(timer);
@@ -416,7 +420,16 @@
         show(); timer = setTimeout(function () { if (document.body.contains(box)) { i++; show(); } }, 2600);
       };
     }
+    function wuGet() { try { var o = JSON.parse(localStorage.getItem('vkv-wu') || '{}'), d = new Date().toDateString(); return o.d === d ? o : { d: d, n: 0 }; } catch (e) { return { d: '', n: 0 }; } }
+    function wuDone() { var o = wuGet(); o.n++; try { localStorage.setItem('vkv-wu', JSON.stringify(o)); } catch (e) {} }
+    function capped() { return isGuest() && wuGet().n >= 2; }
+    function gate() {
+      box.innerHTML = '<p class="hm-try-h">🌟 Today\'s free warm-ups are done</p><div class="wr-end"><p><b>You finished 2 free warm-ups today. Great effort!</b></p>' +
+        '<p class="muted">Sign in free with Google (10 seconds) to unlock everything: subject, unit and topic practice, your choice of question level, timed tests, your own dashboard with progress and weak areas, and the leaderboard.</p>' +
+        '<div class="wr-cta"><a class="btn" href="/login?next=/me" data-link>Sign in free and continue</a><a class="btn ghost" href="/practice" data-link>Browse subjects</a></div><p class="small muted">New free warm-ups again tomorrow.</p></div>';
+    }
     function load() {
+      if (capped()) return gate();
       i = 0; ans = {}; right = 0;
       rpc('welcome_set').then(function (r) { set = (r && r.length) ? r : fallback.map(function (x) { return { s: x.s, q: x.q, o: x.o, a: x.a, e: x.e }; }); show(); })
         .catch(function () { set = fallback.map(function (x) { return { s: x.s, q: x.q, o: x.o, a: x.a, e: x.e }; }); show(); });
@@ -927,6 +940,13 @@
   function viewFocus(subjId, unitNo, topicId) {
     setNav('practice'); loading();
     rpc('catalog').then(function (cat) {
+      var SEL = null, qs0 = new URLSearchParams(location.search);
+      if (subjId === 'mix') {
+        var al = qs0.get('all');
+        SEL = al ? al.split(',').filter(Boolean).slice(0, 60).map(function (x) { x = x.toUpperCase(); return { s: x, n: (SM[x] || [0, x])[1] }; }) : selGet();
+        if (!SEL.length) { h('<div class="narrow card center stack"><h2>Your mix is empty</h2><p class="muted">Tick ☐ the subjects, units or topics you want on any Practice page, then come back here.</p><a class="btn" href="/practice" data-link>Choose topics</a></div>'); return; }
+        subjId = SEL[0].s; unitNo = null; topicId = null;
+      }
       var n = findNode(cat || [], subjId, unitNo, topicId);
       if (!n) { h('<div class="narrow card center"><h2>This practice link is not active yet</h2><p class="muted">Explore what is available instead.</p><a class="btn" href="/" data-link>See all tests</a></div>'); return; }
       var node = n.topic || n.unit || n.subj, ds = node.durations || [], dur = ds.length ? ds[0] : null;
@@ -937,16 +957,30 @@
       var mode = new URLSearchParams(location.search).get('m') === 'quiz' ? 'quiz' : 'practice', pdur = 15;
       var cnt = node.count || 0;
       var args = { p_subject: n.subj.id, p_unit: n.unit ? n.unit.unit : null, p_topic: n.topic ? n.topic.id : null };
+      if (SEL) {
+        cnt = 0; SEL.forEach(function (o) { var k = findNode(cat, o.s, o.u, o.t); if (k) cnt += ((k.topic || k.unit || k.subj).count || 0); });
+        ds = (n.subj.durations || []).filter(function (d) { return Math.floor(d * 60 / 45) * 3 <= cnt; }); dur = ds.length ? ds[0] : null;
+        title = SEL.length > 1 ? 'My mix: ' + SEL.length + ' items' : SEL[0].n; crumbs = '';
+        url = location.origin + '/practice'; exam = null;
+        args = { p_subject: n.subj.id, p_unit: null, p_topic: null, p_sel: SEL.map(function (o) { var x = { s: o.s }; if (o.u) x.u = o.u; if (o.t) x.t = o.t; return x; }) };
+      }
+      var LVS = [['E', 'Easy', 'Basics first'], ['EM', 'Easy to moderate', 'Good start'], ['M', 'Moderate', 'Exam average'], ['MH', 'Moderate to tough', 'Push yourself'], ['H', 'Tough', 'Top-rank level'], ['X', 'Mix', 'Like a real paper']];
+      var lvl = 'EM'; try { lvl = localStorage.getItem('vkv-lvl') || 'EM'; } catch (e) {}
       var quizMode = new URLSearchParams(location.search).get('m') === 'quiz', hubName = quizMode ? 'Test' : 'Practice', hubUrl = quizMode ? '/test' : '/practice', qs = quizMode ? '?m=quiz' : '';
       var cr = [[hubName, hubUrl]];
-      if (n.unit || n.topic) cr.push([n.subj.name, '/p/' + n.subj.id.toLowerCase() + qs]);
-      if (n.topic) cr.push(['Unit ' + n.unit.unit, '/p/' + n.subj.id.toLowerCase() + '/' + n.unit.unit + qs]);
-      cr.push([n.topic ? n.topic.name : n.unit ? 'Unit ' + n.unit.unit : n.subj.name, '']);
+      if (SEL) cr.push(['My mix', '']);
+      else {
+        cr.push([n.subj.name, '/p/' + n.subj.id.toLowerCase() + qs]);
+        if (n.topic) cr.push(['Unit ' + n.unit.unit, '/p/' + n.subj.id.toLowerCase() + '/' + n.unit.unit + qs]);
+        cr.push([n.topic ? n.topic.name : n.unit ? 'Unit ' + n.unit.unit : 'Full subject', '']);
+      }
       var UL = { pmax: 5, qmax: 15, untimed_q: 6 };
       h('<div class="narrow stack focus">' + crumbBar(cr) + '<div class="card center stack">' +
         '<p class="eyebrow">' + (exam ? 'Exam-level paper · ' + esc(exam.toUpperCase().replace(/-/g, ' ')) : 'Free practice & tests') + '</p><h1>' + esc(title) + '</h1>' + (crumbs && crumbs !== title ? '<p class="muted" style="margin:0">' + esc(crumbs) + '</p>' : '') +
-        (cnt >= READY ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>' + icon('practice') + ' Practice</b><span>No pressure: see the right answer and explanation after each question</span></button>' +
+        (SEL ? '<ul class="mixl">' + SEL.map(function (o) { return '<li>' + esc(o.n) + '</li>'; }).join('') + '</ul><p class="small" style="margin:0"><a href="/practice" data-link>Change my ticks</a></p>' : '') +
+        (cnt >= (SEL ? 6 : READY) ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>' + icon('practice') + ' Practice</b><span>No pressure: see the right answer and explanation after each question</span></button>' +
           '<button type="button" data-m="quiz" aria-pressed="' + (mode === 'quiz') + '"><b>' + icon('test') + ' Test</b><span>Timed like an exam: score at the end, counts on the leaderboard</span></button></div>' +
+          '<p class="f">Question level</p><div class="seg lvls" id="lv">' + LVS.map(function (l) { return '<button type="button" data-l="' + l[0] + '" aria-pressed="' + (l[0] === lvl) + '"><b>' + l[1] + '</b><span>' + l[2] + '</span></button>'; }).join('') + '</div>' +
           '<div id="pm"><p class="f">Do you want a timer?</p><div class="seg" id="pd">' + [[0, 'No timer', 'Learn at your own pace'], [5, '5 min', 'Quick revision'], [15, '15 min', 'Short session'], [30, '30 min', 'Focused session'], [60, '1 hour', 'Deep practice'], [180, '3 hours', 'Full study session']].map(function (d) { return '<button type="button" data-d="' + d[0] + '" aria-pressed="' + (d[0] === pdur) + '"><b>' + d[1] + '</b><span>' + d[2] + '</span></button>'; }).join('') + '</div>' +
           '<ul class="rules small" style="text-align:left"><li><b>Read every question fully.</b> After you answer you see the correct answer and explanation.</li><li>Not sure? Tap <b>Show answer</b> to learn it, then move on.</li><li>No timer on any question: the session ends only when your chosen total time is over, even if you read just a few questions.</li><li>Several quick <b>wrong</b> answers in a row (guessing) bring a warning, then short pauses of 1–2 minutes. Quick correct answers are fine. Repeating it on the same day locks all practice and tests for 10 minutes.</li><li>Practise more in a subject to unlock longer practice and tests. A short test after a few practice rounds helps you see what stuck.</li><li>🌐 Want it in your language? Choose <b>Language</b> at the top of the question screen.</li><li>Practice scores are only for you. They do not go on the leaderboard.</li></ul></div>' +
           '<div id="qm" hidden>' + (ds.length ? '<p class="f">How much time do you have?</p><div class="seg" id="fd">' + ds.map(function (d) { return '<button type="button" data-d="' + d + '" aria-pressed="' + (d === dur) + '"><b>' + d + ' min</b><span>' + Math.floor(d * 60 / 45) + ' questions</span></button>'; }).join('') + '</div>' +
@@ -967,6 +1001,7 @@
       function segPick(id, cb) { var el = q(id); if (el) el.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; cb(+b.getAttribute('data-d')); Array.prototype.forEach.call(el.children, function (c) { c.setAttribute('aria-pressed', c === b); }); }; }
       ['#pd', '#fd'].forEach(function (id) { var el = q(id); if (el) el.addEventListener('click', function (e) { var b = e.target.closest('.lk'); if (b) { e.stopImmediatePropagation(); var nt = el.nextElementSibling; if (nt && nt.classList.contains('lk-note')) { nt.classList.remove('pulse'); void nt.offsetWidth; nt.classList.add('pulse'); } } }, true); });
       segPick('#fd', function (d) { dur = d; }); segPick('#pd', function (d) { pdur = d; });
+      var lvEl = q('#lv'); if (lvEl) lvEl.onclick = function (e) { var b = e.target.closest('button'); if (!b) return; lvl = b.getAttribute('data-l'); try { localStorage.setItem('vkv-lvl', lvl); } catch (x) {} Array.prototype.forEach.call(lvEl.children, function (c) { c.setAttribute('aria-pressed', c === b); }); };
       function applyUnlock(u) {
         UL = u || UL;
         [['#pd', UL.pmax, function (d) { pdur = d; }, function () { return pdur; }], ['#fd', UL.qmax, function (d) { dur = d; }, function () { return dur; }]].forEach(function (x) {
@@ -987,8 +1022,9 @@
       var g = q('#fgo'); if (g) g.onclick = function () {
         if (!requireAuth(location.pathname + location.search, function () { q('#fgo').click(); })) return;
         var lbl = g.textContent; g.disabled = true; g.innerHTML = '<svg class="prep-ring" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke-width="3"/></svg> Preparing your questions…'; track(mode === 'practice' ? 'start_practice' : 'start_quiz', { s: n.subj.id, u: args.p_unit, x: exam });
-        var call = mode === 'practice' ? rpc('start_practice', Object.assign({ p_duration: pdur || null, p_exam: exam }, args)).then(function (v) { go('/practice/' + v.attempt); })
-          : rpc('start_custom', Object.assign({ p_duration: dur, p_exam: exam }, args)).then(function (v) { go('/exam/' + v.attempt); });
+        var lp = lvl === 'X' ? null : lvl;
+        var call = mode === 'practice' ? rpc('start_practice', Object.assign({ p_duration: pdur || null, p_exam: exam, p_level: lp }, args)).then(function (v) { go('/practice/' + v.attempt); })
+          : rpc('start_custom', Object.assign({ p_duration: dur, p_exam: exam, p_level: lp }, args)).then(function (v) { go('/exam/' + v.attempt); });
         call.catch(function (e) {
           var m = errMsg(e); g.disabled = false; g.textContent = lbl;
           if (/^QUIZ_DUE:/.test(m)) {
@@ -1099,13 +1135,13 @@
     LLG: ['🗣️', 'Language Lab', 320], LHV: ['🤝', 'Human Values', 150]
   };
   var BR = { // branch key -> [emoji, name, hue, core subjects, exam branch regex, extra]
-    me: ['⚙️', 'Mechanical', 25, ['TD', 'FM', 'HT', 'SOM', 'TOM', 'MD', 'MP', 'EMT', 'ENM', 'ICE', 'RAC', 'PP', 'MET', 'IE', 'AE'], /mechanical|automobile/i, ['MEC', 'CAD', 'ED']],
-    ce: ['🌉', 'Civil', 35, ['CVC', 'ENM', 'SOM', 'FM'], /civil/i, ['CAD']],
-    ee: ['🔌', 'Electrical', 50, ['EEC'], /electrical/i, []],
-    ec: ['📡', 'Electronics', 185, ['ECC'], /electronics/i, []],
-    cs: ['💻', 'Computer Science & IT', 225, ['CSF', 'LCP'], /computer/i, []],
-    in: ['🎛️', 'Instrumentation', 260, ['INC'], /instrumentation/i, []],
-    fy: ['🎓', 'First Year (all branches)', 280, ['EM', 'ENM'], /1st year/i, []]
+    me: ['⚙️', 'Mechanical', 25, ['TD', 'FM', 'HT', 'SOM', 'TOM', 'MD', 'MP', 'EMT', 'ENM', 'ICE', 'RAC', 'PP', 'MET', 'IE', 'AE'], /mechanical|automobile/i, ['MEC', 'CAD', 'ED'], ['LWS', 'LMD', 'LEG']],
+    ce: ['🌉', 'Civil', 35, ['CVC', 'ENM', 'SOM', 'FM'], /civil/i, ['CAD'], ['LCE', 'LEG']],
+    ee: ['🔌', 'Electrical', 50, ['EEC'], /electrical/i, [], ['LEE']],
+    ec: ['📡', 'Electronics', 185, ['ECC'], /electronics/i, [], ['LEE', 'LPH']],
+    cs: ['💻', 'Computer Science & IT', 225, ['CSF'], /computer/i, [], ['LCP']],
+    in: ['🎛️', 'Instrumentation', 260, ['INC'], /instrumentation/i, [], ['LEE', 'LPH']],
+    fy: ['🎓', 'First Year (all branches)', 280, ['EM', 'ENM'], /1st year/i, [], ['LPH', 'LCH', 'LCP', 'LWS', 'LEE', 'LCE', 'LEG', 'LMD', 'LLG', 'LHV']]
   };
   var LABS = ['LPH', 'LCH', 'LCP', 'LWS', 'LEE', 'LCE', 'LEG', 'LMD', 'LLG', 'LHV'];
   var FAM_EMO = { 'GATE': '🎓', 'ESE / IES': '🏛️', 'SSC JE': '📝', 'State JE / AE': '🏢', 'Railways (RRB)': '🚆', 'RTO / MVI': '🚗', 'Banking and Insurance': '🏦',
@@ -1115,10 +1151,10 @@
   function xCard(href, emo, hue, name, sub, extra) {
     return '<a class="xc" href="' + href + '" data-link' + (extra || '') + '>' + xTile(emo, hue) + '<span class="xt"><b>' + esc(name) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span></a>';
   }
-  function subjCards(ids, byId, mode) {
+  function subjCards(ids, byId, mode, inKey) {
     return ids.map(function (id) { var x = byId[id]; if (!x || (x.count || 0) < READY) return ''; var m = SM[id] || ['📘', x.name, 200];
-      var units = (x.units || []).filter(function (u) { return (u.count || 0) >= READY; }).slice(0, 3).map(function (u) { return u.name; }).join(' · ');
-      return xCard('/p/' + id.toLowerCase() + (mode === 'test' ? '?m=quiz' : ''), m[0], m[2], m[1], units, ' data-x="' + esc((m[1] + ' ' + x.name + ' ' + (x.units || []).map(function (u) { return u.name; }).join(' ')).toLowerCase()) + '"'); }).join('');
+      var units = (x.units || []).filter(function (u) { return (u.count || 0) >= READY; }).map(function (u) { return u.name; });
+      return tCard('/p/' + id.toLowerCase() + tq(mode, inKey ? 'in=' + inKey : ''), m[0], m[2], m[1], units, { s: id, n: m[1] }, '', x.name); }).join('');
   }
   function examCards(list) {
     return list.map(function (e) { return xCard('/e/' + e.id, FAM_EMO[e.family] || '📋', 200, e.title.replace(/\s*\(common to all branches\)/i, ''), e.ready ? 'Full syllabus, section by section' : 'Syllabus being mapped', ' data-x="' + esc((e.title + ' ' + (e.family || '')).toLowerCase()) + '"'); }).join('');
@@ -1127,29 +1163,35 @@
     if (!cards) return '';
     return '<section class="xs" id="xs-' + id + '"><div class="xs-h"><h2>' + title + '</h2>' + (more || '') + '</div>' + (note ? '<p class="muted xs-n">' + note + '</p>' : '') + '<div class="xg">' + cards + '</div></section>';
   }
-  function exploreHtml(cat, exams, mode, b) {
+  function exploreHtml(cat, exams, mode, b, c) {
     var byId = {}; cat.forEach(function (x) { byId[x.id] = x; });
     var isTech = function (e) { return e.kind === 'university' || (e.branch && !/^(general|all)/i.test(e.branch)); };
-    var q = mode === 'test' ? '?m=test' : '';
+    var C = c && catOf(c);
+    if (C) {
+      var kids = C.s ? subjCards(C.s, byId, mode, C.k) : C.ex ? examCards(exams.filter(function (e) { return !isTech(e); })) : branchCards(byId, mode);
+      var allSel = C.s ? C.s.filter(function (id) { return byId[id] && byId[id].count >= READY; }) : [];
+      return treeHead(C.e, C.h, mode === 'test' ? 'Test' : 'Practice', C.n, catKw(C, byId), allSel.length ? '/mix' + tq(mode, 'all=' + allSel.join(',')) : '', (mode === 'test' ? '⏱️ Test' : '📘 Practise') + ' all of ' + esc(C.n), null,
+          C.s ? 'Practise everything here in one mixed session, or open one subject below. Tick ☐ to build your own mix.' : C.d) +
+        shelf('kids', 'Inside ' + C.e + ' ' + esc(C.n), '', kids) + shelf('cats', '🧭 Other categories', '', catCards(byId, mode, C.k));
+    }
     if (b && BR[b]) {
       var d = BR[b], ex = exams.filter(function (e) { return d[4].test(e.branch || ''); });
       var uni = ex.filter(function (e) { return e.kind === 'university'; }), comp = ex.filter(function (e) { return e.kind !== 'university'; });
-      return shelf('core', d[0] + ' ' + d[1] + ': subjects', 'Tap a subject to see its units and start.', subjCards(d[3], byId, mode)) +
+      return shelf('core', d[0] + ' ' + d[1] + ': subjects', 'Tap a subject to see its units. Tick ☐ several to mix them.', subjCards(d[3], byId, mode, b)) +
+        (b === 'fy' ? '' : shelf('blabs', '🧪 ' + esc(d[1]) + ' labs', 'Experiment-wise practice and viva questions.', subjCards(d[6] || [], byId, mode, b))) +
         shelf('uni', 'University syllabus, year and semester wise', '', examCards(uni)) +
         shelf('comp', 'Competitive exams for ' + d[1], 'GATE, ESE, JE, PSU and more: the full syllabus of each exam, wired to the same question pool.', examCards(comp)) +
-        shelf('extra', 'Placement and software', '', subjCards(d[5], byId, mode)) +
-        shelf('maths', 'Maths for every branch', '', b === 'fy' ? '' : subjCards(['EM'], byId, mode)) +
-        shelf('labs', 'First-year labs', 'Experiment-wise practice and viva questions.', subjCards(LABS, byId, mode)) +
-        shelf('apt', 'Aptitude for placements', '', subjCards(['QA', 'LR', 'VA'], byId, mode));
+        shelf('extra', 'Placement and software', '', subjCards(d[5], byId, mode, b)) +
+        shelf('maths', 'Maths for every branch', '', b === 'fy' ? '' : subjCards(['EM'], byId, mode, b)) +
+        shelf('labs', b === 'fy' ? '🧪 First-year labs' : '🧪 All first-year labs', 'Experiment-wise practice and viva questions.', subjCards(LABS, byId, mode, b === 'fy' ? 'fy' : 'labs')) +
+        shelf('apt', 'Aptitude for placements', '', subjCards(['QA', 'LR', 'VA'], byId, mode, 'apt')) +
+        shelf('brs', '🛠️ Other branches', '', branchCards(byId, mode, b)) + shelf('cats', '🧭 All categories', '', catCards(byId, mode, 'eng'));
     }
-    var br = Object.keys(BR).map(function (k) { var d = BR[k]; return xCard((mode === 'test' ? '/test' : '/practice') + '?b=' + k, d[0], d[2], d[1], k === 'fy' ? 'Maths, mechanics and 10 labs' : d[3].length + (d[3].length > 1 ? ' subjects' : ' core subject') + ' · exams · labs', ' data-x="' + d[1].toLowerCase() + '"'); }).join('');
-    return shelf('apt', '🧠 Reasoning &amp; aptitude', 'Useful for every exam and every job. Start here.', subjCards(['LR', 'QA', 'VA'], byId, mode)) +
-      shelf('sci', '🔬 Science &amp; general knowledge', '', subjCards(['GSC', 'GKS', 'CA'], byId, mode)) +
-      shelf('india', '🇮🇳 Know India', 'History, polity, geography and economy.', subjCards(['GHI', 'GPO', 'GGE', 'GEC'], byId, mode)) +
-      shelf('nontech', '📝 Non-technical exams', 'SSC, Railways, Banking, State exams and campus tests.', examCards(exams.filter(function (e) { return !isTech(e); }))) +
-      shelf('branch', '🛠️ Engineering: choose your branch', 'Subjects, labs, university syllabus and competitive exams of your branch, all in one place.', br) +
-      shelf('labs', '🧪 First-year labs (all branches)', 'Every experiment: theory, apparatus, procedure, calculations and viva.', subjCards(LABS, byId, mode)) +
-      shelf('more', '🚗 Software, entrepreneurship &amp; transport', '', subjCards(['CAD', 'ED', 'MVL', 'RTO'], byId, mode));
+    return CATS.map(function (C) {
+      var more = '<a class="small" href="' + hubBase(mode) + '?c=' + C.k + '" data-link>Open ›</a>';
+      var cards = C.s ? subjCards(C.s, byId, mode, C.k) : C.ex ? examCards(exams.filter(function (e) { return !isTech(e); })) : branchCards(byId, mode);
+      return shelf(C.k, C.e + ' ' + esc(C.n), esc(C.d), cards, more);
+    }).join('');
   }
   function exploreSearch() {
     var inp = document.getElementById('xq'); if (!inp) return;
@@ -1157,6 +1199,125 @@
       $view.querySelectorAll('.xc').forEach(function (c) { c.hidden = !!t && (c.getAttribute('data-x') || c.textContent.toLowerCase()).indexOf(t) < 0; });
       $view.querySelectorAll('.xs').forEach(function (s) { s.hidden = !!t && !s.querySelector('.xc:not([hidden])'); }); });
   }
+
+  /* ---------- Drill-down: every level shows its children (with keywords and tick boxes), then the level it came from ---------- */
+  var CATS = [
+    { k: 'apt', e: '🧠', h: 265, n: 'Reasoning & aptitude', d: 'Useful for every exam and every job. Start here.', s: ['LR', 'QA', 'VA'] },
+    { k: 'sci', e: '🔬', h: 160, n: 'Science & general knowledge', d: 'Physics, chemistry, biology, world GK and current affairs.', s: ['GSC', 'GKS', 'CA'] },
+    { k: 'india', e: '🇮🇳', h: 30, n: 'Know India', d: 'History, polity, geography and economy.', s: ['GHI', 'GPO', 'GGE', 'GEC'] },
+    { k: 'nontech', e: '📝', h: 45, n: 'Non-technical exams', d: 'SSC, Railways, Banking, State exams and campus tests.', ex: 1, kw: ['SSC', 'Railways', 'Banking', 'State exams', 'Campus tests', 'Police', 'Teaching'] },
+    { k: 'eng', e: '🛠️', h: 25, n: 'Engineering branches', d: 'Subjects, labs, university syllabus and competitive exams of your branch.', br: 1 },
+    { k: 'labs', e: '🧪', h: 140, n: 'Labs (first year, all branches)', d: 'Every experiment: theory, apparatus, procedure, calculations and viva.', s: LABS },
+    { k: 'more', e: '🚗', h: 0, n: 'Software, business & transport', d: 'CAD software, entrepreneurship, motor vehicle laws and RTO exams.', s: ['CAD', 'ED', 'MVL', 'RTO'] }
+  ];
+  function catOf(k) { for (var i = 0; i < CATS.length; i++) if (CATS[i].k === k) return CATS[i]; return null; }
+  function brSubs(k) { var d = BR[k]; return d ? d[3].concat(d[6] || [], d[5] || []) : []; }
+  function tq(mode, extra) { var a = []; if (mode === 'test') a.push('m=quiz'); if (extra) a.push(extra); return a.length ? '?' + a.join('&') : ''; }
+  function hubBase(mode) { return mode === 'test' ? '/test' : '/practice'; }
+  function kwHtml(list) { list = (list || []).filter(Boolean).slice(0, 9); return list.length ? '<span class="kw">' + list.map(function (k) { return '<i>' + esc(k) + '</i>'; }).join('') + '</span>' : ''; }
+  function selKey(o) { return o.s + '|' + (o.u || '') + '|' + (o.t || ''); }
+  function selGet() { try { var a = JSON.parse(localStorage.getItem('vkv-sel') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function selPut(a) { try { localStorage.setItem('vkv-sel', JSON.stringify(a)); } catch (e) {} selBar(); }
+  function selHas(o) { var k = selKey(o); return selGet().some(function (x) { return selKey(x) === k; }); }
+  function ckHtml(o) { if (!o) return ''; return '<span class="xck" role="checkbox" tabindex="0" aria-checked="' + selHas(o) + '" aria-label="Tick to add ' + esc(o.n) + ' to your own mix" title="Tick to add to your own mix" data-sel="' + esc(JSON.stringify(o)) + '"></span>'; }
+  function tCard(href, emo, hue, name, kw, sel, sub, alias) {
+    return '<a class="xc xk" href="' + href + '" data-link data-x="' + esc((name + ' ' + (alias || '') + ' ' + (kw || []).join(' ')).toLowerCase()) + '">' + xTile(emo, hue) + '<span class="xt"><b>' + esc(name) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + kwHtml(kw) + '</span>' + ckHtml(sel) + '</a>';
+  }
+  function selToggle(c) {
+    var o; try { o = JSON.parse(c.getAttribute('data-sel')); } catch (e) { return; }
+    var a = selGet(), k = selKey(o), i = -1;
+    a.forEach(function (x, j) { if (selKey(x) === k) i = j; });
+    if (i >= 0) a.splice(i, 1); else { if (a.length >= 60) { toast('You can tick up to 60 items.'); return; } a.push(o); }
+    document.querySelectorAll('.xck').forEach(function (x) { try { if (selKey(JSON.parse(x.getAttribute('data-sel'))) === k) x.setAttribute('aria-checked', i < 0); } catch (e) {} });
+    selPut(a);
+  }
+  document.addEventListener('click', function (e) { var c = e.target.closest('.xck'); if (!c) return; e.preventDefault(); e.stopPropagation(); selToggle(c); }, true);
+  document.addEventListener('keydown', function (e) { var c = e.target.closest && e.target.closest('.xck'); if (!c || (e.key !== ' ' && e.key !== 'Enter')) return; e.preventDefault(); e.stopPropagation(); selToggle(c); }, true);
+  function selBar(path) {
+    path = path || location.pathname;
+    var b = document.getElementById('selbar'), a = selGet(), on = /^\/(practice|test|p\/|mix)/.test(path) && path !== '/mix' && a.length;
+    if (!on) { if (b) b.hidden = true; document.body.classList.remove('has-selbar'); return; }
+    if (!b) { b = document.createElement('div'); b.id = 'selbar'; b.className = 'selbar'; document.body.appendChild(b);
+      b.addEventListener('click', function (e) { var x = e.target.closest('[data-sb]'); if (!x) return;
+        if (x.getAttribute('data-sb') === 'clear') { selPut([]); document.querySelectorAll('.xck').forEach(function (c) { c.setAttribute('aria-checked', 'false'); }); }
+        else go('/mix' + (new URLSearchParams(location.search).get('m') === 'quiz' || /^\/test/.test(location.pathname) ? '?m=quiz' : '')); }); }
+    b.hidden = false; document.body.classList.add('has-selbar');
+    b.innerHTML = '<span class="sb-n">☑ ' + a.length + ' ticked</span><span class="sb-l">' + esc(a.map(function (x) { return x.n; }).join(' · ')) + '</span><button type="button" class="btn ghost small" data-sb="clear">Clear</button><button type="button" class="btn small" data-sb="go">Start my mix ›</button>';
+  }
+  function parentOf(sid, inn) {
+    var i, b = branchGet();
+    if (inn && BR[inn] && brSubs(inn).indexOf(sid) >= 0) return { kind: 'b', key: inn };
+    if (inn && catOf(inn) && (catOf(inn).s || []).indexOf(sid) >= 0) return { kind: 'c', key: inn };
+    if (BR[b] && brSubs(b).indexOf(sid) >= 0) return { kind: 'b', key: b };
+    for (i = 0; i < CATS.length; i++) if ((CATS[i].s || []).indexOf(sid) >= 0) return { kind: 'c', key: CATS[i].k };
+    for (var k in BR) if (brSubs(k).indexOf(sid) >= 0) return { kind: 'b', key: k };
+    return { kind: 'c', key: 'apt' };
+  }
+  function catKw(c, byId) {
+    if (c.kw) return c.kw;
+    if (c.br) return Object.keys(BR).map(function (k) { return BR[k][1].replace(/ \(.*\)/, ''); });
+    return (c.s || []).filter(function (id) { return byId[id]; }).map(function (id) { return (SM[id] || [0, byId[id].name])[1]; });
+  }
+  function catCards(byId, mode, skip) {
+    return CATS.filter(function (c) { return c.k !== skip; }).map(function (c) { return tCard(hubBase(mode) + '?c=' + c.k, c.e, c.h, c.n, catKw(c, byId), null, c.d); }).join('');
+  }
+  function branchCards(byId, mode, skip) {
+    return Object.keys(BR).filter(function (k) { return k !== skip; }).map(function (k) { var d = BR[k];
+      var kw = d[3].filter(function (id) { return byId[id]; }).map(function (id) { return (SM[id] || [0, id])[1]; }).slice(0, 7).concat(['Labs', 'Exams']);
+      return tCard(hubBase(mode) + '?b=' + k, d[0], d[2], d[1], kw, null, ''); }).join('');
+  }
+  function upperShelves(byId, mode, par, sid) {
+    var out = '';
+    if (par.kind === 'b') {
+      var d = BR[par.key];
+      out += shelf('sib', 'More in ' + d[0] + ' ' + esc(d[1]), '', subjCards(brSubs(par.key).filter(function (x) { return x !== sid; }), byId, mode, par.key), '<a class="small" href="' + hubBase(mode) + '?b=' + par.key + '" data-link>Open ' + esc(d[1]) + ' ›</a>');
+      out += shelf('brs', '🛠️ Other branches', '', branchCards(byId, mode, par.key));
+    } else {
+      var c = catOf(par.key);
+      if (c && c.s) out += shelf('sib', 'More in ' + c.e + ' ' + esc(c.n), '', subjCards(c.s.filter(function (x) { return x !== sid; }), byId, mode, c.k), '<a class="small" href="' + hubBase(mode) + '?c=' + c.k + '" data-link>Open ›</a>');
+    }
+    return out + shelf('cats', '🧭 All categories', '', catCards(byId, mode, par.kind === 'c' ? par.key : 'eng'));
+  }
+  function treeHead(emo, hue, eyebrow, title, kw, fullHref, fullLabel, selObj, note) {
+    return '<div class="card th">' + '<div class="th-r">' + xTile(emo, hue) + '<div><p class="eyebrow">' + eyebrow + '</p><h1>' + esc(title) + '</h1></div></div>' + kwHtml(kw) +
+      (fullHref ? '<div class="th-a"><a class="btn" href="' + fullHref + '" data-link>' + fullLabel + '</a>' + (selObj ? '<span class="th-ck">' + ckHtml(selObj) + '<span>Add to my mix</span></span>' : '') + '</div>' : '') +
+      (note ? '<p class="muted small th-n">' + note + '</p>' : '') + '</div>';
+  }
+  function viewTree(sid, un) {
+    var mode = new URLSearchParams(location.search).get('m') === 'quiz' ? 'test' : 'practice', inn = new URLSearchParams(location.search).get('in');
+    setNav(mode); loading();
+    Promise.all([rpc('catalog'), rpc('subject_keywords', { p_subject: String(sid).toUpperCase() }).catch(function () { return {}; })]).then(function (r) {
+      var cat = r[0] || [], kwm = r[1] || {}, byId = {}; cat.forEach(function (x) { byId[x.id] = x; });
+      var n = findNode(cat, sid, un);
+      if (!n || (un && !n.unit)) { h('<div class="narrow card center"><h2>This page is not active yet</h2><a class="btn" href="' + hubBase(mode) + '" data-link>See all subjects</a></div>'); return; }
+      var S = n.subj, id = S.id, m = SM[id] || ['📘', S.name, 200], par = parentOf(id, inn), inq = 'in=' + par.key;
+      var pname = par.kind === 'b' ? BR[par.key][1] : (catOf(par.key) || {}).n;
+      var phref = hubBase(mode) + (par.kind === 'b' ? '?b=' : '?c=') + par.key + (mode === 'test' ? '' : '');
+      var act = mode === 'test' ? '⏱️ Test' : '📘 Practise';
+      var cr = [[mode === 'test' ? 'Test' : 'Practice', hubBase(mode)], [pname, phref]];
+      var units = (S.units || []).filter(function (u) { return (u.count || 0) >= READY; });
+      function unitKw(u) { var k = (u.topics || []).map(function (t) { return t.name; }); if (k.length < 6) (u.topics || []).forEach(function (t) { (kwm[u.unit + '|' + t.id] || []).slice(0, 3).forEach(function (w) { if (k.length < 9) k.push(w); }); }); return k; }
+      function unitCards(skip) { return units.filter(function (u) { return u.unit !== skip; }).map(function (u) { return tCard('/p/' + id.toLowerCase() + '/' + u.unit + tq(mode, inq), String(u.unit), m[2], 'Unit ' + u.unit + ': ' + u.name, unitKw(u), { s: id, u: u.unit, n: m[1] + ' U' + u.unit }); }).join(''); }
+      var html;
+      if (!n.unit) {
+        cr.push([m[1], '']);
+        html = treeHead(m[0], m[2], esc(pname), S.name, units.map(function (u) { return u.name; }), '/p/' + id.toLowerCase() + tq(mode, 'go=1'), act + ' full ' + esc(m[1]), { s: id, n: m[1] },
+            'Click above to ' + (mode === 'test' ? 'take a test on' : 'practise') + ' the full subject, or choose a unit below. Tick ☐ any units, topics or subjects to build your own mix.') +
+          shelf('units', '📚 Units of ' + esc(m[1]), '', unitCards(null));
+      } else {
+        var U = n.unit, tops = (U.topics || []).filter(function (t) { return (t.count || 0) >= READY; });
+        cr.push([m[1], '/p/' + id.toLowerCase() + tq(mode, inq)]); cr.push(['Unit ' + U.unit, '']);
+        html = treeHead(String(U.unit), m[2], esc(m[1]) + ' · Unit ' + U.unit, U.name, tops.map(function (t) { return t.name; }), '/p/' + id.toLowerCase() + '/' + U.unit + tq(mode, 'go=1'), act + ' full Unit ' + U.unit, { s: id, u: U.unit, n: m[1] + ' U' + U.unit },
+            'Practise the whole unit, or pick one topic below. Tick ☐ several topics to mix them in one session.') +
+          shelf('tops', '🎯 Topics in Unit ' + U.unit, tops.length ? '' : 'Topics are being added. Practise the whole unit for now.', tops.map(function (t) {
+            return tCard('/p/' + id.toLowerCase() + '/' + U.unit + '/' + t.id + tq(mode, inq), '🎯', m[2], t.name, kwm[U.unit + '|' + t.id] || [], { s: id, u: U.unit, t: t.id, n: t.name }); }).join('')) +
+          shelf('units', '📚 Other units of ' + esc(m[1]), '', unitCards(U.unit));
+      }
+      h('<div class="hub stack tree">' + crumbBar(cr) + html + upperShelves(byId, mode, par, id) + '</div>');
+      selBar();
+    }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
+  }
+
   function viewHub(mode) {
     setNav(mode); loading();
     Promise.all([rpc('catalog').catch(function () { return []; }), mode === 'test' ? rpc('list_tests').catch(function () { return []; }) : Promise.resolve([]), rpc('exam_list').catch(function () { return []; })]).then(function (r) {
@@ -1182,14 +1343,18 @@
 
       }
       var bk = new URLSearchParams(location.search).get('b'); if (bk && !BR[bk]) bk = null;
-      var crumbs = [['Home', '/'], [mode === 'test' ? 'Test' : 'Practice', bk ? (mode === 'test' ? '/test' : '/practice') : '']]; if (bk) crumbs.push([BR[bk][1], '']);
+      var ck = new URLSearchParams(location.search).get('c'); if (ck && !catOf(ck)) ck = null; if (bk) ck = null;
+      var crumbs = [['Home', '/'], [mode === 'test' ? 'Test' : 'Practice', bk || ck ? (mode === 'test' ? '/test' : '/practice') : '']];
+      if (bk) { crumbs.push([catOf('eng').n, hubBase(mode) + '?c=eng']); crumbs.push([BR[bk][1], '']); }
+      if (ck) crumbs.push([catOf(ck).n, '']);
       if (bk) head = '<p class="eyebrow">' + (mode === 'test' ? 'Test' : 'Practice') + '</p><h1>' + BR[bk][0] + ' ' + esc(BR[bk][1]) + '</h1><p class="muted">Pick a subject, a lab or an exam. Everything here draws on the same question pool, so your progress counts everywhere.</p>';
-      var xp = exploreHtml(cat, r[2] && r[2].length ? r[2] : (window._exl || []), mode, bk);
-      h('<div class="hub stack">' + crumbBar(crumbs) + '<div>' + head + '</div>' + continueCard() +
+      var xp = exploreHtml(cat, r[2] && r[2].length ? r[2] : (window._exl || []), mode, bk, ck);
+      if (ck) head = '';
+      h('<div class="hub stack">' + crumbBar(crumbs) + (head ? '<div>' + head + '</div>' : '') + continueCard() +
         '<label class="sb-s xq">' + icon('search') + '<input id="xq" class="in" type="search" placeholder="Search a subject, lab or exam" autocomplete="off" aria-label="Search"></label>' +
-        '<div class="xw">' + xp + '</div>' + (bk ? '' : mocks) +
+        '<div class="xw">' + xp + '</div>' + (bk || ck ? '' : mocks) +
         '<details class="grp xall"><summary><b>All subjects, units and topics</b><small>full list with search</small>' + icon('chevron', 'sj-c') + '</summary><div class="grp-b">' + sb.html + '</div></details></div>');
-      sb.mount(); exploreSearch();
+      sb.mount(); exploreSearch(); selBar();
       var xt = q('.ex-tabs'); if (xt) xt.onclick = function (e) { var b = e.target.closest('[data-x]'); if (!b) return; xt.querySelectorAll('[data-x]').forEach(function (c) { c.setAttribute('aria-pressed', c === b); }); $view.querySelectorAll('[data-xp]').forEach(function (d) { d.hidden = d.getAttribute('data-xp') !== b.getAttribute('data-x'); }); };
     }).catch(function (e) { h('<div class="narrow card center"><p>' + esc(errMsg(e)) + '</p><button class="btn" onclick="location.reload()">Try again</button></div>'); });
   }
