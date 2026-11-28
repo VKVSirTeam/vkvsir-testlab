@@ -964,6 +964,7 @@
         url = location.origin + '/practice'; exam = null;
         args = { p_subject: n.subj.id, p_unit: null, p_topic: null, p_sel: SEL.map(function (o) { var x = { s: o.s }; if (o.u) x.u = o.u; if (o.t) x.t = o.t; return x; }) };
       }
+      var INV = qs0.get('inv') === '1';
       var LVS = [['E', 'Easy', 'Basics first'], ['EM', 'Easy to moderate', 'Good start'], ['M', 'Moderate', 'Exam average'], ['MH', 'Moderate to tough', 'Push yourself'], ['H', 'Tough', 'Top-rank level'], ['X', 'Mix', 'Like a real paper']];
       var lvl = 'EM'; try { lvl = localStorage.getItem('vkv-lvl') || 'EM'; } catch (e) {}
       var quizMode = new URLSearchParams(location.search).get('m') === 'quiz', hubName = quizMode ? 'Test' : 'Practice', hubUrl = quizMode ? '/test' : '/practice', qs = quizMode ? '?m=quiz' : '';
@@ -976,6 +977,7 @@
       }
       var UL = { pmax: 5, qmax: 15, untimed_q: 6 };
       h('<div class="narrow stack focus">' + crumbBar(cr) + '<div class="card center stack">' +
+        (INV && isGuest() ? '<div class="inv-b">🎁 <b>A friend invited you.</b> Try up to 10 questions on this topic free, no sign-up needed. One free try per person; after that, sign in free with Google to continue.</div>' : '') +
         '<p class="eyebrow">' + (exam ? 'Exam-level paper · ' + esc(exam.toUpperCase().replace(/-/g, ' ')) : 'Free practice & tests') + '</p><h1>' + esc(title) + '</h1>' + (crumbs && crumbs !== title ? '<p class="muted" style="margin:0">' + esc(crumbs) + '</p>' : '') +
         (SEL ? '<ul class="mixl">' + SEL.map(function (o) { return '<li>' + esc(o.n) + '</li>'; }).join('') + '</ul><p class="small" style="margin:0"><a href="/practice" data-link>Change my ticks</a></p>' : '') +
         (cnt >= (SEL ? 6 : READY) ? '<div class="mtabs" id="mt" role="tablist"><button type="button" data-m="practice" aria-pressed="' + (mode === 'practice') + '"><b>' + icon('practice') + ' Practice</b><span>No pressure: see the right answer and explanation after each question</span></button>' +
@@ -1193,11 +1195,24 @@
       return shelf(C.k, C.e + ' ' + esc(C.n), esc(C.d), cards, more);
     }).join('');
   }
+  function topicHits(list, mode, title) {
+    return shelf('hits', title, 'Each result shows where it sits: subject › unit › topic. Tick ☐ several to practise them together.', (list || []).map(function (x) {
+      var m = SM[x.s] || ['📘', x.sn, 200];
+      return tCard('/p/' + x.s.toLowerCase() + '/' + x.u + '/' + x.t + tq(mode, ''), m[0], m[2], x.tn, String(x.kw || '').split(', ').filter(Boolean).slice(0, 6), { s: x.s, u: x.u, t: x.t, n: x.tn }, m[1] + ' › Unit ' + x.u + ': ' + x.un);
+    }).join(''));
+  }
   function exploreSearch() {
     var inp = document.getElementById('xq'); if (!inp) return;
+    var tm, seq = 0, mode = /^\/test/.test(location.pathname) ? 'test' : 'practice';
+    inp.addEventListener('input', function () {
+      var t0 = inp.value.trim(), box = document.getElementById('xr'); clearTimeout(tm);
+      if (!box) { box = document.createElement('div'); box.id = 'xr'; var xw = $view.querySelector('.xw'); if (xw) xw.parentNode.insertBefore(box, xw); }
+      if (t0.length < 3) { box.innerHTML = ''; return; }
+      tm = setTimeout(function () { var my = ++seq; rpc('kw_search', { p_q: t0 }).then(function (r) { if (my !== seq) return; box.innerHTML = r && r.length ? topicHits(r, mode, '🔎 Topics with “' + esc(t0) + '”') : ''; track('kw_search', { q: t0, n: (r || []).length }); }).catch(function () {}); }, 350);
+    });
     inp.addEventListener('input', function () { var t = inp.value.trim().toLowerCase();
-      $view.querySelectorAll('.xc').forEach(function (c) { c.hidden = !!t && (c.getAttribute('data-x') || c.textContent.toLowerCase()).indexOf(t) < 0; });
-      $view.querySelectorAll('.xs').forEach(function (s) { s.hidden = !!t && !s.querySelector('.xc:not([hidden])'); }); });
+      $view.querySelectorAll('.xw .xc').forEach(function (c) { c.hidden = !!t && (c.getAttribute('data-x') || c.textContent.toLowerCase()).indexOf(t) < 0; });
+      $view.querySelectorAll('.xw .xs').forEach(function (s) { s.hidden = !!t && !s.querySelector('.xc:not([hidden])'); }); });
   }
 
   /* ---------- Drill-down: every level shows its children (with keywords and tick boxes), then the level it came from ---------- */
@@ -1313,8 +1328,11 @@
             return tCard('/p/' + id.toLowerCase() + '/' + U.unit + '/' + t.id + tq(mode, inq), '🎯', m[2], t.name, kwm[U.unit + '|' + t.id] || [], { s: id, u: U.unit, t: t.id, n: t.name }); }).join('')) +
           shelf('units', '📚 Other units of ' + esc(m[1]), '', unitCards(U.unit));
       }
-      h('<div class="hub stack">' + crumbBar(cr) + html + upperShelves(byId, mode, par, id) + '</div>');
+      h('<div class="hub stack">' + crumbBar(cr) + html + '<div id="rel"></div>' + upperShelves(byId, mode, par, id) + '</div>');
       selBar();
+      if (n.unit) rpc('related_topics', { p_subject: id, p_unit: n.unit.unit, p_topic: null }).then(function (rl) {
+        var el = document.getElementById('rel'); if (el && rl && rl.length) el.innerHTML = topicHits(rl, mode, '🔗 Related topics in other subjects and labs');
+      }).catch(function () {});
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
 
@@ -1554,7 +1572,15 @@
   function viewResume() {
     setNav('resume'); loading();
     var api = { h: h, esc: esc, rpc: rpc, q: q, toast: toast, setNav: setNav, sb: sb, errMsg: errMsg, gate: gate, ensureGuest: guestSession, activity: guestActivity, get guest() { return isGuest(); }, get anySession() { return session; }, get session() { return isGuest() ? null : session; }, get profile() { return profile; } };
-    function run() { window.RB.render(api); }
+    function run() { window.RB.render(api); setTimeout(laptopTip, 400); }
+    function laptopTip() {
+      var shown = false; try { shown = sessionStorage.getItem('vkv-rlap') === '1'; } catch (e) {}
+      if (shown || !/^\/resume/.test(location.pathname) || document.querySelector('.rlap')) return;
+      var tgt = $view.querySelector('h1'); var el = document.createElement('div'); el.className = 'rlap';
+      el.innerHTML = '💻 <span><b>Tip:</b> use a laptop or desktop for easier and faster editing of your resume. You can still view and download it on your phone.</span><button type="button" aria-label="Hide tip">✕</button>';
+      el.querySelector('button').onclick = function () { el.remove(); try { sessionStorage.setItem('vkv-rlap', '1'); } catch (e) {} };
+      if (tgt && tgt.parentNode) tgt.parentNode.insertBefore(el, tgt.nextSibling); else $view.insertBefore(el, $view.firstChild);
+    }
     if (window.RB) return run();
     var s = document.createElement('script'); s.src = '/resume.js?v=12'; s.onload = run;
     s.onerror = function () { h('<div class="card narrow center"><p>Could not load the resume builder. Please refresh.</p></div>'); };
@@ -2783,9 +2809,9 @@
   function shareFlow(attemptId, idx, onDone) {
     var wa = ''; try { wa = localStorage.getItem('vkv-wa') || ''; } catch (e) {}
     if (!wa && profile && profile.mobile) wa = String(profile.mobile).replace(/[^\d+]/g, '');
-    var g = gmodal('<div class="gm-ic">📸</div><h2>Save this question to WhatsApp</h2><p class="gm-lead">Save only questions you found <b>hard</b>, got <b>wrong</b>, or want to <b>discuss with a friend or teacher</b>. You can save up to 20% of a session’s questions and 10 per day. The image shows the question and options only; whoever opens the link can try it and then see the answer and explanation.</p>' +
+    var g = gmodal('<div class="gm-ic">📸</div><h2>Share or save this question on WhatsApp</h2><p class="gm-lead">Share a question you found <b>hard</b> or <b>interesting</b> with your friends, your class group or a teacher, to discuss it more, or save it for yourself to revise. You can share up to 20% of a session’s questions and 10 per day. The image shows the question and options only; whoever opens the link can try it and then see the answer and explanation.</p>' +
       '<label class="f" for="wa-n">Your WhatsApp number</label><input class="in" id="wa-n" inputmode="tel" placeholder="+91 98XXXXXXXX" value="' + esc(wa) + '"><p class="small muted" style="margin:6px 0 12px">Asked once. On a phone you can pick any chat or group to send it to.</p>' +
-      '<div class="err" id="wa-e"></div><button type="button" class="btn block" id="wa-go">Save &amp; open WhatsApp</button><button type="button" class="link-btn" id="wa-x" style="margin-top:8px">Cancel</button>');
+      '<div class="err" id="wa-e"></div><button type="button" class="btn block" id="wa-go">Share / save on WhatsApp</button><button type="button" class="link-btn" id="wa-x" style="margin-top:8px">Cancel</button>');
     g.el.querySelector('#wa-x').onclick = function () { g.close(); };
     g.el.querySelector('#wa-go').onclick = function () {
       var b = this, n = g.el.querySelector('#wa-n').value.replace(/[^\d+]/g, '');
@@ -2806,7 +2832,7 @@
           window.open('https://wa.me/' + n.replace(/\D/g, '') + '?text=' + encodeURIComponent(cap), '_blank', 'noopener');
           toast('Image saved to your downloads. Attach it in WhatsApp with the message.');
         }).then(function () { if (onDone) onDone(x); });
-      }).catch(function (e) { var m = errMsg(e).replace(/^SHARE_LIMIT:/, ''); g.el.querySelector('#wa-e').textContent = m; b.disabled = false; b.textContent = 'Save & open WhatsApp'; });
+      }).catch(function (e) { var m = errMsg(e).replace(/^SHARE_LIMIT:/, ''); g.el.querySelector('#wa-e').textContent = m; b.disabled = false; b.textContent = 'Share / save on WhatsApp'; });
     };
   }
   function viewShared(code) {
@@ -2928,15 +2954,36 @@
     return c;
   }
   if (location.hostname === 'localhost') window.__scoreCard = scoreCard;
+  function scoreLink(r) {
+    var base = location.origin, sub = String(r.subject || '').toLowerCase();
+    if (r.sel && r.sel.length) { var ids = r.sel.map(function (o) { return o.s; }).filter(function (x, i, a) { return a.indexOf(x) === i; }); if (ids.length === 1 && !r.sel[0].u) sub = ids[0].toLowerCase(); else return base + '/mix?all=' + ids.join(',') + '&inv=1'; }
+    if (!sub) return base + '/practice';
+    return base + '/p/' + sub + (r.unit ? '/' + r.unit : '') + (r.unit && r.topic ? '/' + r.topic : '') + '?go=1&inv=1' + (r.mode === 'exam' || r.kind === 'quiz' ? '&m=quiz' : '');
+  }
   function shareScore(r, pct) {
-    var c = scoreCard(r, pct), text = 'I scored ' + pct + '% in ' + (r.title || 'a test') + ' on VKV Sir Test Lab. Practise free: https://test.vkvsir.com';
-    c.toBlob(function (b) {
-      var f = new File([b], 'vkv-score.png', { type: 'image/png' });
-      if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], text: text }).catch(function () {}); track('share_score'); return; }
-      var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'vkv-score.png'; document.body.appendChild(a); a.click(); a.remove();
-      try { navigator.clipboard.writeText(text); } catch (e) {}
-      toast('Image saved. The message is copied: paste it with the image.'); track('share_score');
-    }, 'image/png');
+    var link = scoreLink(r), what = (r.title || 'a test').replace(/^Practice · /, '');
+    var text = 'I scored ' + pct + '% in ' + what + ' on VKV Sir Test Lab. Can you beat me? Try the same topic free (10 questions, no sign-up) 👉 ' + link;
+    var enc = encodeURIComponent, file = null;
+    scoreCard(r, pct).toBlob(function (b) { file = new File([b], 'vkv-score.png', { type: 'image/png' }); }, 'image/png');
+    function saveImg() { if (!file) return; var a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 2000); }
+    function copy() { try { navigator.clipboard.writeText(text); } catch (e) {} }
+    var apps = [['native', '📤', 'Share (image + link)'], ['wa', '🟢', 'WhatsApp'], ['fb', '📘', 'Facebook'], ['ig', '📸', 'Instagram'], ['x', '✖️', 'X (Twitter)'], ['tg', '✈️', 'Telegram'], ['in', '💼', 'LinkedIn'], ['mail', '✉️', 'Email'], ['copy', '🔗', 'Copy link']];
+    if (!navigator.share) apps.shift();
+    var g = gmodal('<div class="gm-ic">🏆</div><h2>Share my score</h2><p class="gm-lead">Your score image goes with a link to <b>' + esc(what) + '</b>. Friends who click it land on the same topic and can try 10 questions free, without signing up.</p>' +
+      '<div class="shg">' + apps.map(function (a) { return '<button type="button" class="shg-b" data-a="' + a[0] + '"><span>' + a[1] + '</span>' + a[2] + '</button>'; }).join('') + '</div>' +
+      '<p class="small muted" style="margin:10px 0 0">On a phone, <b>Share</b> sends the image and the link together. Elsewhere the image is saved to your downloads and the message with the link is copied, so attach the image and paste.</p><button type="button" class="link-btn" id="shg-x" style="margin-top:8px">Close</button>');
+    g.el.querySelector('#shg-x').onclick = function () { g.close(); };
+    g.el.querySelector('.shg').onclick = function (e) {
+      var bt = e.target.closest('[data-a]'); if (!bt) return; var a = bt.getAttribute('data-a'); track('share_score', { to: a });
+      if (a === 'native') { var d = { text: text, url: link }; if (file && navigator.canShare && navigator.canShare({ files: [file] })) d = { files: [file], text: text }; navigator.share(d).catch(function () {}); return; }
+      if (a === 'copy') { copy(); toast('Message with link copied.'); return; }
+      saveImg(); copy();
+      var u = { wa: 'https://wa.me/?text=' + enc(text), fb: 'https://www.facebook.com/sharer/sharer.php?u=' + enc(link) + '&quote=' + enc(text), x: 'https://twitter.com/intent/tweet?text=' + enc(text),
+        tg: 'https://t.me/share/url?url=' + enc(link) + '&text=' + enc(text), 'in': 'https://www.linkedin.com/sharing/share-offsite/?url=' + enc(link),
+        mail: 'mailto:?subject=' + enc('Can you beat my score on VKV Sir Test Lab?') + '&body=' + enc(text), ig: 'https://www.instagram.com/' }[a];
+      if (a === 'ig') toast('Image saved and caption copied. Post the image on Instagram and paste the caption with the link.'); else toast('Image saved to downloads and message copied. Attach the image there.');
+      if (u) window.open(u, a === 'mail' ? '_self' : '_blank', 'noopener');
+    };
   }
   function viewResult(id, tok) {
     setNav(tok ? 'exam' : 'me');
