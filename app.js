@@ -1147,7 +1147,7 @@
   var FAM_EMO = { 'GATE': '🎓', 'ESE / IES': '🏛️', 'SSC JE': '📝', 'State JE / AE': '🏢', 'Railways (RRB)': '🚆', 'RTO / MVI': '🚗', 'Banking and Insurance': '🏦',
     'SSC (Graduate / 12th / 10th level)': '📝', 'State Level Exams (all states combined)': '🏛️', 'Campus Placement and Company Tests': '💼', 'ITI / Apprenticeship': '🔧',
     'Space, Defence and Atomic Energy': '🚀', 'B.Tech / B.E.': '🎓' };
-  function xTile(emo, hue) { return '<span class="xi" style="--h:' + (hue || 200) + '" aria-hidden="true">' + emo + '</span>'; }
+  function xTile(emo, hue) { return '<span class="xti" style="--h:' + (hue || 200) + '" aria-hidden="true">' + emo + '</span>'; }
   function xCard(href, emo, hue, name, sub, extra) {
     return '<a class="xc" href="' + href + '" data-link' + (extra || '') + '>' + xTile(emo, hue) + '<span class="xt"><b>' + esc(name) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span></a>';
   }
@@ -1313,7 +1313,7 @@
             return tCard('/p/' + id.toLowerCase() + '/' + U.unit + '/' + t.id + tq(mode, inq), '🎯', m[2], t.name, kwm[U.unit + '|' + t.id] || [], { s: id, u: U.unit, t: t.id, n: t.name }); }).join('')) +
           shelf('units', '📚 Other units of ' + esc(m[1]), '', unitCards(U.unit));
       }
-      h('<div class="hub stack tree">' + crumbBar(cr) + html + upperShelves(byId, mode, par, id) + '</div>');
+      h('<div class="hub stack">' + crumbBar(cr) + html + upperShelves(byId, mode, par, id) + '</div>');
       selBar();
     }).catch(function (e) { h('<div class="card narrow center"><p>' + esc(errMsg(e)) + '</p></div>'); });
   }
